@@ -37,7 +37,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Drifting airborne Strain | **miasma clouds** | spawned by surges above festering land; add viral load to anything flying through |
 | The Counterstrain's deployable carrier | **dispersal payload** | block `remission:dispersal_payload`; can also ride a moving Create contraption through the optional integration |
 | Research records made by the scanner | **scans**: **host scans** and **block scans** | item `remission:scanner`; data items `remission:host_scan`, `remission:block_scan`; data component `remission:scan_data` |
-| A player's record of host types, filled by host scans | **bestiary** | player attachment `remission:bestiary`; key mapping `key.remission.bestiary`; "12 of 82 host types scanned" |
+| A player's record of host types, filled by host scans | **bestiary** | player attachment `remission:bestiary`; key mapping `key.remission.bestiary`; "12 of 79 host types scanned" |
 
 "Variant" always means a resistant mutation of the Strain, never a kind of host: scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
 

@@ -61,11 +61,11 @@ Matching scans in pack recipes (1.21.1 ingredients): any scan of a kind with `{"
 
 Not part of this contract yet: the `remission:host_scanned` trigger and `remission:hosts_scanned` stat (P8.1) and scanning samples (unassigned). Per-player scan progress: Bestiary, below.
 
-## Bestiary (P6.2)
+## Bestiary (P6.2; hidden types P6.3)
 
-Host types are derived, not listed: every registered entity type that has default attributes (that is, is living), is not `minecraft:player` and is not in `#remission:immune` (`Bestiary.isHostType`, `Bestiary.hostTypes()`). Each installed mod's living mobs count without data; to drop a type from the bestiary (and from infection), tag it immune. Players can still carry the Strain and be scanned as hosts, but are never a bestiary entry.
+Host types are derived, not listed: every registered entity type that has default attributes (that is, is living), is not `minecraft:player`, and is in neither `#remission:immune` nor `#remission:bestiary_hidden` (`Bestiary.isHostType`, `Bestiary.hostTypes()`). Each installed mod's living mobs count without data; to drop a type from infection and the bestiary, tag it immune; to keep it infectable but out of the bestiary, tag it hidden. Players can still carry the Strain and be scanned as hosts, but are never a bestiary entry.
 
-Player attachment `remission:bestiary` (`BestiaryProgress`): the highest host stage each host type has been scanned at by this player. Written only on the server, when the scanner gives a host scan of a host type (`Bestiary.recordScan`, keeps the maximum); block scans, non-host scans, scans of types the bestiary does not list (a host player, an immune type) and `/give`n scans record nothing. Saved in the player's `neoforge:attachments` NBT only when non-empty and copied on death. Synced through NeoForge attachment sync: updates go to the owning player only, but NeoForge's initial sync when a client starts tracking an entity ignores the sync predicate, so clients tracking the player also receive its current map. Treat the map as visible to nearby clients; Remission's client reads only the local player's. Shape:
+Player attachment `remission:bestiary` (`BestiaryProgress`): the highest host stage each host type has been scanned at by this player. Written only on the server, when the scanner gives a host scan of a host type (`Bestiary.recordScan`, keeps the maximum); block scans, non-host scans, scans of types the bestiary does not list (a host player, an immune or hidden type) and `/give`n scans record nothing. Saved in the player's `neoforge:attachments` NBT only when non-empty and copied on death. Synced through NeoForge attachment sync: updates go to the owning player only, but NeoForge's initial sync when a client starts tracking an entity ignores the sync predicate, so clients tracking the player also receive its current map. Treat the map as visible to nearby clients; Remission's client reads only the local player's. Shape:
 
 ```json
 { "minecraft:cow": 2, "mekanism:robit": 1 }
@@ -75,6 +75,8 @@ Player attachment `remission:bestiary` (`BestiaryProgress`): the highest host st
 | --- | --- | --- |
 | key | resource location | Scanned host's entity type. Kept even if the type is no longer registered (not listed while missing). |
 | value | int ≥ 1 | Highest host stage scanned for that type. |
+
+Entity tag `#remission:bestiary_hidden` (`Bestiary.HIDDEN`), `data/<ns>/tags/entity_type/bestiary_hidden.json`, standard tag JSON: living types that can still become hosts but that survival players cannot normally meet as hosts. Tagged types are left out of the bestiary list and its total, and their scans record no progress (the scan item is still given). Remission ships `minecraft:giant`, `minecraft:illusioner` and `minecraft:armor_stand`; a pack adds types with `"replace": false` or re-shows a default with `"replace": true` and its own list. There is no spawn-egg or other heuristic, so modded mobs without eggs (the Mekanism robit) stay listed. Tags are read on every check, so `/reload` applies at once on the server and, after the tag sync, on clients; progress already recorded for a newly hidden type is kept but not listed or counted.
 
 Wire format (`BestiaryProgress.STREAM_CODEC`): var-int entry count, then per entry a resource location and a var-int stage. The client opens the bestiary with the key mapping `key.remission.bestiary` (category `key.categories.remission`, default M). Not part of this contract: the `remission:host_scanned` trigger and `remission:hosts_scanned` stat (P8.1).
 

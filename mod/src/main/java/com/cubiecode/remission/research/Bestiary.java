@@ -1,10 +1,13 @@
 package com.cubiecode.remission.research;
 
+import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import java.util.List;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
 import net.minecraft.world.entity.player.Player;
@@ -17,15 +20,23 @@ import net.neoforged.neoforge.attachment.IAttachmentHolder;
  * {@link #syncsTo}). Reads work on either side.
  */
 public final class Bestiary {
+    /**
+     * Types the bestiary leaves out although they could carry the Strain: ones survival players cannot normally meet as
+     * hosts. Remission ships giant, illusioner and armour stand; packs extend or replace it.
+     */
+    public static final TagKey<EntityType<?>> HIDDEN = TagKey.create(Registries.ENTITY_TYPE, Remission.id("bestiary_hidden"));
+
     private Bestiary() {
     }
 
     /**
      * Whether the bestiary lists the type: a living type (one with default attributes, which every living entity type
-     * must register), other than the player, and not in {@code #remission:immune}. Needs tags bound (any loaded world).
+     * must register), other than the player, and in neither {@code #remission:immune} nor {@link #HIDDEN}. Tags are read
+     * on every call, so a reload's tags apply at once. Needs tags bound (any loaded world).
      */
     public static boolean isHostType(EntityType<?> type) {
-        return type != EntityType.PLAYER && DefaultAttributes.hasSupplier(type) && !type.is(Corruption.IMMUNE);
+        return type != EntityType.PLAYER && DefaultAttributes.hasSupplier(type) && !type.is(Corruption.IMMUNE)
+                && !type.is(HIDDEN);
     }
 
     /** Every host type, in registry order. */
@@ -41,7 +52,7 @@ public final class Bestiary {
 
     /**
      * Records a host scan of the type at the stage; keeps the highest stage per type. Types the bestiary does not list
-     * ({@link #isHostType}: players, immune or unregistered types) record nothing. Server only.
+     * ({@link #isHostType}: players, immune, hidden or unregistered types) record nothing. Server only.
      */
     public static void recordScan(Player player, ResourceLocation type, int stage) {
         if (player.level().isClientSide()) {
