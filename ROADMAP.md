@@ -140,9 +140,10 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.4: Host overlay on separately modelled layers
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p2.4-layer-overlay
 - PR: https://github.com/CubieCode/counterstrain/pull/27
+- Validation: PR #27; companion overlay on armour, wool, slime gel, drowned, horse and wolf armour layers (35 in the dev runtime, no mixin); `corruption/stages_layers` references reviewed, `stages_vanilla`/`stages_modded` updated only on layered mobs; gpu-smoke green on RTX 4070; CI green.
 - Depends on: P2.2
 - Scope: Extend the Strain overlay to render layers that draw their own model or texture over the body, which P2.2's layer cannot reach: humanoid armour (players, zombies, skeletons, armour stands), sheep wool, slime outer gel, the drowned's outer layer, horse and wolf armour, and the same vanilla layer helpers when modded renderers use them. Emissive and eye layers (spider and enderman eyes) stay untouched. Prefer wrapping or re-registering those layers from `EntityRenderersEvent.AddLayers` without mixins; if a mixin turns out to be necessary, report it first, since adding a mixin config changes the mod metadata and build files (serialization gates). Reuse P2.2's render type, patterns and `hosts.overlayIntensity`; no new art unless a layer needs it. GeckoLib-style and other non-`LivingEntityRenderer` renderers remain out of scope.
 - Acceptance: At stages 1–3, armoured zombies and players, sheep, slimes, drowned and an armour stand show the overlay on those layers, following each layer's own texture cutout. Eye layers are unchanged, non-hosts render exactly as before (`smoke/mob_lineup` still matches its reference) and nothing crashes with modded layers in the dev runtime. New harness scene `corruption/stages_layers` with reviewed references. `corruption/stages_vanilla` and `stages_modded` references are updated only for intended changes, explained in the PR. Ledger updated if new art is added; placeholders marked.
@@ -169,9 +170,10 @@ Goals: hosts of any kind behave as hostile Strain-infected creatures, infect oth
 
 ### P3.2: Brain, flying and swimming fallbacks
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p3.2-behaviour-fallbacks
 - PR: https://github.com/CubieCode/counterstrain/pull/26
+- Validation: PR #26; brain (incl. warden, breeze), flying and swimming host fallbacks with `remission:unsupported` default profile (villager, allay, frog); HostFallbackTests 73/73 gametests; deterministic `behaviour/fallbacks` scene reviewed, gpu-smoke green on RTX 4070; CI green.
 - Depends on: P3.1
 - Scope: Fallbacks for brain-based mobs (villager, piglin, axolotl, allay, frog), flyers (bat, phantom-like, parrot, modded) and swimmers (fish, squid, dolphin).
 - Acceptance: Each category either attacks sensibly or is explicitly marked unsupported in its default profile. Harness scene `behaviour/fallbacks`.
@@ -228,9 +230,10 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.4: Public API and events
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p4.4-public-api
 - PR: https://github.com/CubieCode/counterstrain/pull/25
+- Validation: PR #25; `com.cubiecode.remission.api` events (host corrupted/cleansed, chunk stage changed, nidus destroyed, cancellable spread attempt with multiplier, firebreaks honoured in catch-up) and queries; PublicApiTests 70/70 gametests; spread benchmark recorded in ARCHITECTURE; CI green.
 - Depends on: P2.1, P4.1
 - Scope: Create `com.cubiecode.remission.api`: event base classes and conventions (server side, `NeoForge.EVENT_BUS`, posted after the change; batched changes post per chunk), and the hooks for systems already built: host corrupted, host cleansed, chunk stage changed, nidus destroyed, a cancellable Strain spread attempt with a rate multiplier, and queries for corruption stage at a position or chunk and whether an entity is a host. Document every event and query (fields, side, when fired, cancellable or not) in remission-data-formats and the ARCHITECTURE contracts table. The remaining DESIGN hooks (block festered, block purified, chunk entered remission, surge started/ended, viral load changed and its query) are added by the items that build those systems.
 - Acceptance: Gametests fire each event and assert payloads, cancellation of the spread attempt stops spread, and the multiplier changes its rate; queries return correct values for host and non-host entities and every stage; nothing outside `api/` is documented as public.
@@ -282,9 +285,10 @@ Goals: knowledge is gathered from the world and recorded.
 
 ### P6.2: Bestiary
 
-- Status: `review`
+- Status: `done`
 - Owner: `feat/p6.2-bestiary`
 - PR: https://github.com/CubieCode/counterstrain/pull/24
+- Validation: PR #24; bestiary key mapping (default M) listing 82 host types in the dev runtime incl. Mekanism robit, `remission:bestiary` player attachment; BestiaryTests; `research/bestiary` references reviewed, gpu-smoke green on RTX 4070; CI green.
 - Depends on: P6.1
 - Scope: Bestiary UI listing host types derived from installed entity types; scan progress per player.
 - Acceptance: Host type count scales with dev-runtime mods; harness scene `research/bestiary`. Ledger updated; placeholders marked.
