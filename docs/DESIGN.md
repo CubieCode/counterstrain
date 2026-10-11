@@ -38,6 +38,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Drifting airborne Strain | **miasma clouds** | spawned by surges above festering land; add viral load to anything flying through |
 | The Counterstrain's deployable carrier | **dispersal payload** | block `remission:dispersal_payload`; can also ride a moving Create contraption through the optional integration |
 | Research records made by the scanner | **scans**: **host scans** and **block scans** | item `remission:scanner`; data items `remission:host_scan`, `remission:block_scan`; data component `remission:scan_data` |
+| A player who died to the Strain, risen as a host carrying their items | **revenant** | entity `remission:revenant`; item `remission:revenant_tracker` (planned, P5.3 and P5.4); "kill your revenant to get your gear back" |
 | A player's record of host types, filled by host scans | **bestiary** | player attachment `remission:bestiary`; key mapping `key.remission.bestiary`; "12 of 79 host types scanned" |
 
 "Variant" on its own always means a resistant mutation of the Strain, never a kind of host (a **fester variant** is a biome and is always called that in full): scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
@@ -79,6 +80,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - **Viral load:** a player attachment that rises in festering chunks, with escalating debuffs; serums and gear reduce it. Drinking water from, or swimming in, water in festering chunks also adds viral load, and so does flying through a miasma cloud. Gain from festering land falls off with height above the ground (config: on/off and the falloff curve), so anything airborne, from elytra to airships, can cross festering zones above the worst of it. Below the ground there is no falloff: caves and tunnels under a festering chunk count in full. There are no climate mods: viral load is the only exposure system.
 - **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot.
 - **Remission zones:** purified chunks enter remission and grant bonuses (spawn safety, growth, resource yields; tunable).
+- **Revenants:** a player who dies to the Strain (killed by a host or revenant, by viral load, or anywhere in a festering chunk) rises as a revenant: a host with their skin, wearing their armour and holding their weapon, that keeps their items and experience and stays near where they fell. Other deaths drop items as usual, and `keepInventory` turns revenants off. Anyone can fight a revenant, but its items can be picked up only by its owner, and by their team where the pack defines one (Counterstrain uses FTB Teams), until a timeout frees them. A craftable **revenant tracker**, worn in a Curios slot or carried anywhere in the inventory, shows your revenants as JourneyMap waypoints, or as a HUD pointer without JourneyMap.
 
 ### Research
 

@@ -25,6 +25,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - E: P4.2 (done), then P4.3 (after P4.5 and P8.1, both done). P4.3 owns surge scheduling, miasma clouds, its surge API events and the surge survived trigger and stat, and is the remission-data-formats owner while it runs; append-only edits in `api/` and `quest/`.
 - P4.6 and P4.7 (follow-ups to P4.2 and P3.3) can join wave E with P4.3 or run alone. P4.6 owns `world/FesteringStages` and `world/FesterMaps` and runs before P5.2; P4.7 owns `infection/`. With P4.3 in the same wave, appoint one owner for config specs and one for remission-data-formats.
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
+- P5.3 → P5.4 serially, after P5.1. P5.3 owns the revenant entity, `integration/curios/` and its build-file entries; P5.4 owns its payload and coordinates `integration/journeymap/` with P8.2 (never in the same wave).
 - G: P7.2 → P7.3 serially (recipe types and KubeJS schemas are contracts), after P8.1 (done; later items append their triggers and stats to its contracts).
 - H: P8.2 + P9.1, then P8.3 + P9.2. P8.2 owns command syntax; P8.3 owns the KubeJS binding contract.
 - I: P10.1 alone (owns `pack/pack.toml`, `pack/mods/` and the build-file entries for every mod-side integration).
@@ -304,7 +305,29 @@ Goals: the player can survive the Strain and push it back locally.
 - Acceptance: Gametests for radius, cleansing and remission entry; harness scene `purification/pylon_radius` (before/after). Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
-Exit criteria: a player can enter, survive and cleanse festering land in a dev world, leaving chunks in remission; scenes reviewed.
+### P5.3: Revenants
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P2.2, P3.1, P4.4, P5.1, P8.1
+- Scope: Entity `remission:revenant`: when a player dies to the Strain (killer is a host or revenant, death by viral load, or death anywhere in a festering chunk at stage 1 or above, underground included), their items (main inventory, armour, offhand, and Curios slots through a guarded `integration/curios/`) and experience go into a revenant at the death position instead of dropping; other deaths and `keepInventory` behave as vanilla. The revenant is a hostile host rendered with the player's skin and the host overlay (P2.2), wearing their armour and holding their main-hand item, which it fights with; it never despawns, stays within a short radius of where the player fell, survives unloads, and takes damage only from players and their projectiles (fire, lava, falling, drowning and other mobs cannot destroy it; in the void it returns to its death position). Killing it drops its items and experience at its position; item pickup is restricted to the owner, widened by a public API event (packs add teammates), and freed for anyone after a timeout (config). A saved per-level index keeps each revenant's owner, dimension and last position, so P5.4 can track unloaded revenants. A player can have several revenants, one per death. Pack side: a KubeJS handler on that event (NeoForge event listening) lets FTB Teams members collect too; if FTB Teams' team lookup is not reachable from KubeJS, a guarded `integration/ftbteams/` does it instead. Emits revenant risen and revenant slain events; adds the revenant reclaimed trigger and a revenants reclaimed stat, following P8.1's conventions. Glossary entry: revenant (DESIGN).
+- Acceptance: Gametests: each Strain death creates a revenant holding exactly the dropped items (Curios included when Curios is present) and the experience; non-Strain deaths and `keepInventory` drop as vanilla; the revenant ignores non-player damage and returns from the void; it persists across unload and reload and stays leashed; owner-only pickup, the API event widening it, and the timeout; the index is updated on rise, move and death. Harness scene `survival/revenant` (a revenant with a player skin, armour and weapon, at two host stages), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, kubejs-scripting, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns the revenant entity, its renderer and index, `integration/curios/` and its build-file entries (one build-file owner per wave).
+
+### P5.4: Revenant tracker
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P5.3
+- Scope: Craftable item `remission:revenant_tracker` (default recipe in the mod, pack may replace it), active when worn in a Curios charm slot (guarded `integration/curios/`) or carried anywhere in the inventory. While active, the server sends the holder the dimension and position of their own revenants (and those of anyone the P5.3 pickup event allows them to reclaim) from the revenant index, so unloaded revenants show too, on an interval. With JourneyMap present, each revenant is a JourneyMap waypoint or marker on the full-screen map and minimap (guarded `integration/journeymap/`, `compileOnly`), removed when the revenant is slain or the tracker is no longer carried; without JourneyMap, a HUD pointer shows direction and distance to the nearest revenant. Client code under `client/`.
+- Acceptance: Gametests for activation (Curios slot, inventory, neither) and for the positions sent (own, allowed, unloaded, removed on death); harness scenes `survival/revenant_tracker` (HUD pointer) and, with JourneyMap in the dev runtime, `survival/revenant_map`, reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, visual-checks, content-provenance
+- Parallel: Adds a network payload (one registry and network spine owner per wave) and the JourneyMap build-file entry; P8.2 also uses `integration/journeymap/`, so whichever runs second appends to that package rather than replacing it.
+
+Exit criteria: a player can enter, survive and cleanse festering land in a dev world, leaving chunks in remission; scenes reviewed. P5.3 and P5.4, added later, are not part of these exit criteria.
 
 ## Phase 6: Research
 
