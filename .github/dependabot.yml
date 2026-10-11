@@ -1,0 +1,13 @@
+# Keeps workflow action versions current. Gradle and packwiz versions are
+# pinned deliberately (mod/gradle.properties, pack/) and are not managed here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: 'CI:'

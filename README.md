@@ -76,7 +76,7 @@ Remission is not in the packwiz index until it is published. For development, `t
 
 ## Releases
 
-The mod and the pack are versioned independently. CI (`ci.yml`) builds, runs datagen and gametests and checks the pack on every push and PR; `docs.yml` runs `tools/check-docs.py`; `gpu-smoke.yml` is the manual GPU client check. Tags `mod-v<version>` and `pack-v<version>` build draft GitHub releases (`release-mod.yml`, `release-pack.yml`). Platform publishing is roadmap P12.3: Remission goes to Modrinth and CurseForge; Counterstrain is CurseForge-first (the CurseForge zip is the release artifact; see [distribution](docs/DESIGN.md#distribution)). See the release skill.
+The mod and the pack are versioned independently. CI (`ci.yml`) builds, runs datagen and gametests and checks the pack on every push and PR that touches more than Markdown, and its `ci-ok` job and `docs.yml` are the required checks for `main`; `docs.yml` runs `tools/check-docs.py`; `gpu-smoke.yml` is the manual GPU client check. Tags `mod-v<version>` and `pack-v<version>` build draft GitHub releases (`release-mod.yml`, `release-pack.yml`). Platform publishing is roadmap P12.3: Remission goes to Modrinth and CurseForge; Counterstrain is CurseForge-first (the CurseForge zip is the release artifact; see [distribution](docs/DESIGN.md#distribution)). See the release skill.
 
 ## License
 

@@ -1,6 +1,7 @@
 name: CI
 # Mod: build, datagen drift check and gametests. Pack: packwiz index check.
-# Docs-only changes skip both jobs.
+# Docs-only changes skip both jobs. `ci-ok` always reports, so the main branch
+# ruleset requires it instead of the path-dependent jobs.
 #
 # Runners: vars.RUNNER selects them (JSON, e.g. ["self-hosted","foundry"]);
 # unset means ubuntu-latest. The repository is public, so pull requests from
@@ -12,9 +13,7 @@ name: CI
 on:
   push:
     branches: [main]
-    paths-ignore: ['**/*.md', 'docs/**']
   pull_request:
-    paths-ignore: ['**/*.md', 'docs/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,7 +21,29 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.code == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+
   mod:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ fromJSON((github.event.pull_request.head.repo.fork && '"ubuntu-latest"') || vars.RUNNER || '"ubuntu-latest"') }}
     timeout-minutes: 30
     defaults:
@@ -58,6 +79,8 @@ jobs:
           if-no-files-found: ignore
 
   pack:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ fromJSON((github.event.pull_request.head.repo.fork && '"ubuntu-latest"') || vars.RUNNER || '"ubuntu-latest"') }}
     timeout-minutes: 15
     steps:
@@ -67,3 +90,18 @@ jobs:
           PACKWIZ_BIN_DIR="$RUNNER_TEMP/bin" tools/install-packwiz.sh
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       - run: tools/pack.sh check
+
+  ci-ok:
+    needs: [changes, mod, pack]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Fail unless every job passed or was skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) exit 1 ;; esac
+          done
