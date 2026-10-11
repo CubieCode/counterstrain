@@ -169,8 +169,8 @@ Goals: hosts of any kind behave as hostile Strain-infected creatures, infect oth
 
 ### P3.2: Brain, flying and swimming fallbacks
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p3.2-behaviour-fallbacks
 - PR:
 - Depends on: P3.1
 - Scope: Fallbacks for brain-based mobs (villager, piglin, axolotl, allay, frog), flyers (bat, phantom-like, parrot, modded) and swimmers (fish, squid, dolphin).
