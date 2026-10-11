@@ -8,6 +8,10 @@ import net.neoforged.neoforge.event.entity.living.LivingEvent;
  * applied (attachment, host attributes and host goals included), so {@link CorruptionQueries} already reports the new
  * state. Levels are 0 to {@link CorruptionQueries#MAX_LEVEL}; a stage above 0 means the entity is a host. Not
  * cancellable. Abstract, so the bus only accepts listeners for {@link HostCorruptedEvent} and {@link HostCleansedEvent}.
+ *
+ * <p>Re-entrancy: a listener that changes the same entity's level posts a nested event at once, before later listeners
+ * of this event run; those later listeners then see this event's (now stale) values while queries return the nested
+ * change. Prefer deferring such changes (for example to the next tick).
  */
 public abstract class HostEvent extends LivingEvent {
     private final int oldLevel;

@@ -378,6 +378,7 @@ public final class PublicApiTests {
         ServerLevel level = helper.getLevel();
         withNidus(helper, (nidus, origin) -> {
             ChunkPos east = new ChunkPos(origin.x + 1, origin.z);
+            setLevel(level, origin, 100, 0L);
             setLevel(level, east, 0, 0L);
             long since = NidusIndex.get(level).nidi().stream().filter(n -> n.pos().equals(nidus)).findFirst().orElseThrow().since();
             long now = since + 3L * SETTINGS.intervalTicks();
@@ -389,6 +390,38 @@ public final class PublicApiTests {
             helper.assertTrue(events.getFirst().isCatchUp(), "catch-up step not flagged");
             helper.assertValueEqual(events.getFirst().getAmount(), 3 * SETTINGS.spreadStep(), "catch-up amount for 3 passes");
             helper.assertValueEqual(CorruptionQueries.chunkLevel(level, east), 3 * SETTINGS.spreadStep() / 2, "halved catch-up");
+        });
+        helper.succeed();
+    }
+
+    /** Cancelling every step into the chunk east of a nidus keeps the chunk behind it clean after it reloads. */
+    @GameTest(template = "empty")
+    public static void cancelledSpreadHoldsThroughCatchUp(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        withNidus(helper, (nidus, origin) -> {
+            ChunkPos east = new ChunkPos(origin.x + 1, origin.z);
+            ChunkPos behind = new ChunkPos(origin.x + 2, origin.z);
+            long base = aligned(level.getGameTime() + 100_000L);
+            setLevel(level, origin, 100, base);
+            setLevel(level, east, 0, 0L);
+            setLevel(level, behind, 0, 0L);
+            SpreadEngine engine = FesteringLand.newEngine(level, () -> SETTINGS);
+            List<StrainSpreadAttemptEvent> attempts = capture(StrainSpreadAttemptEvent.class,
+                    event -> event.getTo().equals(east) || event.getTo().equals(behind),
+                    event -> {
+                        if (event.getTo().equals(east)) {
+                            event.setCanceled(true);
+                        }
+                    }, () -> {
+                        runPasses(engine, base, 4);
+                        // The chunk behind the firebreak reloads after a long absence.
+                        engine.catchUp(behind.toLong(), base + 1000L * SETTINGS.intervalTicks(), SETTINGS);
+                    });
+            helper.assertValueEqual(CorruptionQueries.chunkLevel(level, east), 0, "firebreak chunk");
+            helper.assertValueEqual(CorruptionQueries.chunkLevel(level, behind), 0, "chunk behind the firebreak after catch-up");
+            helper.assertTrue(attempts.stream().allMatch(event -> event.getTo().equals(east)),
+                    "a step from the held firebreak chunk was attempted");
+            helper.assertValueEqual(attempts.size(), 4, "cancelled live attempts into the firebreak chunk");
         });
         helper.succeed();
     }

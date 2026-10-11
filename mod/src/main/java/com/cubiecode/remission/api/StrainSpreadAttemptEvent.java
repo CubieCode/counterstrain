@@ -10,10 +10,17 @@ import net.neoforged.bus.api.ICancellableEvent;
  * chunk with (then {@link #isCatchUp()} is true, {@link #getFrom()} may be unloaded and {@link #getAmount()} covers all
  * the passes it missed). The growth of a nidus's own chunk is not a spread attempt.
  *
- * <p>Cancel it to stop this step (a firebreak); spread past a blocked chunk stops too, because every chunk is reached
- * through its parent. Or set {@link #setRateMultiplier rate multiplier} to scale it: the level gained is
- * {@code amount * multiplier}, its fraction resolved deterministically per chunk and game time, capped at the chunk's
- * target. Listeners compose by multiplying ({@code event.setRateMultiplier(event.getRateMultiplier() * 0.5)}).
+ * <p>Cancel it to stop this step (a firebreak). Every chunk is reached through its parent, and a step from a loaded
+ * parent below the spread threshold is held without an event, live and in catch-up, so a chunk kept clean by
+ * cancelling also keeps the chunks behind it clean while it is loaded. A step from an unloaded parent is not held: the
+ * engine assumes the parent is at its own target, so a firebreak only holds while its chunk is loaded (keep it
+ * force-loaded, or cancel the steps behind it as well).
+ *
+ * <p>Or set {@link #setRateMultiplier rate multiplier} to scale it: the level gained is {@code amount * multiplier},
+ * its fraction resolved deterministically per chunk and game time, capped at the chunk's target. Listeners compose by
+ * multiplying ({@code event.setRateMultiplier(event.getRateMultiplier() * 0.5)}). A catch-up step scaled below 1 (or
+ * cancelled) still moves the chunk's last change to now, so the passes it shortened are not credited again: the chunk
+ * ends below where full-rate spread would have taken it and continues from there.
  */
 public class StrainSpreadAttemptEvent extends FesteringLandEvent implements ICancellableEvent {
     private final ChunkPos from;

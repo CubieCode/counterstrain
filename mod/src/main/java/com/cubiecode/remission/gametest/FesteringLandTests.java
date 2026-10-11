@@ -196,6 +196,10 @@ public final class FesteringLandTests {
         long far = ChunkPos.asLong(3, 0);
         long outside = ChunkPos.asLong(9, 0);
         land.set(near, new ChunkCorruption(4, 160L));
+        // Parents at or above the threshold, so catch-up may pass the Strain on (a parent below it holds the step).
+        long nidusChunk = ChunkPos.asLong(0, 0);
+        land.set(nidusChunk, new ChunkCorruption(ChunkCorruption.MAX_LEVEL, 160L));
+        land.set(ChunkPos.asLong(2, 0), new ChunkCorruption(SETTINGS.spreadThreshold(), 160L));
 
         long now = 160L + 3 * SETTINGS.intervalTicks() + 7;
         engine.catchUp(near, now, SETTINGS);
@@ -205,7 +209,7 @@ public final class FesteringLandTests {
         helper.assertValueEqual(land.get(far).level(), SETTINGS.target(3), "far chunk capped at its target");
         engine.catchUp(outside, now, SETTINGS);
         helper.assertFalse(land.chunks.containsKey(outside), "chunk out of reach changed");
-        long nidusChunk = ChunkPos.asLong(0, 0);
+        land.chunks.remove(nidusChunk);
         engine.catchUp(nidusChunk, 100L + 2 * SETTINGS.intervalTicks(), SETTINGS);
         helper.assertValueEqual(land.get(nidusChunk).level(), 2 * SETTINGS.nidusGrowth(), "nidus chunk after 2 passes");
         helper.succeed();
@@ -223,14 +227,72 @@ public final class FesteringLandTests {
         }
         long t = 10_000;
         int ticks = 0;
+        int processed = 0;
         while (engine.pendingCatchUps() > 0) {
             int before = engine.pendingCatchUps();
             SpreadEngine.TickWork work = engine.tick(t++);
             ticks++;
+            processed += work.catchUps();
             helper.assertTrue(work.catchUps() <= SETTINGS.catchUpBudget(), "catch-up over budget: " + work.catchUps());
-            helper.assertValueEqual(before - engine.pendingCatchUps(), work.catchUps(), "queue drained by the work done");
+            helper.assertTrue(before > engine.pendingCatchUps(), "queue did not drain at tick " + ticks);
         }
-        helper.assertValueEqual(ticks, 400 / SETTINGS.catchUpBudget(), "ticks to drain 400 loaded chunks");
+        // Every chunk once, however many parents went first; the last tick may only skip entries already done.
+        helper.assertValueEqual(processed, 400, "chunks caught up");
+        int minTicks = 400 / SETTINGS.catchUpBudget();
+        helper.assertTrue(ticks == minTicks || ticks == minTicks + 1, "ticks to drain 400 loaded chunks: " + ticks);
+        helper.succeed();
+    }
+
+    /** Catch-up of a region that loads at once reaches the same levels whatever order its chunks were queued in. */
+    @GameTest(template = "empty")
+    public static void catchUpOrderDoesNotMatter(GameTestHelper helper) {
+        List<Map<Long, Integer>> results = new ArrayList<>();
+        for (boolean outsideIn : new boolean[] {false, true}) {
+            MapLand land = new MapLand(12);
+            land.nidi.add(nidusInChunk(0, 0));
+            // One tick catches the whole region up, before any live pass touches it.
+            SpreadSettings settings = new SpreadSettings(SETTINGS.intervalTicks(), SETTINGS.nidusGrowth(), SETTINGS.spreadStep(),
+                    SETTINGS.falloff(), SETTINGS.spreadThreshold(), SETTINGS.chunkBudget(), 4096);
+            SpreadEngine engine = new SpreadEngine(land, () -> settings);
+            List<Long> chunks = new ArrayList<>();
+            for (int x = -8; x <= 8; x++) {
+                for (int z = -8; z <= 8; z++) {
+                    chunks.add(ChunkPos.asLong(x, z));
+                }
+            }
+            chunks.sort(java.util.Comparator.comparingInt(c -> Math.abs(ChunkPos.getX(c)) + Math.abs(ChunkPos.getZ(c))));
+            if (outsideIn) {
+                java.util.Collections.reverse(chunks);
+            }
+            chunks.forEach(engine::chunkLoaded);
+            engine.tick(100_000);
+            helper.assertValueEqual(engine.pendingCatchUps(), 0, "queue after one tick");
+            results.add(land.levels());
+        }
+        helper.assertValueEqual(results.get(1), results.get(0), "levels after outside-in vs inside-out catch-up");
+        helper.assertValueEqual(results.get(0).get(ChunkPos.asLong(SETTINGS.radius(), 0)), SETTINGS.target(SETTINGS.radius()),
+                "edge of reach after a long absence");
+        helper.succeed();
+    }
+
+    /** A firebreak holds through catch-up: a chunk behind a cancelled step stays clean after it reloads. */
+    @GameTest(template = "empty")
+    public static void catchUpRespectsFirebreak(GameTestHelper helper) {
+        MapLand land = new MapLand(12);
+        land.nidi.add(nidusInChunk(0, 0));
+        land.blocked = chunk -> ChunkPos.getX(chunk) == 2;
+        land.set(ChunkPos.asLong(0, 0), new ChunkCorruption(ChunkCorruption.MAX_LEVEL, 0L));
+        land.set(ChunkPos.asLong(1, 0), new ChunkCorruption(SETTINGS.target(1), 0L));
+        SpreadEngine engine = new SpreadEngine(land, () -> SETTINGS);
+        long now = 1000L * SETTINGS.intervalTicks();
+        engine.catchUp(ChunkPos.asLong(2, 0), now, SETTINGS);
+        engine.catchUp(ChunkPos.asLong(3, 0), now, SETTINGS);
+        engine.catchUp(ChunkPos.asLong(4, 0), now, SETTINGS);
+        helper.assertValueEqual(level(land, 2, 0), 0, "firebreak chunk");
+        helper.assertValueEqual(level(land, 3, 0), 0, "chunk behind the firebreak");
+        helper.assertValueEqual(level(land, 4, 0), 0, "second chunk behind the firebreak");
+        engine.catchUp(ChunkPos.asLong(-1, 0), now, SETTINGS);
+        helper.assertValueEqual(level(land, -1, 0), SETTINGS.target(1), "open side caught up");
         helper.succeed();
     }
 
