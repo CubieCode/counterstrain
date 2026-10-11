@@ -271,8 +271,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.7: Festering land infects mobs
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: `feat/p4.7-festering-land-infection`
 - PR:
 - Depends on: P3.3, P4.1, P4.4
 - Scope: Build the festering land infection source that P3.3 stubbed (`Infection.canInfectFromFesteringLand`, profile flag `conversion.festering_land`). Mobs that pass that check build up exposure while inside a festering chunk at or above a minimum stage, at any height, underground included; exposure decays outside festering land and is saved with the mob. Past a threshold the mob becomes a host through the corruption API with a new `CorruptionCause` (festering land), and its `convert_to` profile entry applies as it does for infection on kill. Config: on/off, minimum stage and exposure time. Exposure is checked on an interval with a per-tick budget, not for every mob every tick. This is what creates the first hosts in normal play. Documents the source, the new cause and the config in remission-data-formats and docs/ARCHITECTURE.md.
