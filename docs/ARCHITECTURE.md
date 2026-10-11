@@ -106,9 +106,10 @@ All schemas start as stubs in the remission-data-formats skill and change only w
 
 ## Runtime and test infrastructure
 
-- Run configs: `client` (`run/client`), `server` (`run/server`), `gameTestServer` (`run/gametest`, exits on completion), `data` (`run/data`, writes `src/generated/resources`).
+- Run configs: `client` (`run/client`; also loads the dev-only scene harness), `server` (`run/server`), `gameTestServer` (`run/gametest`, exits on completion), `data` (`run/data`, writes `src/generated/resources`).
 - Dev runtime mods (`localRuntime`, never published): KubeJS + Rhino + Better Advanced Tooltips, ProbeJS, Architectury, FTB Library/Teams/Quests (FTB Maven, not on Modrinth), JEI + EMI, Mekanism, AE2 + GuideME, JourneyMap. Toggle `dev_runtime_mods`. CI disables them.
-- Headless client: `tools/run-client-headless.sh` (Xvfb + VirtualGL EGL on the RTX 4070). Phase 1 adds a dev-only harness that loads fixed scenes, screenshots them and quits.
+- Headless client: `tools/run-client-headless.sh` (Xvfb + VirtualGL EGL on the RTX 4070).
+- Scene harness (dev only): the `harness` source set (`mod/src/harness/`) is a separate client-only mod, `remission_harness`, that only the `client` run loads (`loadedMods`); the jar and the other runs never contain it, and `build` compiles it so it cannot rot. It does nothing unless `-Dremission.harness.scene=<id>` is set (`tools/run-client-headless.sh --scene <id>` sets it). Then it recreates a fixed superflat world, runs the scene JSON from `mod/src/harness/resources/harness/scenes/`, saves the named screenshots and exits. See the visual-checks skill for the scene format.
 
 ## Decisions
 
@@ -122,4 +123,5 @@ All schemas start as stubs in the remission-data-formats skill and change only w
 - **Integrations pack-side first:** each tie-in in DESIGN's Pack integrations table is pack-side (KubeJS, datapacks on Remission's surfaces) unless the other mod's content can be registered or hooked only from Java; then it is a guarded `integration/<modid>/` package. P10.1 owns membership (`pack/mods/`) and the `compileOnly`/dev-runtime entries for every mod-side integration, so later phase 10 lanes do not touch build files.
 - **Content provenance:** player-facing content is tracked in [CONTENT-PROVENANCE](CONTENT-PROVENANCE.md); `tools/check-provenance.sh` (CI: `docs.yml`) fails when an image, sound or model has no row, and when a texture's magenta placeholder marker disagrees with its row's status.
 - **Pack datapack in `pack/kubejs/data/`:** KubeJS loads it as a datapack in every world without another mod.
+- **Scene harness determinism and exit:** scenes freeze the tick (`/tick freeze`) after time and weather, spawn mobs without `finalizeSpawn` (no random gear or variants), and pin the image-affecting options in memory (GUI hidden, clouds off, render distance 8, FOV 70, fancy graphics). Repeated runs give byte-identical PNGs on foundry. The harness ends the process with libc `_exit` after flushing logs, because under VirtualGL's EGL back end the NVIDIA driver segfaults in `libEGL_nvidia` during libc `exit()`: a normal quit, `System.exit` and `Runtime.halt` all end with exit code 134.
 - **Performance:** spread, catch-up and visual stage changes must be budgeted per tick and measured on foundry (phase 12 includes client FPS under heavy spread).

@@ -2,13 +2,17 @@
 # Launch the Remission dev client on foundry's virtual display with the GPU
 # redirected through VirtualGL, then verify the renderer and tear it down.
 #
-#   tools/run-client-headless.sh [--resolution 1920x1080] [--timeout 300]
-#                                [--no-framebuffer] [--gpu-wait 1800]
-#                                [-- extra gradle args]
+#   tools/run-client-headless.sh [--scene <area/subject>] [--resolution 1920x1080]
+#                                [--timeout 300] [--no-framebuffer]
+#                                [--gpu-wait 1800] [-- extra gradle args]
 #
-# --timeout 0 waits for the game to exit by itself. Without a test harness
-# (roadmap phase 1) the client never quits, so a timeout is normally needed;
-# reaching it is the expected way for a smoke run to end.
+# Without --scene the client never quits by itself: reaching --timeout is the
+# expected end of a smoke run (--timeout 0 waits for a manual exit).
+# --scene runs a dev-only harness scene (mod/src/harness/resources/harness/
+# scenes/<id>.json): the game builds the fixed superflat world, takes the
+# scene's screenshots and quits; the run passes only if it exits 0 and the
+# harness reports status=ok. --timeout (default 600 with --scene) is then only a
+# safety bound, and reaching it fails the run.
 # Parallel Orca lanes and CI jobs share one RTX 4070, so runs take an
 # exclusive lock (~/.cache/counterstrain/gpu.lock) and wait up to --gpu-wait
 # seconds for it; the timeout starts once the lock is held.
@@ -16,17 +20,20 @@
 #   console.log      Gradle and game stdout/stderr
 #   latest.log       the game's log (mod/run/client/logs/latest.log)
 #   framebuffer.png  last frame of the virtual display, when captured
+#   screenshots/     --scene only: <shot>.png and harness-result.txt
 #   result.txt       renderer verdict and exit reason
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
 resolution=1920x1080
-timeout_s=300
+timeout_s=
+scene=
 framebuffer=1
 gpu_wait=1800
 gradle_args=()
 while (($#)); do
   case "$1" in
+    --scene) scene="${2:?}"; shift 2 ;;
     --resolution) resolution="${2:?}"; shift 2 ;;
     --timeout) timeout_s="${2:?}"; shift 2 ;;
     --no-framebuffer) framebuffer=0; shift ;;
@@ -37,6 +44,11 @@ while (($#)); do
   esac
 done
 [[ "$resolution" =~ ^[0-9]+x[0-9]+$ ]] || die "resolution must look like 1920x1080"
+if [[ -n "$scene" ]]; then
+  [[ "$scene" =~ ^[a-z0-9_]+(/[a-z0-9_]+)*$ ]] || die "scene must look like area/subject"
+  [[ -f "$mod_dir/src/harness/resources/harness/scenes/$scene.json" ]] || die "no such scene: $scene"
+fi
+: "${timeout_s:=$([[ -n "$scene" ]] && echo 600 || echo 300)}"
 [[ "$timeout_s" =~ ^[0-9]+$ ]] || die "timeout must be whole seconds"
 [[ "$gpu_wait" =~ ^[0-9]+$ ]] || die "gpu-wait must be whole seconds"
 
@@ -57,6 +69,9 @@ run_dir="$local_dir/runs/client-$(date -u +%Y%m%dT%H%M%SZ)"
 fb_dir="$run_dir/.xvfb"
 mkdir -p "$fb_dir"
 ln -sfn "$(basename "$run_dir")" "$local_dir/runs/latest"
+shots_dir="$run_dir/screenshots"
+harness_args=()
+[[ -n "$scene" ]] && harness_args=("-Pharness_scene=$scene" "-Pharness_output=$shots_dir")
 game_log="$mod_dir/run/client/logs/latest.log"
 rm -f "$game_log"
 # Skip the first-launch accessibility prompt so runs land on the title menu.
@@ -71,7 +86,7 @@ fi
 xvfb_server_args="-screen 0 ${resolution}x24"
 ((framebuffer)) && xvfb_server_args+=" -fbdir $fb_dir"
 
-log "Launching client at $resolution (timeout ${timeout_s}s); output in $run_dir"
+log "Launching client at $resolution${scene:+, scene $scene} (timeout ${timeout_s}s); output in $run_dir"
 # --no-daemon is mandatory: a daemon started outside vglrun would launch the
 # game without the GPU redirect (llvmpipe). setsid gives the whole tree one
 # process group so teardown reaches Xvfb, Gradle and the game JVM.
@@ -79,7 +94,7 @@ log "Launching client at $resolution (timeout ${timeout_s}s); output in $run_dir
   cd "$mod_dir"
   exec setsid xvfb-run -a -s "$xvfb_server_args" \
     "$vglrun" -d egl ./gradlew runClient --no-daemon --console=plain \
-    "-Pclient_width=${resolution%x*}" "-Pclient_height=${resolution#*x}" "${gradle_args[@]}"
+    "-Pclient_width=${resolution%x*}" "-Pclient_height=${resolution#*x}" "${harness_args[@]}" "${gradle_args[@]}"
 ) >"$run_dir/console.log" 2>&1 &
 pid=$!
 pgid=$pid
@@ -139,8 +154,20 @@ if grep -q -E 'Crash report saved|---- Minecraft Crash Report ----' "$run_dir/co
   status=1
 fi
 ((leftover)) && status=1
+if [[ -n "$scene" ]]; then
+  if [[ "$reason" == timeout ]]; then
+    log "error: scene $scene did not finish within ${timeout_s}s"
+    status=1
+  fi
+  if ! grep -qx 'status=ok' "$shots_dir/harness-result.txt" 2>/dev/null; then
+    log "error: scene $scene did not report success (see $shots_dir/harness-result.txt and latest.log)"
+    status=1
+  fi
+  [[ -f "$shots_dir/harness-result.txt" ]] && cat "$shots_dir/harness-result.txt" >&2
+fi
 
 {
+  [[ -n "$scene" ]] && echo "scene=$scene"
   echo "reason=$reason"
   echo "exit_code=$exit_code"
   echo "leftover_processes=$leftover"
