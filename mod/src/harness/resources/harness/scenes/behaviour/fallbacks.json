@@ -15,25 +15,22 @@
     "fill -11 -61 25 11 -53 25 minecraft:white_concrete",
     {"spawn": "minecraft:bat", "pos": [-6.5, -58, 30.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
     {"spawn": "minecraft:parrot", "pos": [-3.5, -58.5, 30.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
-    {"spawn": "minecraft:phantom", "pos": [0.5, -58, 30.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
+    {"spawn": "minecraft:ghast", "pos": [0.5, -58.5, 30.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
     {"spawn": "minecraft:bee", "pos": [4.5, -58.5, 30.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
     {"spawn": "minecraft:pig", "pos": [8.0, -60, 30.5], "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
-    "fill -11 -61 57 11 -61 67 minecraft:smooth_stone",
-    "fill -11 -60 57 11 -54 57 minecraft:white_concrete",
-    "fill -11 -60 58 -11 -57 63 minecraft:glass",
-    "fill 11 -60 58 11 -57 63 minecraft:glass",
-    "fill -10 -60 58 10 -57 63 minecraft:water",
-    {"spawn": "minecraft:cod", "pos": [-6.0, -59, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
-    {"spawn": "minecraft:salmon", "pos": [-3.5, -59, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
-    {"spawn": "minecraft:tropical_fish", "pos": [-1.5, -59, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
-    {"spawn": "minecraft:pufferfish", "pos": [0.5, -59, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
-    {"spawn": "minecraft:squid", "pos": [3.0, -59.5, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
-    {"spawn": "minecraft:dolphin", "pos": [6.0, -59.5, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
+    "fill -11 -61 58 11 -61 67 minecraft:smooth_stone",
+    "fill -12 -61 57 12 -55 57 minecraft:white_concrete",
+    {"spawn": "minecraft:cod", "pos": [-6.0, -60.0, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
+    {"spawn": "minecraft:salmon", "pos": [-3.5, -60.0, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
+    {"spawn": "minecraft:tropical_fish", "pos": [-1.5, -60.0, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
+    {"spawn": "minecraft:pufferfish", "pos": [0.5, -60.0, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
+    {"spawn": "minecraft:squid", "pos": [3.0, -60.0, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
+    {"spawn": "minecraft:dolphin", "pos": [6.0, -60.0, 62.5], "nbt": "{Tags:[\"host\"],NoAI:1b,Silent:1b,PersistenceRequired:1b}"},
     {"corrupt": "@e[tag=host]", "level": 50}
   ],
   "shots": [
     {"name": "brain", "camera": {"pos": [0.5, -59.0, 9.5], "yaw": 180.0, "pitch": 6.0}},
     {"name": "flying", "camera": {"pos": [0.5, -58.5, 39.5], "yaw": 180.0, "pitch": 2.0}},
-    {"name": "swimming", "camera": {"pos": [0.5, -58.5, 69.5], "yaw": 180.0, "pitch": 4.0}}
+    {"name": "swimming", "camera": {"pos": [0.5, -59.0, 68.5], "yaw": 180.0, "pitch": 8.0}}
   ]
 }
