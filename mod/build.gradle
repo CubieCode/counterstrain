@@ -1,0 +1,187 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.148'
+    id 'idea'
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+// Minecraft 1.21.1 ships Java 21. Builds and CI use Temurin 21 (.sdkmanrc);
+// foojay downloads one if no local Java 21 exists.
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+sourceSets.main.resources {
+    srcDir 'src/generated/resources'
+    exclude '**/*.bbmodel'
+    exclude '.cache'
+}
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Modrinth'
+                url = 'https://api.modrinth.com/maven'
+            }
+        }
+        filter {
+            includeGroup 'maven.modrinth'
+        }
+    }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'FTB'
+                url = 'https://maven.ftb.dev/releases'
+            }
+        }
+        filter {
+            includeGroup 'dev.ftb.mods'
+        }
+    }
+}
+
+neoForge {
+    version = project.neo_version
+
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+
+    runs {
+        client {
+            client()
+            gameDirectory = project.file('run/client')
+            // Window size; tools/run-client-headless.sh matches it to the virtual display.
+            programArguments.addAll '--width', project.findProperty('client_width') ?: '1280',
+                    '--height', project.findProperty('client_height') ?: '720'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        server {
+            server()
+            gameDirectory = project.file('run/server')
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        // Runs every registered gametest, then exits non-zero on failure.
+        gameTestServer {
+            type = 'gameTestServer'
+            gameDirectory = project.file('run/gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        data {
+            data()
+            gameDirectory = project.file('run/data')
+            programArguments.addAll '--mod', project.mod_id, '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+// localRuntime: present in dev runs, never published as a dependency.
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    if (project.dev_runtime_mods.toBoolean()) {
+        localRuntime "maven.modrinth:rhino:${rhino_version}"
+        localRuntime "maven.modrinth:better-advanced-tooltips:${better_advanced_tooltips_version}"
+        localRuntime "maven.modrinth:kubejs:${kubejs_version}"
+        localRuntime "maven.modrinth:probejs:${probejs_version}"
+        localRuntime "maven.modrinth:architectury-api:${architectury_version}"
+        localRuntime("dev.ftb.mods:ftb-library-neoforge:${ftb_library_version}") { transitive = false }
+        localRuntime("dev.ftb.mods:ftb-teams-neoforge:${ftb_teams_version}") { transitive = false }
+        localRuntime("dev.ftb.mods:ftb-quests-neoforge:${ftb_quests_version}") { transitive = false }
+        localRuntime "maven.modrinth:jei:${jei_version}"
+        localRuntime "maven.modrinth:mekanism:${mekanism_version}"
+        localRuntime "maven.modrinth:guideme:${guideme_version}"
+        localRuntime "maven.modrinth:ae2:${ae2_version}"
+    }
+}
+
+// Opt-in JetBrains Runtime for interactive runs (enhanced class redefinition).
+// Builds, datagen, gametests and CI always use the default Temurin toolchain.
+if (project.dev_jbr.toBoolean()) {
+    def jbrLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
+        vendor = JvmVendorSpec.JETBRAINS
+    }
+    ['runClient', 'runServer'].each { name ->
+        tasks.named(name).configure {
+            javaLauncher = jbrLauncher
+            jvmArgs '-XX:+AllowEnhancedClassRedefinition'
+        }
+    }
+}
+
+var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url = "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
