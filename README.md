@@ -4,7 +4,7 @@ Counterstrain is a quest-driven, tech-focused Minecraft 1.21.1 (NeoForge) modpac
 
 Inspired by Blightfall.
 
-Status: phase 0 (scaffold) is complete; phases 1 (visual test harness) and 2 (corruption state) are in progress. The dev-only scene harness, the entity corruption attachment and the provenance check are built; no player-visible gameplay yet. See the [roadmap](ROADMAP.md), [design](docs/DESIGN.md) and [architecture](docs/ARCHITECTURE.md). Player-facing content and its origin (AI, procedural, human, licensed) is tracked in [content provenance](docs/CONTENT-PROVENANCE.md).
+Status: phase 0 (scaffold) is complete; phases 1 (visual test harness) and 2 (corruption state) are in progress. The dev-only scene harness and its GPU workflow, the entity corruption attachment and the provenance check are built; no player-visible gameplay yet. See the [roadmap](ROADMAP.md), [design](docs/DESIGN.md) and [architecture](docs/ARCHITECTURE.md). Player-facing content and its origin (AI, procedural, human, licensed) is tracked in [content provenance](docs/CONTENT-PROVENANCE.md).
 
 ## Stack and decisions
 
@@ -39,7 +39,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `cd mod && ./gradlew runServer` | Dedicated dev server (`mod/run/server`, accept the EULA there first) |
 | `tools/run-client-headless.sh --timeout 180` | Dev client on foundry's GPU; logs in `.local/runs/latest/` |
 | `tools/run-client-headless.sh --scene smoke/mob_lineup` | Dev-only harness scene: fixed world, screenshots in `.local/runs/latest/screenshots/`, then exits |
-| `tools/run-scenes.sh [--scenes "a/b c/d"]` | Run every harness scene (or the listed ones) headlessly, compare screenshots when `tools/compare-screenshots.sh` exists; summary in `.local/scene-runs/latest/` |
+| `tools/run-scenes.sh [--scenes "a/b c/d"]` | Run every harness scene (or the listed ones) headlessly, compare screenshots when P1.2's `compare-screenshots.sh` exists; summary in `.local/scene-runs/latest/` |
 | `tools/verify-gpu-render.sh LOG` | Fail unless a client log names the RTX 4070 |
 | `tools/compare-screenshots.sh --scene <id> --actual DIR --out DIR` | Diff a scene run's screenshots against the reviewed references in `tools/visual-references/` (diff images, exit 1 on a difference); `--self-test` runs synthetic cases |
 | `tools/collect-screenshots.sh` | Copy screenshots to `.local/screenshots/latest/` |
