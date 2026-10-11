@@ -198,7 +198,7 @@ public class ModBlockEntities {
 NeoForge has two event buses:
 
 - **MOD bus** (`IEventBus` injected into constructor): lifecycle events, registration events
-- **GAME bus** (`NeoForge.EVENT_BUS`): in-game events  
+- **GAME bus** (`NeoForge.EVENT_BUS`): in-game events
   Import: `net.neoforged.neoforge.common.NeoForge`
 
 `@EventBusSubscriber` is `net.neoforged.fml.common.EventBusSubscriber`; in
