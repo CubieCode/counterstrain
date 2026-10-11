@@ -17,6 +17,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 
 - A: P1.1 + P2.1 + P1.4. P2.1 owns the registry and network spine; P1.1 owns the dev-only harness and `tools/run-client-headless.sh`; P1.4 owns the provenance check script and its `docs.yml` step. P1.4 can also run in any later early wave.
 - B: P2.2 + P2.3 + P1.2 + P1.3, after A. P1.2 owns comparison scripts; P1.3 owns `gpu-smoke.yml`; P2.2 owns client rendering; P2.3 owns commands.
+- P2.4 (follow-up to P2.2) can join any wave after B, or run alone. It owns `client/` host rendering and the `corruption/*` scenes and their references.
 - C: P3.1 + P3.3 + P4.1 + P6.1, after P2.1. Agree the `mob_profile` record (P3.3 owns the contract) before P3.1 starts; registry and lang edits append-only; one registry-spine owner.
 - D: P4.4 + P3.2 + P6.2. P4.4 owns the `api/` package and the API section of remission-data-formats.
 - E: P4.2 + P4.3. P4.2 owns new blocks, textures and biome data; P4.3 owns surge scheduling and miasma clouds. Each adds its own API events; append-only edits in `api/`, one remission-data-formats owner (P4.2).
@@ -137,7 +138,18 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 - Skills: neoforge-mod-dev, content-provenance
 - Parallel: With P2.2
 
-Exit criteria: gametests pass; harness screenshots show stages 0–N on a vanilla and a modded lineup, reviewed.
+### P2.4: Host overlay on separately modelled layers
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P2.2
+- Scope: Extend the Strain overlay to render layers that draw their own model or texture over the body, which P2.2's layer cannot reach: humanoid armour (players, zombies, skeletons, armour stands), sheep wool, slime outer gel, the drowned's outer layer, horse and wolf armour, and the same vanilla layer helpers when modded renderers use them. Emissive and eye layers (spider and enderman eyes) stay untouched. Prefer wrapping or re-registering those layers from `EntityRenderersEvent.AddLayers` without mixins; if a mixin turns out to be necessary, report it first, since adding a mixin config changes the mod metadata and build files (serialization gates). Reuse P2.2's render type, patterns and `hosts.overlayIntensity`; no new art unless a layer needs it. GeckoLib-style and other non-`LivingEntityRenderer` renderers remain out of scope.
+- Acceptance: At stages 1–3, armoured zombies and players, sheep, slimes, drowned and an armour stand show the overlay on those layers, following each layer's own texture cutout. Eye layers are unchanged, non-hosts render exactly as before (`smoke/mob_lineup` still matches its reference) and nothing crashes with modded layers in the dev runtime. New harness scene `corruption/stages_layers` with reviewed references. `corruption/stages_vanilla` and `stages_modded` references are updated only for intended changes, explained in the PR. Ledger updated if new art is added; placeholders marked.
+- Skills: neoforge-mod-dev, visual-checks, content-provenance
+- Parallel: Any wave after B; owns `client/` host rendering and its harness scenes. Its GPU runs compete with other visual lanes.
+
+Exit criteria: gametests pass; harness screenshots show stages 0–N on a vanilla and a modded lineup, reviewed. P2.4, a follow-up added after the phase was accepted, is not part of these exit criteria.
 
 ## Phase 3: Host behaviour
 
