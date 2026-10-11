@@ -54,7 +54,7 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 - Status: `review`
 - Owner: feat/p1.1-scene-harness
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/7
 - Depends on: P0.1
 - Scope: A client hook enabled only by a system property or program argument (never in normal play or release jars' default path). It creates or loads a fixed superflat test world, runs a named scene (spawn a lineup of vanilla and dev-runtime modded mobs, place blocks, set time/weather), positions the camera, waits for chunks and resources, takes screenshots at fixed names, then quits the game. Scenes are data (JSON) or small Java classes in a dev source set. `tools/run-client-headless.sh --scene <id>` passes the flag, uses the exit code instead of a timeout, and collects images.
 - Acceptance: `--scene smoke/mob_lineup` exits 0 on its own within a bounded time and produces identically framed screenshots on repeated runs (same camera, seed, time, weather, GUI hidden). The renderer is verified. Harness code cannot run unless enabled.
