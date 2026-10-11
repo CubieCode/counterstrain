@@ -3,11 +3,15 @@
 # redirected through VirtualGL, then verify the renderer and tear it down.
 #
 #   tools/run-client-headless.sh [--resolution 1920x1080] [--timeout 300]
-#                                [--no-framebuffer] [-- extra gradle args]
+#                                [--no-framebuffer] [--gpu-wait 1800]
+#                                [-- extra gradle args]
 #
 # --timeout 0 waits for the game to exit by itself. Without a test harness
 # (roadmap phase 1) the client never quits, so a timeout is normally needed;
 # reaching it is the expected way for a smoke run to end.
+# Parallel Orca lanes and CI jobs share one RTX 4070, so runs take an
+# exclusive lock (~/.cache/counterstrain/gpu.lock) and wait up to --gpu-wait
+# seconds for it; the timeout starts once the lock is held.
 # Output: .local/runs/client-<UTC time>/ (and .local/runs/latest):
 #   console.log      Gradle and game stdout/stderr
 #   latest.log       the game's log (mod/run/client/logs/latest.log)
@@ -19,24 +23,35 @@ source "$(dirname "$0")/lib.sh"
 resolution=1920x1080
 timeout_s=300
 framebuffer=1
+gpu_wait=1800
 gradle_args=()
 while (($#)); do
   case "$1" in
     --resolution) resolution="${2:?}"; shift 2 ;;
     --timeout) timeout_s="${2:?}"; shift 2 ;;
     --no-framebuffer) framebuffer=0; shift ;;
+    --gpu-wait) gpu_wait="${2:?}"; shift 2 ;;
     --) shift; gradle_args=("$@"); break ;;
-    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+    -h|--help) awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac
 done
 [[ "$resolution" =~ ^[0-9]+x[0-9]+$ ]] || die "resolution must look like 1920x1080"
 [[ "$timeout_s" =~ ^[0-9]+$ ]] || die "timeout must be whole seconds"
+[[ "$gpu_wait" =~ ^[0-9]+$ ]] || die "gpu-wait must be whole seconds"
 
 vglrun="${VGLRUN:-/opt/VirtualGL/bin/vglrun}"
-require xvfb-run setsid
+require xvfb-run setsid flock
 [[ -x "$vglrun" ]] || die "VirtualGL not found at $vglrun"
 use_sdkman_java
+
+lock_file="${XDG_CACHE_HOME:-$HOME/.cache}/counterstrain/gpu.lock"
+mkdir -p "$(dirname "$lock_file")"
+exec 9>"$lock_file"
+if ! flock -n 9; then
+  log "GPU busy (another lane or CI job holds $lock_file); waiting up to ${gpu_wait}s"
+  flock -w "$gpu_wait" 9 || die "timed out waiting for the GPU lock"
+fi
 
 run_dir="$local_dir/runs/client-$(date -u +%Y%m%dT%H%M%SZ)"
 fb_dir="$run_dir/.xvfb"

@@ -1,0 +1,6 @@
+# Matches worktui's setup-hook structure; no secrets or local state are copied.
+scripts:
+  setup: |
+    bash "$ORCA_WORKTREE_PATH/tools/worktree-setup.sh" "$ORCA_ROOT_PATH" "$ORCA_WORKTREE_PATH"
+  archive: |
+    true
