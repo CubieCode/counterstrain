@@ -259,9 +259,10 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.6: Underground festering
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p4.6-underground-festering
 - PR: https://github.com/CubieCode/counterstrain/pull/45
+- Validation: PR #45; cave pass festers air-facing blocks from stage 3 (complete at Y>=0, 1 in 4 below), optional `underground_stage` in `festers_into`, ore-replaceable tag defaults with new `festered_deepslate`; 106/106 gametests (5 new); cave pass 0.14-0.17 ms/tick mean at 8 layers; GPU scene `world/caves` (RTX 4070) reviewed, all scenes match references; CI green.
 - Depends on: P4.2
 - Scope: Festering reaches caves. P4.2 festers only the surface (down to 5 blocks into the ground), so a player can tunnel under a stage 4 chunk and see untouched rock. From a late stage (default stage 3), blocks with a `remission:festers_into` entry that face cave air become a festered skin on cave walls, floors and ceilings; rock inside the ground and ores (no default entry) are left alone, so mining stays viable. Festering is complete down to a depth limit (default about Y=0) and sparse, by a deterministic hash, below it; the limit is a constant, not config. Adds default entries for deepslate and tuff (with a festered deepslate block if festered stone does not read well there) and an optional per-entry underground stage in the data map (contract in remission-data-formats), so packs can tune or turn cave festering off. The cave skin must read clearly differently from sculk in the Deep Dark. The scan walks the chunk section by section, skips sections with no festerable block in their palette, runs on its own per-tick budget and resumes after an unload. Posts `BlockFesteredEvent` per replaced block. The biome flip already covers every height and is unchanged.
 - Acceptance: Gametests for exposed-only replacement (rock inside the ground and ores untouched), the stage gate, the depth limit and sparse festering below it, determinism, turning it off through the data map, and resuming after an unload; per-tick cost measured on foundry and recorded in the PR next to P4.2's 0.12 ms; harness scene `world/caves` (a carved cave under chunks at each stage, including one in deepslate next to sculk), reviewed, with no lighting artefacts. Ledger updated; placeholders marked.
