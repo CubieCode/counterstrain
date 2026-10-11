@@ -24,10 +24,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -35,16 +34,14 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * Festering land infection (P4.7): mobs in festering land at or above the minimum stage build exposure, at any height,
  * lose it elsewhere, and become hosts through the corruption API with {@link CorruptionCause#FESTERING_LAND}. Each test
- * drives its own {@link ExposureTracker} over its own mobs with synthetic game times, on chunks far east of the test grid
- * (force-loaded, and used once they are entity-ticking). Most mobs are created but never added to the level,
- * so the level's own tracker never sees them.
+ * runs alone in its own batch and drives its own {@link ExposureTracker} over its own mobs with synthetic game times, in
+ * its own chunk (entity-ticking once the test starts), whose land and blocks it restores afterwards. Most mobs are
+ * created but never added to the level, so the level's own tracker never sees them.
  */
 @GameTestHolder(Remission.MOD_ID)
 @PrefixGameTestTemplate(false)
 public final class FesteringInfectionTests {
     private static final String BATCH = "festering_infection";
-    /** Chunks east of the test's own chunk, one pair per test, away from the grid and from the festering stage tests. */
-    private static final int FAR = 160;
     private static final int EXPOSURE = 100;
     private static final ExposureSettings SETTINGS = new ExposureSettings(true, 2, EXPOSURE, 20, 256, 32);
     private static final long BASE = 10_000_000L;
@@ -52,14 +49,12 @@ public final class FesteringInfectionTests {
     private FesteringInfectionTests() {
     }
 
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
+    @GameTest(template = "empty", batch = BATCH + "_surface")
     public static void surfaceAndUndergroundMobsBecomeHosts(GameTestHelper helper) {
-        LevelChunk land = farChunk(helper, 0);
-        setStage(land, SETTINGS.minStage());
-        whenTicking(helper, List.of(land), () -> {
+        inOwnChunk(helper, SETTINGS.minStage(), land -> {
             ServerLevel level = helper.getLevel();
-            Mob surface = create(level, EntityType.PIG, surface(level, land));
-            BlockPos cave = cave(level, land);
+            Mob surface = create(level, EntityType.PIG, spot(helper));
+            BlockPos cave = cave(helper, land);
             Mob underground = create(level, EntityType.PIG, cave);
             helper.assertFalse(level.canSeeSky(cave), "cave pocket sees the sky");
             ExposureTracker tracker = tracker(level, List.of(surface, underground), Map.of());
@@ -78,18 +73,15 @@ public final class FesteringInfectionTests {
                 helper.assertValueEqual(event.getCause(), CorruptionCause.FESTERING_LAND, "event cause");
                 helper.assertTrue(event.becameHost(), "event did not turn the mob into a host");
             }
-            release(level, land);
             helper.succeed();
         });
     }
 
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
+    @GameTest(template = "empty", batch = BATCH + "_ineligible")
     public static void ineligibleMobsNeverBecomeHosts(GameTestHelper helper) {
-        LevelChunk land = farChunk(helper, 2);
-        setStage(land, SETTINGS.minStage() + 1);
-        whenTicking(helper, List.of(land), () -> {
+        inOwnChunk(helper, SETTINGS.minStage() + 1, land -> {
             ServerLevel level = helper.getLevel();
-            BlockPos pos = surface(level, land);
+            BlockPos pos = spot(helper);
             Mob wither = create(level, EntityType.WITHER, pos);
             Mob host = create(level, EntityType.PIG, pos);
             Corruption.set(host, 50);
@@ -105,23 +97,20 @@ public final class FesteringInfectionTests {
             for (Mob mob : List.of(wither, host, optedOut)) {
                 helper.assertValueEqual(ExposureTracker.exposure(mob), 0, "exposure of ineligible " + mob.getType());
             }
-            release(level, land);
             helper.succeed();
         });
     }
 
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
+    @GameTest(template = "empty", batch = BATCH + "_gates")
     public static void nothingBelowMinimumStageOrWhenOff(GameTestHelper helper) {
-        LevelChunk land = farChunk(helper, 4);
-        setStage(land, SETTINGS.minStage() - 1);
-        whenTicking(helper, List.of(land), () -> {
+        inOwnChunk(helper, SETTINGS.minStage() - 1, land -> {
             ServerLevel level = helper.getLevel();
-            Mob pig = create(level, EntityType.PIG, surface(level, land));
+            Mob pig = create(level, EntityType.PIG, spot(helper));
             run(tracker(level, List.of(pig), Map.of()), BASE, BASE + 5L * EXPOSURE);
             helper.assertFalse(Corruption.isHost(pig), "host below the minimum stage");
             helper.assertValueEqual(ExposureTracker.exposure(pig), 0, "exposure below the minimum stage");
 
-            setStage(land, SETTINGS.minStage());
+            setStage(land.chunk(), SETTINGS.minStage());
             ExposureSettings off = new ExposureSettings(false, SETTINGS.minStage(), EXPOSURE, 20, 256, 32);
             ExposureTracker disabled = new ExposureTracker(level, () -> off, () -> List.of(pig), mob -> Optional.empty());
             run(disabled, BASE, BASE + 5L * EXPOSURE);
@@ -130,19 +119,15 @@ public final class FesteringInfectionTests {
 
             ExposureSettings unreachable = new ExposureSettings(true, 8, EXPOSURE, 20, 256, 32);
             helper.assertValueEqual(unreachable.minLevel(), Integer.MAX_VALUE, "minimum level of a stage past the thresholds");
-            release(level, land);
             helper.succeed();
         });
     }
 
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
+    @GameTest(template = "empty", batch = BATCH + "_decay")
     public static void exposureDecaysAndIsSaved(GameTestHelper helper) {
-        LevelChunk land = farChunk(helper, 6);
-        LevelChunk clean = farChunk(helper, 7);
-        setStage(land, SETTINGS.minStage());
-        whenTicking(helper, List.of(land, clean), () -> {
+        inOwnChunk(helper, SETTINGS.minStage(), land -> {
             ServerLevel level = helper.getLevel();
-            Mob pig = create(level, EntityType.PIG, surface(level, land));
+            Mob pig = create(level, EntityType.PIG, spot(helper));
             ExposureTracker tracker = tracker(level, List.of(pig), Map.of());
             run(tracker, BASE, BASE + 60);
             helper.assertValueEqual(ExposureTracker.exposure(pig), 60, "exposure after 60 ticks");
@@ -153,27 +138,23 @@ public final class FesteringInfectionTests {
             reloaded.load(saved);
             helper.assertValueEqual(ExposureTracker.exposure(reloaded), 60, "exposure after save and load");
 
-            BlockPos away = surface(level, clean);
-            pig.moveTo(away.getX() + 0.5, away.getY(), away.getZ() + 0.5);
+            // The pig's land stops festering, as if it had walked out (the chunk next door may not be entity-ticking).
+            setStage(land.chunk(), 0);
             run(tracker, BASE + 61, BASE + 100);
             helper.assertValueEqual(ExposureTracker.exposure(pig), 20, "exposure after 40 ticks outside");
             run(tracker, BASE + 101, BASE + 200);
             helper.assertValueEqual(ExposureTracker.exposure(pig), 0, "exposure long after leaving");
             helper.assertFalse(pig.hasData(RemissionAttachments.FESTERING_EXPOSURE), "exposure attachment kept at 0");
             helper.assertFalse(Corruption.isHost(pig), "pig that left became a host");
-            release(level, land);
-            release(level, clean);
             helper.succeed();
         });
     }
 
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
+    @GameTest(template = "empty", batch = BATCH + "_convert_to")
     public static void convertToApplies(GameTestHelper helper) {
-        LevelChunk land = farChunk(helper, 8);
-        setStage(land, SETTINGS.minStage());
-        whenTicking(helper, List.of(land), () -> {
+        inOwnChunk(helper, SETTINGS.minStage(), land -> {
             ServerLevel level = helper.getLevel();
-            Mob pig = create(level, EntityType.PIG, surface(level, land));
+            Mob pig = create(level, EntityType.PIG, spot(helper));
             level.addFreshEntity(pig);
             MobProfile toZombie = new MobProfile(HolderSet.direct(EntityType.PIG.builtInRegistryHolder()), 0, Optional.empty(),
                     Map.of(), Optional.of(EntityType.ZOMBIE.builtInRegistryHolder()), MobProfile.Conversion.DEFAULT);
@@ -188,18 +169,15 @@ public final class FesteringInfectionTests {
             helper.assertTrue(event.becameHost() && Corruption.isHost((Mob) host), "converted zombie is not a host");
             helper.assertValueEqual(host.position(), pig.position(), "converted position");
             host.discard();
-            release(level, land);
             helper.succeed();
         });
     }
 
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
+    @GameTest(template = "empty", batch = BATCH + "_budgets")
     public static void passesSpendTheBudgets(GameTestHelper helper) {
-        LevelChunk land = farChunk(helper, 10);
-        setStage(land, SETTINGS.minStage());
-        whenTicking(helper, List.of(land), () -> {
+        inOwnChunk(helper, SETTINGS.minStage(), land -> {
             ServerLevel level = helper.getLevel();
-            BlockPos pos = surface(level, land);
+            BlockPos pos = spot(helper);
             List<Mob> pigs = new ArrayList<>();
             for (int i = 0; i < 10; i++) {
                 pigs.add(create(level, EntityType.PIG, pos));
@@ -223,17 +201,33 @@ public final class FesteringInfectionTests {
                 helper.assertValueEqual(tracker.tick(BASE + 40 + t), new ExposureTracker.TickWork(2, 2), "work on tick " + t + " of the wave");
             }
             helper.assertTrue(pigs.stream().allMatch(Corruption::isHost), "a pig at the threshold is not a host");
-            release(level, land);
             helper.succeed();
         });
     }
 
-    /** Runs {@code body} once every chunk in {@code chunks} is entity-ticking (force-loading takes a few ticks). */
-    private static void whenTicking(GameTestHelper helper, List<LevelChunk> chunks, Runnable body) {
-        helper.startSequence()
-                .thenWaitUntil(() -> chunks.forEach(chunk -> helper.assertTrue(
-                        helper.getLevel().isPositionEntityTicking(chunk.getPos().getWorldPosition()), "far chunk is not entity-ticking")))
-                .thenExecute(body);
+    /** The test's own chunk with its land and the blocks a test changed, restored when the test body ends. */
+    private record Land(LevelChunk chunk, List<Runnable> undo) {
+    }
+
+    /**
+     * Runs {@code body} with the test's own chunk (the chunk of {@link #spot}) at festering stage {@code stage}, then
+     * restores its land and every block the body changed, even when an assertion fails.
+     */
+    private static void inOwnChunk(GameTestHelper helper, int stage, Consumer<Land> body) {
+        LevelChunk chunk = helper.getLevel().getChunkAt(spot(helper));
+        ChunkCorruption before = chunk.getExistingDataOrNull(RemissionAttachments.CHUNK_CORRUPTION);
+        Land land = new Land(chunk, new ArrayList<>());
+        setStage(chunk, stage);
+        try {
+            body.accept(land);
+        } finally {
+            land.undo().forEach(Runnable::run);
+            if (before == null) {
+                chunk.removeData(RemissionAttachments.CHUNK_CORRUPTION);
+            } else {
+                chunk.setData(RemissionAttachments.CHUNK_CORRUPTION, before);
+            }
+        }
     }
 
     private static ExposureTracker tracker(ServerLevel level, List<Mob> mobs, Map<Mob, MobProfile> profiles) {
@@ -270,49 +264,33 @@ public final class FesteringInfectionTests {
         return mob;
     }
 
-    /** The surface position in the middle of {@code chunk}. */
-    private static BlockPos surface(ServerLevel level, LevelChunk chunk) {
-        int x = chunk.getPos().getMiddleBlockX();
-        int z = chunk.getPos().getMiddleBlockZ();
-        return new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z), z);
+    /** Where the test's mobs stand: the middle of the test's air box. */
+    private static BlockPos spot(GameTestHelper helper) {
+        return helper.absolutePos(new BlockPos(1, 1, 1));
     }
 
-    /** An air pocket inside a stone shell, below the surface in a corner of {@code chunk}. */
-    private static BlockPos cave(ServerLevel level, LevelChunk chunk) {
-        int x = chunk.getPos().getMinBlockX() + 3;
-        int z = chunk.getPos().getMinBlockZ() + 3;
-        int y = Math.max(level.getMinBuildHeight() + 2, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 4);
-        BlockPos pocket = new BlockPos(x, y, z);
+    /**
+     * An air pocket inside a stone shell, in the ground three blocks under {@link #spot}, so it is in the same chunk. The
+     * shell's previous blocks are put back through {@code land}'s undo list.
+     */
+    private static BlockPos cave(GameTestHelper helper, Land land) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pocket = spot(helper).below(3);
         for (BlockPos pos : BlockPos.betweenClosed(pocket.offset(-1, -1, -1), pocket.offset(1, 1, 1))) {
-            level.setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState());
+            BlockPos at = pos.immutable();
+            BlockState old = level.getBlockState(at);
+            land.undo().add(() -> level.setBlockAndUpdate(at, old));
+            level.setBlockAndUpdate(at, at.equals(pocket) ? Blocks.AIR.defaultBlockState() : Blocks.STONE.defaultBlockState());
         }
-        level.setBlockAndUpdate(pocket, Blocks.AIR.defaultBlockState());
         return pocket;
     }
 
     private static void setStage(LevelChunk chunk, int stage) {
-        ExposureSettings atStage = new ExposureSettings(true, stage, EXPOSURE, 20, 256, 32);
-        int level = stage == 0 ? 0 : atStage.minLevel();
-        if (level == 0) {
+        ExposureSettings atStage = new ExposureSettings(true, Math.max(stage, 1), EXPOSURE, 20, 256, 32);
+        if (stage == 0) {
             chunk.removeData(RemissionAttachments.CHUNK_CORRUPTION);
         } else {
-            chunk.setData(RemissionAttachments.CHUNK_CORRUPTION, new ChunkCorruption(level, 0L));
+            chunk.setData(RemissionAttachments.CHUNK_CORRUPTION, new ChunkCorruption(atStage.minLevel(), 0L));
         }
-    }
-
-    /** A force-loaded chunk {@code offset} chunks east of the test, its land cleared. */
-    private static LevelChunk farChunk(GameTestHelper helper, int offset) {
-        ServerLevel level = helper.getLevel();
-        ChunkPos own = new ChunkPos(helper.absolutePos(BlockPos.ZERO));
-        ChunkPos pos = new ChunkPos(own.x + FAR + offset, own.z);
-        level.setChunkForced(pos.x, pos.z, true);
-        LevelChunk chunk = level.getChunk(pos.x, pos.z);
-        chunk.removeData(RemissionAttachments.CHUNK_CORRUPTION);
-        return chunk;
-    }
-
-    private static void release(ServerLevel level, LevelChunk chunk) {
-        chunk.removeData(RemissionAttachments.CHUNK_CORRUPTION);
-        level.setChunkForced(chunk.getPos().x, chunk.getPos().z, false);
     }
 }
