@@ -1,0 +1,14 @@
+# Every asset has a row, markers agree with statuses: no failures.
+mod/src/main/resources/assets/remission/textures/block/nidus.png <- marked_16.png
+mod/src/main/resources/assets/remission/textures/block/nidus_big.png <- marked_32_rgb.png
+mod/src/main/resources/assets/remission/textures/block/nidus_pulse.png <- marked_anim_16x48.png
+mod/src/main/resources/assets/remission/textures/item/mendroot.png <- marked_indexed_16.png
+mod/src/main/resources/assets/remission/textures/item/sample_final.png <- plain_16.png
+mod/src/main/resources/assets/remission/textures/item/sample_draft.png <- marked_16.png
+mod/src/generated/resources/assets/remission/models/block/nidus.json
+mod/src/main/resources/assets/remission/sounds/nidus_pulse.ogg
+pack/kubejs/assets/counterstrain/textures/item/field_kit.png <- plain_16.png
+pack/mods/jei.pw.toml
+pack/config/example.toml
+pack/mods/icon.png <- plain_16.png  # packwiz metadata directory, never scanned
+mod/src/main/resources/assets/remission/lang/en_us.json

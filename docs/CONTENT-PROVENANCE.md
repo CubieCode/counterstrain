@@ -1,16 +1,16 @@
 # Content provenance
 
-Ledger of player-facing content in Remission and Counterstrain: where each asset or text block came from and whether it is final. Policy: [DESIGN](DESIGN.md#ai-generated-content-policy). How to add, mark and replace rows: [content-provenance](../.agents/skills/content-provenance/SKILL.md). Every PR that adds or changes player-facing content updates this file in the same PR; P1.4 adds a CI check (planned) that every image, sound and model has a row.
+Ledger of player-facing content in Remission and Counterstrain: where each asset or text block came from and whether it is final. Policy: [DESIGN](DESIGN.md#ai-generated-content-policy). How to add, mark and replace rows: [content-provenance](../.agents/skills/content-provenance/SKILL.md). Every PR that adds or changes player-facing content updates this file in the same PR; `tools/check-provenance.sh` (CI: `docs.yml`) checks that every image, sound and model has a row, that texture markers match statuses and that rows point at existing files.
 
 Columns:
 
 - **Path / ID:** repository path, or `file:key` / `file:quest_id` for text inside a larger file.
 - **Type:** texture, model, gui, particle, sound, icon, lang, quest, lore, journal, book, store-copy, store-image, metadata.
 - **Origin:** `ai` (tool/model if known), `procedural` (script that generates it), `human`, or `licensed` (source and license).
-- **Status:** `placeholder`, `draft` or `final`.
+- **Status:** `placeholder`, `draft` or `final`; `removed` once the file is deleted.
 - **Notes:** what the art or writing pass should aim for, and any review record.
 
-Replacing content changes the row's origin and status; rows are never deleted, so history stays visible. A removed asset keeps its row with a note saying when and why.
+Replacing content changes the row's origin and status; rows are never deleted, so history stays visible. A removed asset keeps its row with status `removed` and a note saying when and why.
 
 ## Textures
 

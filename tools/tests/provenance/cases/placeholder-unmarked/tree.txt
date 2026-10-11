@@ -1,0 +1,2 @@
+mod/src/main/resources/assets/remission/textures/block/nidus.png <- plain_16.png
+mod/src/main/resources/assets/remission/textures/block/nidus_big.png <- small_marker_32.png

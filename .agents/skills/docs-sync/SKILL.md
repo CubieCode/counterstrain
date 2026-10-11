@@ -16,6 +16,8 @@ Two passes: a mechanical check that CI enforces, then a judgment pass that only 
 - skill frontmatter, the `.claude/skills` symlink and the VENDORED precedence list;
 - ROADMAP structure: unique IDs, valid statuses, PRs on review/done items, known dependencies and skills, every item in a safe wave.
 
+`tools/check-provenance.sh` runs in the same workflow: every image, sound and model needs a [content provenance](../../../docs/CONTENT-PROVENANCE.md) row and texture markers must match their status (content-provenance skill). Fix the ledger or the asset, not the check.
+
 Fix the doc, not the check. If a check is wrong, fix `tools/check-docs.py` in the same PR and explain why. When you document a new kind of checkable fact (a new version pin, config key, command, schema path), extend the script so it cannot go stale silently.
 
 **2. Judgment pass:** list what changed (`git diff --stat origin/main...HEAD`, or since the last docs commit for an audit) and read the docs that describe each changed area:
@@ -30,7 +32,7 @@ Fix the doc, not the check. If a check is wrong, fix `tools/check-docs.py` in th
 | `.github/workflows/*` | README releases/CI, DEV-ENVIRONMENT runners, release, headless-client |
 | Roadmap progress | ROADMAP item fields, phase exit criteria, README status line, safe waves |
 | User-visible mod or pack change | `mod/CHANGELOG.md` / `pack/CHANGELOG.md` under Unreleased |
-| Player-facing content (textures, models, sounds, lang, quests, lore, store copy) | docs/CONTENT-PROVENANCE.md rows and markers (content-provenance) |
+| Player-facing content (textures, models, sounds, lang, quests, lore, store copy) | docs/CONTENT-PROVENANCE.md rows and markers (content-provenance); `tools/check-provenance.sh` |
 | New concept or name | DESIGN glossary; no reused terms from the pack's inspirations |
 
 For each statement ask: is it still true, is it complete (new commands, files, options, mods), and does it describe what the code does rather than what was planned? Remove "planned"/"stub" wording once something is built, and do not describe unbuilt features as present. Check counts and lists by looking (number of mods, scenes, triggers), not from memory. Keep worktui's voice: short, specific, no filler.

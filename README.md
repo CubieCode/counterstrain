@@ -41,6 +41,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `tools/verify-gpu-render.sh LOG` | Fail unless a client log names the RTX 4070 |
 | `tools/collect-screenshots.sh` | Copy screenshots to `.local/screenshots/latest/` |
 | `python3 -I tools/check-docs.py` | Check docs, roadmap, READMEs and skills against the code (docs-sync skill) |
+| `tools/check-provenance.sh` | Fail if an image, sound or model lacks a [content provenance](docs/CONTENT-PROVENANCE.md) row or a texture's placeholder marker disagrees with its status; `--self-test` runs the fixtures in `tools/tests/provenance/` |
 | `tools/build-mod.sh [INSTANCE]` | Build and copy the jar into a test instance's `mods/` |
 | `tools/pack.sh refresh` / `check` / `export` | packwiz index refresh, CI drift check, CurseForge zip (release artifact) + `.mrpack` (local testing) to `.local/dist/` |
 | `tools/bump-version.sh mod\|pack X.Y.Z` | Set the mod or pack version (independent) |
@@ -52,7 +53,7 @@ Dev runs include KubeJS, ProbeJS, FTB Quests, EMI + JEI, Mekanism, AE2 and Journ
 ```text
 mod/                 Remission NeoForge project (Gradle wrapper, gradle.properties)
 pack/                Counterstrain packwiz pack, kubejs/, config/ftbquests/
-tools/               Build, pack, release, headless-client and worktree setup scripts (bash, no root)
+tools/               Build, pack, release, headless-client, worktree setup and docs/provenance check scripts (bash, no root)
 orca.yaml            Orca setup hook (runs tools/worktree-setup.sh per worktree)
 docs/                Design, architecture, lore, content provenance and development environment
 ROADMAP.md           Phases, items, status
@@ -76,7 +77,7 @@ Remission is not in the packwiz index until it is published. For development, `t
 
 ## Releases
 
-The mod and the pack are versioned independently. CI (`ci.yml`) builds, runs datagen and gametests and checks the pack on every push and PR that touches more than Markdown, and its `ci-ok` job and `docs.yml` are the required checks for `main`; `docs.yml` runs `tools/check-docs.py`; `gpu-smoke.yml` is the manual GPU client check. Tags `mod-v<version>` and `pack-v<version>` build draft GitHub releases (`release-mod.yml`, `release-pack.yml`). Platform publishing is roadmap P12.3: Remission goes to Modrinth and CurseForge; Counterstrain is CurseForge-first (the CurseForge zip is the release artifact; see [distribution](docs/DESIGN.md#distribution)). See the release skill.
+The mod and the pack are versioned independently. CI (`ci.yml`) builds, runs datagen and gametests and checks the pack on every push and PR that touches more than Markdown, and its `ci-ok` job and `docs.yml` are the required checks for `main`; `docs.yml` runs `tools/check-docs.py` and `tools/check-provenance.sh`; `gpu-smoke.yml` is the manual GPU client check. Tags `mod-v<version>` and `pack-v<version>` build draft GitHub releases (`release-mod.yml`, `release-pack.yml`). Platform publishing is roadmap P12.3: Remission goes to Modrinth and CurseForge; Counterstrain is CurseForge-first (the CurseForge zip is the release artifact; see [distribution](docs/DESIGN.md#distribution)). See the release skill.
 
 ## License
 

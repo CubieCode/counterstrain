@@ -1,0 +1,16 @@
+# Test ledger for the pass case (tools/check-provenance.py --self-test).
+
+| Path / ID | Type | Origin | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/textures/block/nidus.png` | texture | procedural (fixture) | placeholder | 16x16, 2x2 marker. |
+| `mod/src/main/resources/assets/remission/textures/block/nidus_big.png` | texture | procedural (fixture) | `placeholder` | 32x32 RGB, 4x4 marker. |
+| `mod/src/main/resources/assets/remission/textures/block/nidus_pulse.png` | texture | procedural (fixture) | placeholder | Animated strip, marker scales with width. |
+| `mod/src/main/resources/assets/remission/textures/item/mendroot.png` | texture | procedural (fixture) | placeholder | Indexed 4-bit PNG. |
+| `mod/src/main/resources/assets/remission/textures/item/sample_final.png` | texture | human (fixture) | final | No marker. |
+| `mod/src/main/resources/assets/remission/textures/item/sample_draft.png` | texture | ai (fixture) | draft | Drafts are not marker-checked. |
+| `mod/src/generated/resources/assets/remission/models/block/nidus.json` | model | procedural (datagen) | placeholder | Generated model. |
+| `mod/src/main/resources/assets/remission/sounds/nidus_pulse.ogg` | sound | ai (fixture) | draft | |
+| `pack/kubejs/assets/counterstrain/textures/item/field_kit.png` | gui | human (fixture) | final | GUI art is not marker-checked. |
+| `mod/src/main/resources/assets/remission/textures/block/old_nidus.png` | texture | procedural (fixture) | removed | Removed 2026-10-11 (fixture). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.nidus*` | lang | ai (fixture) | draft | Text row. |
+| Remission Modrinth summary | store-copy | ai (fixture) | draft | Not a repository path. |

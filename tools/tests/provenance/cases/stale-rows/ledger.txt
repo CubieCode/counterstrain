@@ -1,0 +1,9 @@
+# Test ledger for the stale-rows case (tools/check-provenance.py --self-test).
+
+| Path / ID | Type | Origin | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/textures/block/gone.png` | texture | ai (fixture) | placeholder | File deleted without updating the row. |
+| `mod/src/main/resources/assets/remission/textures/block/kept.png` | texture | ai (fixture) | removed | Says removed but the file is still there. |
+| `mod/src/main/resources/assets/remission/textures/block/dup.png` | texture | human (fixture) | final | |
+| `mod/src/main/resources/assets/remission/textures/block/dup.png` | texture | human (fixture) | final | Second row for the same file. |
+| `docs/MISSING.md` | lore | ai (fixture) | done | Unknown status. |
