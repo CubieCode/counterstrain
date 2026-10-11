@@ -102,8 +102,8 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.1: Corruption attachment and sync
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p2.1-corruption-attachment
 - PR:
 - Depends on: P0.1
 - Scope: `CorruptionState` record (level, stage; `variant` reserved for resistant mutations), codec, entity attachment `corruption`, server API (`get/set/isHost`), sync to tracking clients on change and start-tracking (choose custom payload vs NeoForge attachment sync and record it in ARCHITECTURE). Common config for stage thresholds.
