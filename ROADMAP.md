@@ -85,8 +85,8 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.4: Provenance check
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p1.4-provenance-check
 - PR:
 - Depends on: P0.1
 - Scope: A `tools/check-provenance.sh` script (planned; bash plus Python standard library, no root-only tools), run in `docs.yml`, that fails if any image, sound or model under the mod's main and generated `assets/` trees or under `pack/` lacks a row in `docs/CONTENT-PROVENANCE.md`, and that checks each texture's placeholder marker (the 2×2 `#FF00FF` top-left square, scaled) matches its row's status: marker present on `final`, or missing on `placeholder`, fails. Rows pointing at missing files fail too, unless their status says the asset was removed. Documented in README, the content-provenance skill and docs-sync.
