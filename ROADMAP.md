@@ -21,6 +21,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - C: P3.1 + P3.3 + P4.1 + P6.1, after P2.1. Agree the `mob_profile` record (P3.3 owns the contract) before P3.1 starts; registry and lang edits append-only; one registry-spine owner.
 - D: P4.4 + P3.2 + P6.2. P4.4 owns the `api/` package and the API section of remission-data-formats.
 - P4.5 (follow-up to P4.1) runs before P4.3 or alone; it owns `world/SpreadEngine`.
+- P6.3 (follow-up to P6.2) can join any wave or run alone; it owns `research/Bestiary` and the bestiary scene reference.
 - E: P4.2 + P4.3. P4.2 owns new blocks, textures and biome data; P4.3 owns surge scheduling and miasma clouds. Each adds its own API events; append-only edits in `api/`, one remission-data-formats owner (P4.2).
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - G: P7.2 → P7.3 serially (recipe types and KubeJS schemas are contracts), with P8.1 in parallel (owns triggers and stats contracts).
@@ -306,7 +307,17 @@ Goals: knowledge is gathered from the world and recorded.
 - Acceptance: Host type count scales with dev-runtime mods; harness scene `research/bestiary`. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
-Exit criteria: scanning works for vanilla and modded hosts; bestiary screenshots reviewed.
+### P6.3: Hidden bestiary types
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P6.2
+- Scope: Entity type tag `#remission:bestiary_hidden`: tagged types are left out of the bestiary list and its host type total, and scans of them are not recorded as bestiary progress. Remission ships it with types survival players cannot normally meet as hosts (`minecraft:giant`, `minecraft:illusioner`, `minecraft:armor_stand`); packs extend or replace it. No spawn-egg or other heuristic, so modded mobs without eggs (the Mekanism robit) stay listed. Contract in remission-data-formats (Bestiary section) and docs/ARCHITECTURE.md.
+- Acceptance: Gametests show tagged types absent from the list and total, a pack tag hiding another type and `replace` re-showing a default, and the robit still listed in the dev runtime; `research/bestiary` reference updated for the new total and reviewed from a GPU run.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks
+
+Exit criteria: scanning works for vanilla and modded hosts; bestiary screenshots reviewed. P6.3, a follow-up added after P6.2, is not part of these exit criteria.
 
 ## Phase 7: Tech chain
 
