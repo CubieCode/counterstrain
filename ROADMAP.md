@@ -180,7 +180,7 @@ Goals: hosts of any kind behave as hostile Strain-infected creatures, infect oth
 
 - Status: `review`
 - Owner: feat/p3.3-infection-loot-profiles
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/19
 - Depends on: P2.1
 - Scope: Infection on kill by a host and on prolonged time in festering land (that source stubbed until phase 4); `remission:is_corrupted` loot condition and default global loot modifier (host tissue); `#remission:immune` tag; `remission:mob_profile` datapack registry (attributes, behaviour profile, `convert_to`).
 - Acceptance: Schemas in remission-data-formats match the code; immune mobs never become hosts; overrides reload with `/reload` where possible; gametests for each.
