@@ -284,7 +284,7 @@ Goals: knowledge is gathered from the world and recorded.
 
 - Status: `review`
 - Owner: `feat/p6.2-bestiary`
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/24
 - Depends on: P6.1
 - Scope: Bestiary UI listing host types derived from installed entity types; scan progress per player.
 - Acceptance: Host type count scales with dev-runtime mods; harness scene `research/bestiary`. Ledger updated; placeholders marked.
