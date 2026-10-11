@@ -364,7 +364,7 @@ Goals: quests and scripts can observe and drive Remission.
 
 - Status: `review`
 - Owner: feat/p8.1-triggers-stats
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/38
 - Depends on: P4.1, P6.1
 - Scope: Triggers and stats for region % cleansed, nidus destroyed (`remission:nidus_destroyed`, stat `remission:nidi_destroyed`), host scanned, surge survived, and others the pack needs.
 - Acceptance: Schemas in remission-data-formats; FTB Quests tasks gate on them in a dev run.
