@@ -264,7 +264,7 @@ public final class FesteringStageTests {
         FesterMaps.FesterBlock grass = Blocks.GRASS_BLOCK.builtInRegistryHolder().getData(FesterMaps.FESTERS_INTO);
         helper.assertTrue(grass != null && grass.block() == RemissionBlocks.FESTERING_GRASS.get() && grass.stage() == 1, "grass entry");
         FesterMaps.FesterBlock deepslate = Blocks.DEEPSLATE.builtInRegistryHolder().getData(FesterMaps.FESTERS_INTO);
-        helper.assertTrue(deepslate != null && deepslate.stage() == 3, "deepslate entry from base_stone_overworld");
+        helper.assertTrue(deepslate != null && deepslate.stage() == 3, "deepslate entry from deepslate_ore_replaceables");
         helper.assertTrue(Blocks.DIRT.builtInRegistryHolder().getData(FesterMaps.FESTERS_INTO) == null, "dirt has no entry");
 
         // A flip through a variant lookup, then a second flip that changes nothing.

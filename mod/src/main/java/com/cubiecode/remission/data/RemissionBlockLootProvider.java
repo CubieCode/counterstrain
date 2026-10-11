@@ -42,6 +42,7 @@ public final class RemissionBlockLootProvider extends BlockLootSubProvider {
                                 registries.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.FORTUNE),
                                 LEAVES_STICK_CHANCES))));
         dropSelf(RemissionBlocks.FESTERED_STONE.get());
+        dropSelf(RemissionBlocks.FESTERED_DEEPSLATE.get());
     }
 
     // Every Remission block must have a loot table; datagen fails if one is missing.

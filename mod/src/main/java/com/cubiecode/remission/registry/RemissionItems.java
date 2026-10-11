@@ -39,6 +39,7 @@ public final class RemissionItems {
     public static final DeferredItem<BlockItem> FESTERING_LOG = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_LOG);
     public static final DeferredItem<BlockItem> FESTERING_LEAVES = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_LEAVES);
     public static final DeferredItem<BlockItem> FESTERED_STONE = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERED_STONE);
+    public static final DeferredItem<BlockItem> FESTERED_DEEPSLATE = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERED_DEEPSLATE);
 
     private RemissionItems() {
     }

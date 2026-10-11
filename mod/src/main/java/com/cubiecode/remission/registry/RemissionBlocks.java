@@ -57,6 +57,9 @@ public final class RemissionBlocks {
     /** Overworld stone near the surface at festering stage 3. */
     public static final DeferredBlock<Block> FESTERED_STONE = BLOCKS.registerSimpleBlock("festered_stone",
             BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.TERRACOTTA_PURPLE));
+    /** Deepslate facing cave air at festering stage 3 (P4.6); a pillar with {@code axis} like deepslate. */
+    public static final DeferredBlock<RotatedPillarBlock> FESTERED_DEEPSLATE = BLOCKS.registerBlock("festered_deepslate",
+            RotatedPillarBlock::new, BlockBehaviour.Properties.ofFullCopy(Blocks.DEEPSLATE).mapColor(MapColor.TERRACOTTA_PURPLE));
 
     private RemissionBlocks() {
     }

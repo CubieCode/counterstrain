@@ -6,6 +6,7 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.sun.jna.NativeLibrary;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,6 +26,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
@@ -130,6 +135,7 @@ final class SceneRunner {
             case SETUP -> {
                 if (pending.isDone()) {
                     pending.join();
+                    pinTextureAnimations(mc);
                     startShot(mc, 0);
                 }
             }
@@ -323,6 +329,24 @@ final class SceneRunner {
             throw new IllegalStateException("command failed: /" + command + " " + failures);
         }
         RemissionHarness.LOGGER.debug("Scene {}: /{}", sceneId, command);
+    }
+
+    /**
+     * Stops atlas texture animations and shows every sprite's first frame, so animated block textures (sculk in
+     * {@code world/caves}) look the same in every run: they advance with client ticks, which {@code /tick freeze}
+     * does not stop and which differ between runs. Dev-only reflection on the texture manager's tickable set.
+     */
+    private static void pinTextureAnimations(Minecraft mc) {
+        try {
+            Field field = TextureManager.class.getDeclaredField("tickableTextures");
+            field.setAccessible(true);
+            ((Set<?>) field.get(mc.getTextureManager())).removeIf(texture -> texture instanceof TextureAtlas);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("cannot pin texture animations", e);
+        }
+        TextureAtlas blocks = mc.getModelManager().getAtlas(TextureAtlas.LOCATION_BLOCKS);
+        blocks.bind();
+        blocks.getTextures().values().forEach(TextureAtlasSprite::uploadFirstFrame);
     }
 
     private void startShot(Minecraft mc, int index) {

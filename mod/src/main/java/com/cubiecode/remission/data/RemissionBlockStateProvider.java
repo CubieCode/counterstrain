@@ -25,5 +25,8 @@ public final class RemissionBlockStateProvider extends BlockStateProvider {
         simpleBlockWithItem(RemissionBlocks.FESTERING_LEAVES.get(), models().cubeAll("festering_leaves",
                 modLoc("block/festering_leaves")).renderType("cutout_mipped"));
         simpleBlockWithItem(RemissionBlocks.FESTERED_STONE.get(), cubeAll(RemissionBlocks.FESTERED_STONE.get()));
+        // Cave festering (P4.6).
+        axisBlock(RemissionBlocks.FESTERED_DEEPSLATE.get(), modLoc("block/festered_deepslate"), modLoc("block/festered_deepslate_top"));
+        simpleBlockItem(RemissionBlocks.FESTERED_DEEPSLATE.get(), models().getExistingFile(modLoc("block/festered_deepslate")));
     }
 }
