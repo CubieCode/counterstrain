@@ -1,6 +1,7 @@
 package com.cubiecode.remission.data;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.registry.RemissionBlocks;
 import net.minecraft.data.PackOutput;
 import net.neoforged.neoforge.client.model.generators.BlockStateProvider;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
@@ -12,5 +13,6 @@ public final class RemissionBlockStateProvider extends BlockStateProvider {
 
     @Override
     protected void registerStatesAndModels() {
+        simpleBlockWithItem(RemissionBlocks.NIDUS.get(), cubeAll(RemissionBlocks.NIDUS.get()));
     }
 }

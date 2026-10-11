@@ -132,6 +132,37 @@ Errors: `commands.remission.failed.no_living_targets` when `infect` or `cleanse`
 
 Commands (`/remission surge start <pos> [intensity]`, `/remission nidus seed <pos>`, `/remission region advance <id>`) under the same `/remission` root, usable from FTB Quests command rewards and KubeJS. Document exact syntax here when built.
 
+## Festering land: chunk attachment, nidus, spread config (built, P4.1)
+
+Chunk attachment `remission:chunk_corruption` (`ChunkCorruption` in `com.cubiecode.remission.world`), saved inside the chunk's `neoforge:attachments` compound, omitted at level 0. Server only, not synced. Internal until P4.4 adds the stage queries; packs read it through those.
+
+```json
+{ "level": 42, "last_update_game_time": 1234000 }
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `level` | int 0–100 | Strain level of the land. Only rises in phase 4; festering stages (P4.2) are derived from it. |
+| `last_update_game_time` | long | Level game time of the last change; catch-up credits the passes missed since then (or since the nidus was indexed, if later). |
+
+Block `remission:nidus` with block entity `remission:nidus` (no saved fields yet) and block item `remission:nidus`. Drops nothing (loot table `remission:blocks/nidus`), mineable with a hoe (`#minecraft:mineable/hoe`), cannot be pushed. Placing it (or loading a chunk that has one) indexes it; removing it in any way stops its spread and leaves its land as it is. Index: `data/remission_nidi.dat` in the dimension folder, `{ "nidi": [ { "pos": <BlockPos.asLong>, "since": <game time> }, ... ] }`. Packs place nidi as ordinary blocks (structures, `/setblock`, features); `/remission nidus seed` is P8.2.
+
+Config `config/remission-common.toml`, section `[spread]` (all ints, applied from the next pass; budgets per server tick and level):
+
+| Key | Default | Range | Meaning |
+| --- | --- | --- | --- |
+| `intervalTicks` | 400 | 20–72000 | Game ticks between passes (passes start at multiples of level game time). |
+| `nidusGrowth` | 5 | 1–100 | Level the nidus chunk gains per pass, up to 100. |
+| `spreadStep` | 2 | 1–100 | Level another chunk in reach gains per pass from its neighbour toward the nidus. |
+| `falloff` | 10 | 1–100 | A chunk `d` chunks (Manhattan) from a nidus reaches at most `100 - d * falloff` through it. |
+| `spreadThreshold` | 40 | 1–100 | Level a chunk needs before it passes the Strain outward. Reach is the largest `d` with target(`d`) > 0 and target(`d - 1`) ≥ threshold: 7 by default. |
+| `chunkBudget` | 256 | 1–65536 | Chunk visits per tick for the live pass; a longer pass continues next tick. |
+| `catchUpBudget` | 32 | 1–4096 | Reloaded chunks fast-forwarded per tick; the rest wait in a queue. |
+
+Rules: spread runs chunk to chunk from the parent neighbour (one step toward the nidus along the larger offset axis), so cancelling one step blocks everything behind it; overlapping nidi each add their step; unloaded chunks are never loaded or written, and an unloaded parent counts as at its target. Default pace: a nidus chunk reaches the threshold after 8 passes (about 2.7 minutes), its neighbours reach 90 after about 45 more, and the seventh ring starts festering after about 128 passes (about 43 minutes of play, two in-game days). These are first-pass numbers for balancing in the pack.
+
+Events: P4.4 posts the chunk stage changed, nidus destroyed and spread attempt events from the internal points in `SpreadHooks` (`chunkLevelChanged`, `nidusDestroyed`, `spreadAttempt`; the last runs before every live and catch-up step and its returned amount scales or cancels it). No player is passed to the nidus hook yet.
+
 ## Fester variants (planned, P4.2)
 
 Per-source-biome fester target so modded biomes fester into their own variant, falling back to `remission:fester`. Shape (data map on `minecraft:worldgen/biome` or a datapack registry) is fixed in P4.2; the pack uses it for Biomes O' Plenty and Terralith (P10.7).

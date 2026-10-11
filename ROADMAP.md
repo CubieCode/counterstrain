@@ -194,13 +194,14 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.1: Chunk corruption levels and spread engine
 
-- Status: `todo`
-- Owner:
-- PR:
+- Status: `review`
+- Owner: feat/p4.1-chunk-spread
+- PR: #20
 - Depends on: P2.1
 - Scope: Chunk attachment, `remission:nidus` block entity and level index, tick-budgeted spread, catch-up on load from stored game time, config for rates and budgets.
 - Acceptance: Deterministic spread in gametests; catch-up bounded per tick; server tick cost measured on foundry and recorded in the PR.
 - Skills: neoforge-mod-dev, minecraft-world-generation
+- Validation: PR #20; 8 spread gametests (36/36 total after rebasing on P3.1 and P6.1); `SpreadBenchmark` on foundry, 1,024 loaded chunks: 16 nidi at default config add 0.9 µs/tick mean, 0.13 ms max; 64 nidi with a pass every second 27 µs mean, 0.09 ms max; catch-up of 1,024 chunks takes 32 ticks at 0.29 ms max.
 
 ### P4.2: Festering stages and biome conversion
 

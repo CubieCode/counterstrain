@@ -1,9 +1,11 @@
 package com.cubiecode.remission.data;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.registry.RemissionBlocks;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
+import net.minecraft.tags.BlockTags;
 import net.neoforged.neoforge.common.data.BlockTagsProvider;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
@@ -14,5 +16,6 @@ public final class RemissionBlockTagsProvider extends BlockTagsProvider {
 
     @Override
     protected void addTags(HolderLookup.Provider provider) {
+        tag(BlockTags.MINEABLE_WITH_HOE).add(RemissionBlocks.NIDUS.get());
     }
 }

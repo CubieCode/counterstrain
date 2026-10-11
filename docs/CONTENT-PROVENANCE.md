@@ -25,16 +25,19 @@ Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in t
 | `mod/src/main/resources/assets/remission/textures/item/scanner.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel-map script, not kept) | placeholder | Scanner (P6.1): handheld unit with an antenna, a green readout screen and two buttons. Should read as field lab equipment, not a weapon or magic item. |
 | `mod/src/main/resources/assets/remission/textures/item/host_scan.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel-map script, not kept) | placeholder | Host scan data item (P6.1): a violet data card with green readout lines. Shares a silhouette with the block scan; the art pass should keep the two distinguishable by colour at inventory size. |
 | `mod/src/main/resources/assets/remission/textures/item/block_scan.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel-map script, not kept) | placeholder | Block scan data item (P6.1): the host scan's card in slate teal with pale readout lines. |
+| `mod/src/main/resources/assets/remission/textures/block/nidus.png` | texture | ai (Claude Opus 5.5, 2026-10-11; noise script, not kept) | placeholder | Nidus block (P4.1), all faces: dark bruise-violet organic mass with green veins and a sickly glowing core. The art pass should make it read as the living source of the Strain from a distance, matching the host overlay palette. |
 
 ## Models
 
-Datagen item models are `procedural (datagen)` and follow their textures.
+Datagen block and item models are `procedural (datagen)` and follow their textures.
 
 | Path / ID | Type | Origin | Status | Notes |
 | --- | --- | --- | --- | --- |
 | `mod/src/generated/resources/assets/remission/models/item/scanner.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:scanner` (`RemissionItemModelProvider`, P6.1). |
 | `mod/src/generated/resources/assets/remission/models/item/host_scan.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:host_scan` (`RemissionItemModelProvider`, P6.1). |
 | `mod/src/generated/resources/assets/remission/models/item/block_scan.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:block_scan` (`RemissionItemModelProvider`, P6.1). |
+| `mod/src/generated/resources/assets/remission/models/block/nidus.json` | model | procedural (datagen) | draft | Nidus block model: `cube_all` with the nidus texture. A custom shape (pulsing growth, roots) can replace it in the art pass. |
+| `mod/src/generated/resources/assets/remission/models/item/nidus.json` | model | procedural (datagen) | draft | Nidus block item model, inherits the block model. |
 
 ## GUI art, icons and logos
 
@@ -78,6 +81,15 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.host_scan*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Host scan name and its tooltip line (entity name, host stage) (P6.1). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.block_scan*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Block scan name and its tooltip line (block name) (P6.1). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:message.remission.scanner*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Action bar feedback after a scan: host scan recorded, block scan recorded, no Strain detected (P6.1). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.nidus` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Nidus block and block item name; the glossary term, likely final. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.spread` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Config screen section title for the spread settings (P4.1). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.intervalTicks*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: ticks between spread passes. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.nidusGrowth*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: growth of the nidus chunk. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.spreadStep*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: growth of chunks near a nidus. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.falloff*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: level falloff per chunk of distance. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.spreadThreshold*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: level needed to pass the Strain on. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.chunkBudget*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: chunk visits per tick. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.catchUpBudget*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: catch-up chunks per tick. |
 
 ## Mod and pack metadata
 
