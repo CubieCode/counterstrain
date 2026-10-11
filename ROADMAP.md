@@ -269,7 +269,7 @@ Goals: knowledge is gathered from the world and recorded.
 
 - Status: `review`
 - Owner: `feat/p6.1-scanner`
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/18
 - Depends on: P2.1
 - Scope: Scanner item scanning hosts and blocks into data items (data components).
 - Acceptance: Gametests; harness scene `research/scanner`. Ledger updated; placeholders marked.
