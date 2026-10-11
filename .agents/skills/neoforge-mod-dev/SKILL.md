@@ -1,0 +1,22 @@
+---
+name: neoforge-mod-dev
+description: Build, run, register and datagen Remission (NeoForge 1.21.1, ModDevGradle) in mod/. Use for any Java change to the mod, its resources or its Gradle build.
+---
+
+# Remission mod development
+
+Read AGENTS.md, docs/ARCHITECTURE.md and the assigned ROADMAP item. Work in `mod/`; versions live only in `mod/gradle.properties` (NeoForge 21.1.259, MDG 2.0.148, Parchment 2024.11.17, Gradle 9.8.1 wrapper). Java 21 via `sdk env` from the repo root, or the Gradle toolchain. Never bump NeoForge, MDG or Gradle inside a feature item.
+
+Commands from `mod/`: `./gradlew build` (jar in `build/libs/remission-<version>.jar`), `./gradlew runData` (writes `src/generated/resources`; commit the result, never hand-edit it, CI fails on drift), `./gradlew runGameTestServer` (runs every `@GameTestHolder(Remission.MOD_ID)` test and exits; it crashes if no tests exist, so keep `RemissionSmokeTests`). `runServer` uses `run/server` (accept `eula.txt` once). Client runs on foundry only via `tools/run-client-headless.sh` (headless-client skill). `-Pdev_runtime_mods=false` drops KubeJS/FTB/JEI/Mekanism/AE2 from runs; CI always sets it, so tests must not need them. `-Pdev_jbr=true` is opt-in hot-swap.
+
+Verify APIs against 1.21.1, not memory or newer tutorials: sources are in `build/moddev/artifacts/neoforge-21.1.259-sources.jar` (Minecraft + NeoForge, Parchment names), docs at docs.neoforged.net/docs/1.21.1. Things that do **not** exist in 1.21.1: `GatherDataEvent.Client/Server` split, `ModelProvider`/item model definitions in `assets/<ns>/items/`, equipment assets, `ResourceLocation` renamed to `Identifier`, data-driven `test_instance` gametests. `ResourceLocation.fromNamespaceAndPath` (use `Remission.id(path)`), data components on items, `CustomPacketPayload`, Data Attachments and `@EventBusSubscriber(modid = ...)` without `bus` (late 21.1 routes mod-bus events automatically; `bus` is deprecated) are correct here.
+
+Registration: add entries to the existing holder in `registry/` (`RemissionBlocks.BLOCKS.registerSimpleBlock`, `RemissionItems.ITEMS.registerSimpleItem`/`registerItem`, `RemissionAttachments.ATTACHMENT_TYPES.register(name, () -> AttachmentType.builder(...).serialize(codec).build())`, loot condition types, GLM `MapCodec`s, recipe type + serializer pairs, `CriterionTrigger`s). A new registry kind gets its own holder and a line in `RemissionRegistries.register`. Keep `DeferredHolder` fields `public static final`. Every block needs a loot table (`RemissionBlockLootProvider` fails datagen otherwise), a blockstate/model (datagen) and a lang key.
+
+Placement: common logic in feature packages (`corruption/`, `world/`, ... per ARCHITECTURE); client-only classes under `client/`, reached from `RemissionClient` or `@EventBusSubscriber(value = Dist.CLIENT)`; never reference `Minecraft`/renderers from common code. Payloads: register in `RemissionNetwork.register` with `registrar.playToClient/playToServer/playBidirectional`, bump `PROTOCOL_VERSION` when a wire format changes, handlers run on the main thread. Configs: add values to `RemissionCommonConfig` (gameplay, synced semantics) or `RemissionClientConfig` (presentation) builders with comments and ranges; read through the spec values, never cache at class load.
+
+Datagen: add providers in `data/RemissionDataGenerators` with `event.includeServer()`/`includeClient()`. Hand-written resources (lang `assets/remission/lang/en_us.json`, textures, `.nbt` structures in `data/remission/structure/`) stay in `src/main/resources`; do not generate a file that also exists there. Data paths use 1.21.1 singular folders (`loot_table`, `recipe`, `tags/entity_type`). Mod-facing data contracts follow remission-data-formats.
+
+Optional integrations (Mekanism, AE2, JEI, Create, Ars Nouveau): `compileOnly` API from the same Maven as dev runtime, guarded by `ModList.get().isLoaded(id)` in `integration/<modid>/`, declared `type="optional"` in `neoforge.mods.toml` template. Never make the mod require them.
+
+Tests: gametests next to the feature in `gametest/` using `remission:empty` or a purpose-built template; assert server state, not rendering. Visual features also need harness scenes (visual-checks). Finish with `build`, `runData` (clean `git status`), `runGameTestServer` and, for client changes, a headless run with verified renderer. The vendored minecraft-modding and minecraft-testing skills have deeper API notes; this skill wins on conflicts.
