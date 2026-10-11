@@ -37,13 +37,15 @@ Rules:
 - `build`, `runData`, `runGameTestServer` and `runServer` need no display wrapper.
 
 Troubleshooting:
-- **llvmpipe:** a daemon was involved (`./gradlew --stop`, then rerun), or `vglrun` was missing from the command. Check with `xvfb-run -a /opt/VirtualGL/bin/vglrun -d egl glxinfo -B`, which must print the RTX 4070.
+- **llvmpipe:** a daemon was involved (kill only that daemon's PID, found with `pgrep -af GradleDaemon`, then rerun; never `--stop`, below), or `vglrun` was missing from the command. Check with `xvfb-run -a /opt/VirtualGL/bin/vglrun -d egl glxinfo -B`, which must print the RTX 4070.
 - **No GL info line:** check `console.log` for an early crash, a Java version mismatch (`sdk env`) or a dependency resolution failure.
 - **Stuck on a warning screen:** read `framebuffer.png`. Example: a Modrinth artifact resolving to a Fabric jar, fixed by pinning a version ID in `gradle.properties`.
 - **Leftover processes:** `pgrep -a -g <pgid>`. Kill only processes from your own run, never other users' Xvfb displays.
 - **Display number clashes:** `xvfb-run -a` picks a free one.
 - **Exit code 134 and `hs_err_pid*.log` naming `libEGL_nvidia.so.0`:** the NVIDIA driver segfaults during libc `exit()` under VirtualGL EGL, so any normal quit of the client crashes there. The harness avoids it by ending with libc `_exit` after flushing logs; a manual quit still shows it.
-- **"Gradle build daemon has been stopped: stop command received":** someone ran `./gradlew --stop`, which also kills the single-use daemon behind `--no-daemon`. Rerun, and don't use `--stop` while other lanes may be running clients.
+- **"Gradle build daemon has been stopped: stop command received":** someone ran `./gradlew --stop`, which also kills the single-use daemon behind `--no-daemon`. Rerun. Never run `./gradlew --stop` (or kill other Java/Gradle processes) on foundry: daemons are shared by every lane and CI job of the same user and Gradle version, so it kills their builds and client runs too.
+- **Early display error (`reason=early-display-error`):** FML's early loading window failed (seen once as `Crash during font initialization` / `FileSystemNotFoundException` in `EARLYDISPLAY`) and its error dialog, with no dialog tool on foundry, fell back to a console `y/n:` prompt that repeats forever. The script stops the run within seconds, trims `console.log` to 16 MB and fails; the crash has been transient, so rerun.
+- **`Disk quota exceeded` in `console.log` (harness `could not write …`):** `/tmp` (a tmpfs) has a per-user quota; free space there (large downloaded CI artifacts are the usual cause) and rerun.
 
 Scene lists: `tools/run-scenes.sh [--scenes "a/b c/d"] [--list] [--resolution …] [--timeout …]` runs every scene under `mod/src/harness/resources/harness/scenes/` (or the given IDs) through the wrapper one after another, keeps going after a failure, and exits 1 if any scene failed. It compares each passing scene's screenshots with `tools/compare-screenshots.sh` (visual-checks): exit 1 (differs) or 2 (error) fails the scene, 3 (no reference) is only reported. Output: `.local/scene-runs/<UTC>/` (`summary.tsv`, `summary.md`, per-scene diff directories, `latest` symlink); each client run keeps its own `.local/runs/client-<UTC>/`.
 
