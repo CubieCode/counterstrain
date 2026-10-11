@@ -20,6 +20,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | The corruption | **the Strain** | prose: "Strain-infected", "the Strain spreads" |
 | Spread sources | **nidus** (plural **nidi**) | block `remission:nidus`, item `remission:nidus_core` |
 | Infected mobs | **hosts** | "a host cow"; the bestiary lists host types |
+| Mobs the Strain cannot take | **immune** | tag `#remission:immune` (bosses by default); "the wither is immune" |
 | How far the Strain has taken a host | **Strain level** (0–100) and **host stage** | config `hosts.stageThresholds`; `CorruptionState` fields `level`, `stage` |
 | Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone`, biome `remission:fester` |
 | Boundary between festering land and reclaimed land | **frontier** | "hold the frontier" |

@@ -26,6 +26,7 @@ Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in t
 | `mod/src/main/resources/assets/remission/textures/item/host_scan.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel-map script, not kept) | placeholder | Host scan data item (P6.1): a violet data card with green readout lines. Shares a silhouette with the block scan; the art pass should keep the two distinguishable by colour at inventory size. |
 | `mod/src/main/resources/assets/remission/textures/item/block_scan.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel-map script, not kept) | placeholder | Block scan data item (P6.1): the host scan's card in slate teal with pale readout lines. |
 | `mod/src/main/resources/assets/remission/textures/block/nidus.png` | texture | ai (Claude Opus 5.5, 2026-10-11; noise script, not kept) | placeholder | Nidus block (P4.1), all faces: dark bruise-violet organic mass with green veins and a sickly glowing core. The art pass should make it read as the living source of the Strain from a distance, matching the host overlay palette. |
+| `mod/src/main/resources/assets/remission/textures/item/host_tissue.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel script, not kept) | placeholder | Host tissue sample item (P3.3): a ragged lump of flesh-pink tissue with violet Strain veins. Should read as a biological sample, not food, and sit alongside nidus cores and festered soil as the sample family. |
 
 ## Models
 
@@ -38,6 +39,7 @@ Datagen block and item models are `procedural (datagen)` and follow their textur
 | `mod/src/generated/resources/assets/remission/models/item/block_scan.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:block_scan` (`RemissionItemModelProvider`, P6.1). |
 | `mod/src/generated/resources/assets/remission/models/block/nidus.json` | model | procedural (datagen) | draft | Nidus block model: `cube_all` with the nidus texture. A custom shape (pulsing growth, roots) can replace it in the art pass. |
 | `mod/src/generated/resources/assets/remission/models/item/nidus.json` | model | procedural (datagen) | draft | Nidus block item model, inherits the block model. |
+| `mod/src/generated/resources/assets/remission/models/item/host_tissue.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:host_tissue` (`RemissionItemModelProvider`, P3.3). |
 
 ## GUI art, icons and logos
 
@@ -90,6 +92,8 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.spreadThreshold*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: level needed to pass the Strain on. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.chunkBudget*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: chunk visits per tick. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.catchUpBudget*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: catch-up chunks per tick. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.failed.immune` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Command error: every target of `/remission infect` is immune (P3.3). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.host_tissue` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Item name for the host tissue sample (P3.3). |
 
 ## Mod and pack metadata
 

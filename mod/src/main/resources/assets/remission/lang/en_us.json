@@ -37,5 +37,7 @@
   "remission.configuration.chunkBudget": "Chunks per tick",
   "remission.configuration.chunkBudget.tooltip": "Chunks the spread visits each server tick. Lower values spread work over more ticks.",
   "remission.configuration.catchUpBudget": "Catch-up chunks per tick",
-  "remission.configuration.catchUpBudget.tooltip": "Chunks brought up to date each server tick after they load."
+  "remission.configuration.catchUpBudget.tooltip": "Chunks brought up to date each server tick after they load.",
+  "commands.remission.failed.immune": "None of the targets can become hosts",
+  "item.remission.host_tissue": "Host Tissue"
 }

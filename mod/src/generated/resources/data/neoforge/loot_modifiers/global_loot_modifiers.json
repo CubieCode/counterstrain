@@ -1,4 +1,6 @@
 {
-  "entries": [],
+  "entries": [
+    "remission:host_samples"
+  ],
   "replace": false
 }

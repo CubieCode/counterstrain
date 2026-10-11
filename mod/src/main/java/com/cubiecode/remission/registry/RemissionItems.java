@@ -20,6 +20,9 @@ public final class RemissionItems {
     public static final DeferredItem<ScanItem> HOST_SCAN = ITEMS.registerItem("host_scan", ScanItem::new);
     public static final DeferredItem<ScanItem> BLOCK_SCAN = ITEMS.registerItem("block_scan", ScanItem::new);
 
+    /** Sample dropped by hosts ({@code remission:host_samples} loot modifier). */
+    public static final DeferredItem<Item> HOST_TISSUE = ITEMS.registerSimpleItem("host_tissue");
+
     private RemissionItems() {
     }
 }
