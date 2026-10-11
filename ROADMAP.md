@@ -157,9 +157,10 @@ Goals: hosts of any kind behave as hostile Strain-infected creatures, infect oth
 
 ### P3.1: Goal injection and attribute patching
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p3.1-host-goals
 - PR: https://github.com/CubieCode/counterstrain/pull/21
+- Validation: PR #21; host goal gametests (cow, zombie, sheep and Mekanism robit attacks, host-on-host veto, cleanse in-session and after reload) in the dev runtime and `-Pdev_runtime_mods=false`; CI green.
 - Depends on: P2.1
 - Scope: `EntityJoinLevelEvent` stripping of passive goals and injection of target/attack goals; `EntityAttributeModificationEvent` adding attack damage to all types; default profiles by mob category.
 - Acceptance: Host cows, sheep, zombies and modded goal-based mobs attack players and uninfected mobs; cleansing restores normal behaviour after reload. Gametests.
@@ -178,9 +179,10 @@ Goals: hosts of any kind behave as hostile Strain-infected creatures, infect oth
 
 ### P3.3: Infection, loot and data-driven overrides
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p3.3-infection-loot-profiles
 - PR: https://github.com/CubieCode/counterstrain/pull/19
+- Validation: PR #19; 50/50 gametests (kill-by-host infection, convert_to, immune, is_corrupted, host_samples, profile priority and behaviour override); gpu-smoke run 38126737395 passes every scene, with `corruption/stages_modded` stages 1–3 re-accepted because the wither is an immune boss.
 - Depends on: P2.1
 - Scope: Infection on kill by a host and on prolonged time in festering land (that source stubbed until phase 4); `remission:is_corrupted` loot condition and default global loot modifier (host tissue); `#remission:immune` tag; `remission:mob_profile` datapack registry (attributes, behaviour profile, `convert_to`).
 - Acceptance: Schemas in remission-data-formats match the code; immune mobs never become hosts; overrides reload with `/reload` where possible; gametests for each.
@@ -194,9 +196,10 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.1: Chunk corruption levels and spread engine
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p4.1-chunk-spread
-- PR: #20
+- PR: https://github.com/CubieCode/counterstrain/pull/20
+- Validation: PR #20; 8 spread gametests (determinism, bounded catch-up, nidus removal); foundry SpreadBenchmark: 0.9 µs/tick mean, 0.13 ms max for 16 nidi over 1,024 chunks, 0.29 ms max per catch-up tick.
 - Depends on: P2.1
 - Scope: Chunk attachment, `remission:nidus` block entity and level index, tick-budgeted spread, catch-up on load from stored game time, config for rates and budgets.
 - Acceptance: Deterministic spread in gametests; catch-up bounded per tick; server tick cost measured on foundry and recorded in the PR.
@@ -268,9 +271,10 @@ Goals: knowledge is gathered from the world and recorded.
 
 ### P6.1: Scanner and data items
 
-- Status: `review`
+- Status: `done`
 - Owner: `feat/p6.1-scanner`
 - PR: https://github.com/CubieCode/counterstrain/pull/18
+- Validation: PR #18; 6 scanner gametests; harness scene `research/scanner` reviewed and referenced; gpu-smoke run 38125186265 passes.
 - Depends on: P2.1
 - Scope: Scanner item scanning hosts and blocks into data items (data components).
 - Acceptance: Gametests; harness scene `research/scanner`. Ledger updated; placeholders marked.
