@@ -259,7 +259,7 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.6: Underground festering
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p4.6-underground-festering
 - PR:
 - Depends on: P4.2
