@@ -178,7 +178,7 @@ Goals: hosts of any kind behave as hostile Strain-infected creatures, infect oth
 
 ### P3.3: Infection, loot and data-driven overrides
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p3.3-infection-loot-profiles
 - PR:
 - Depends on: P2.1
