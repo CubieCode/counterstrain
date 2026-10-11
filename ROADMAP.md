@@ -225,8 +225,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.3: Surges
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: `feat/p4.3-surges`
 - PR:
 - Depends on: P4.1, P3.1, P4.4, P8.1
 - Scope: Periodic surges that accelerate spread, spawn hosts (on the surface and in caves and other covered spaces under festering chunks) and release miasma clouds (drifting airborne areas above festering land; their viral load effect is added by P5.1), with warnings; config and command to trigger. Emits surge started and surge ended events. Adds the surge survived advancement trigger and stat, following P8.1's trigger and stat conventions.
