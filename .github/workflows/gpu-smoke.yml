@@ -1,7 +1,8 @@
 name: GPU client smoke test
 # Launches the dev client on foundry's RTX 4070 through Xvfb + VirtualGL,
 # fails unless the log names the GPU renderer, and uploads logs and images.
-# Manual for now; the phase 1 harness will add a fixed test scene.
+# Manual and timeout-based for now; P1.3 switches it to the harness scene list
+# (tools/run-client-headless.sh --scene).
 # The runner is `lab` on foundry: no sudo, Xvfb and /opt/VirtualGL provided by
 # the host. See the headless-client skill.
 on:
