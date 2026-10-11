@@ -14,10 +14,14 @@ Replacing content changes the row's origin and status; rows are never deleted, s
 
 ## Textures
 
-None yet (2026-10-11). Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in the top-left corner.
+Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in the top-left corner.
 
 | Path / ID | Type | Origin | Status | Notes |
 | --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/textures/entity/host/stage_1.png` | texture | ai (Claude Opus 5.5, 2026-10-11; value-noise script, not kept) | placeholder | Host overlay, stage 1: bruise-violet blotches over about a third of the surface. Tiles at one texel per mob texel over any mob's UVs (P2.2), so it must stay a seamless 32×32 repeat without features tied to a body part. |
+| `mod/src/main/resources/assets/remission/textures/entity/host/stage_2.png` | texture | ai (Claude Opus 5.5, 2026-10-11; value-noise script, not kept) | placeholder | Host overlay, stage 2: blotches over about half the surface plus dark veins. Same tiling rules as stage 1; should read as clearly worse than stage 1 at a glance. |
+| `mod/src/main/resources/assets/remission/textures/entity/host/stage_3.png` | texture | ai (Claude Opus 5.5, 2026-10-11; value-noise script, not kept) | placeholder | Host overlay, stage 3 (and any higher stage): about four fifths coverage, heavy veins. Same tiling rules. |
+| `mod/src/main/resources/assets/remission/textures/entity/host/veins_glow.png` | texture | ai (Claude Opus 5.5, 2026-10-11; value-noise script, not kept) | placeholder | Full-bright vein pass drawn from stage 3: thin sickly-green lines, transparent elsewhere. Same tiling rules; the art pass should settle the Strain's glow colour. |
 
 ## Models
 
@@ -63,6 +67,7 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.inspect.clean` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | `/remission inspect` report for a clean target (name). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.failed.not_living` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Command error: the target cannot carry the Strain (name). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.failed.no_living_targets` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Command error: no selected target can carry the Strain. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.overlayIntensity*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Client config label and tooltip for the host overlay opacity (P2.2). |
 
 ## Mod and pack metadata
 

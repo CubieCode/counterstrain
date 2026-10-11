@@ -10,5 +10,7 @@
   "commands.remission.inspect.success": "%s is at Strain level %s (host stage %s)",
   "commands.remission.inspect.clean": "%s carries no Strain",
   "commands.remission.failed.not_living": "%s cannot carry the Strain",
-  "commands.remission.failed.no_living_targets": "None of the targets can carry the Strain"
+  "commands.remission.failed.no_living_targets": "None of the targets can carry the Strain",
+  "remission.configuration.overlayIntensity": "Host overlay intensity",
+  "remission.configuration.overlayIntensity.tooltip": "How strongly the Strain shows on hosts, from 0 (hidden) to 1 (full). Changes only what you see."
 }

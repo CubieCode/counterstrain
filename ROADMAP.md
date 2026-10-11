@@ -113,9 +113,9 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.2: Generic host render layer
 
-- Status: `todo`
-- Owner:
-- PR:
+- Status: `review`
+- Owner: feat/p2.2-host-render-layer
+- PR: https://github.com/CubieCode/counterstrain/pull/12
 - Depends on: P2.1, P1.1
 - Scope: Layer added to every living-entity renderer (including players) in `EntityRenderersEvent.AddLayers`, re-rendering the parent model with a stage-dependent Strain overlay; client config for intensity. Placeholder art.
 - Acceptance: Works on vanilla and dev-runtime modded mobs (including non-standard models), baby mobs, armour; no crash with renderers lacking a model. Harness scenes `corruption/stages_vanilla`, `corruption/stages_modded`. Ledger updated; placeholders marked.

@@ -8,7 +8,7 @@ description: Capture and review screenshots of hosts, festering blocks, effects 
 Visual evidence is only valid from a GPU run. The log must name the RTX 4070 (headless-client); llvmpipe output is never evidence. No live view (VNC) exists, so every review works from image files.
 
 **Sources:**
-- Harness scenes (preferred): `tools/run-client-headless.sh --scene <id>` builds the scene, saves fixed-name screenshots to `.local/runs/latest/screenshots/<shot>.png` and quits (headless-client). Current scenes: `smoke/mob_lineup` (shots `front`, `oblique`: vanilla lineup plus the Mekanism robit as a dev-runtime modded mob).
+- Harness scenes (preferred): `tools/run-client-headless.sh --scene <id>` builds the scene, saves fixed-name screenshots to `.local/runs/latest/screenshots/<shot>.png` and quits (headless-client). Current scenes: `smoke/mob_lineup` (shots `front`, `oblique`: vanilla lineup plus the Mekanism robit as a dev-runtime modded mob), `corruption/stages_vanilla` and `corruption/stages_modded` (host overlay stages, P2.2; below).
 - `framebuffer.png` from a timeout run of `tools/run-client-headless.sh`: the last frame, good for "reaches title/world, no error screen".
 - In-game screenshots: F2 writes to `mod/run/client/screenshots/`. foundry has no input device, so these come only from a client run elsewhere with the same pack and scene.
 - `tools/collect-screenshots.sh [game-dir] [--clear]` copies PNGs (and the last framebuffer) into `.local/screenshots/<UTC>/`; review from `.local/screenshots/latest/`.
@@ -35,6 +35,9 @@ Visual evidence is only valid from a GPU run. The log must name the RTX 4070 (he
 - `setup`: a string is a server command without the slash (permission 4); `{"command": ..., "requires_mod": ...}` is its object form. `{"spawn": <entity id>, "pos", "yaw", "nbt"}` adds the entity directly: no `finalizeSpawn`, so no random equipment, babies or variants, and it works for types `/summon` refuses (the robit). `requires_mod` skips a step when that mod is absent (`-Pdev_runtime_mods=false`). Any failing step fails the scene.
 - `shots`: `name` (`[a-z0-9_]+`, saved as `<name>.png`) and `camera`, the player's feet position and rotation as for `/tp x y z yaw pitch`. The flat surface is y = -60.
 - Ticks stay frozen for the whole scene, so mobs, fluids and animations do not move between shots.
+- `{"corrupt": <entity selector>, "level": 0-100}` (P2.2) sets the Strain level of every living entity the selector matches through the server API (`Corruption.set`, staged by the run's common config), players included; it fails when nothing matches. Tag spawned mobs (`Tags:["stage_2"]` in `nbt`) and select them by tag.
+- A shot's optional `view` sets the camera type: `first_person` (default), `third_person_back` or `third_person_front`, e.g. to see the player. The scene's player is a spectator unless setup changes it (`gamemode creative @a`; a spectator renders only its head); a non-spectator falls, so its camera positions must stand on the ground (y = -60).
+- `corruption/stages_vanilla` (shots `stage_0`..`stage_3`, `stage_3_oblique`, `player`) and `corruption/stages_modded` (same stage shots plus `ender_dragon`) are the host overlay scenes (P2.2): one lineup per stage, 30 blocks apart on z, levels 0, 20, 50, 90. Players keep ticking under `/tick freeze`, so while shooting the harness pins the local player's `tickCount` to 0; its idle animation (arm bob) is then the same every run.
 
 **Scene discipline**, so images are comparable (the harness enforces the first four and the default 1920x1080; scenes add `NoAI`):
 - Superflat world, fixed seed.
@@ -55,7 +58,7 @@ Name scenes `<area>/<subject>` as in ROADMAP (`corruption/stages_vanilla`, `worl
 
 Always compare against the accepted reference for the same scene (below), and against vanilla for "does it still look like Minecraft".
 
-**References and comparison:** reviewed reference images are committed in `tools/visual-references/<scene>/<shot>.png`, one directory per harness scene, so local runs and the GPU workflow compare against the same set. Keep the set small: only scenes named in exit criteria (now `smoke/mob_lineup`, about 1 MB), the harness's 1920x1080 PNGs unchanged (no re-encoding, so unchanged runs hit the byte-identical fast path), and replace files instead of adding variants. They are screenshots of the running game used as test fixtures, never shipped, and sit outside the provenance check's scan roots, so they take no CONTENT-PROVENANCE rows. Compare a run with:
+**References and comparison:** reviewed reference images are committed in `tools/visual-references/<scene>/<shot>.png`, one directory per harness scene, so local runs and the GPU workflow compare against the same set. Keep the set small: only scenes named in exit criteria (now `smoke/mob_lineup`, `corruption/stages_vanilla` and `corruption/stages_modded`, about 6 MB together), the harness's 1920x1080 PNGs unchanged (no re-encoding, so unchanged runs hit the byte-identical fast path), and replace files instead of adding variants. They are screenshots of the running game used as test fixtures, never shipped, and sit outside the provenance check's scan roots, so they take no CONTENT-PROVENANCE rows. Compare a run with:
 
 ```sh
 tools/compare-screenshots.sh --scene <id> --actual .local/runs/latest/screenshots --out .local/compare/<id>
