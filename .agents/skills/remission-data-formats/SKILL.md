@@ -115,6 +115,10 @@ Cost (foundry, `ExposureBenchmark`, `REMISSION_EXPOSURE_BENCHMARK=1`): see docs/
 
 `data/<ns>/tags/entity_type/immune.json`, standard tag JSON (`{"replace": false, "values": ["minecraft:wither", "#c:bosses", {"id": "othermod:x", "required": false}]}`); Java `Corruption.IMMUNE`. An immune entity never becomes a host by any route: `Corruption.set` ignores levels above 0, infection on kill and `convert_to` skip it, and `/remission infect` skips it. A type added to the tag after it already carries the Strain keeps its state until cleansed. Remission ships only `#c:bosses` (ender dragon, wither, and whatever other mods tag); the pack extends it. Players are deliberately not immune: they can carry the Strain (`/remission infect`, rendered by the host overlay, scannable), but infection on kill never takes them because it only converts `Mob`s.
 
+## Entity tag `#remission:surge_hosts` (built, P4.3)
+
+`data/<ns>/tags/entity_type/surge_hosts.json`, standard tag JSON; Java `SurgeHosts.SURGE_HOSTS`. The entity types a surge spawns as hosts, each wave picking uniformly from the tag (sorted by id). Remission ships `minecraft:zombie`, `minecraft:spider`, `minecraft:cow`, `minecraft:pig`, `minecraft:sheep`; packs replace or extend it (modded mobs work). Types that are not `Mob`s are skipped; immune types spawn but stay clean, so keep them out. Every type keeps its own spawn placement, and in covered spots (no sky above) its own spawn rules: with the defaults, caves get zombies and spiders, and cows, pigs and sheep spawn only in the open. An empty tag turns surge hosts off.
+
 ## Mob profile (built, P3.3; defaults P3.2)
 
 Datapack registry `remission:mob_profile` (`MobProfiles.KEY`), files `data/<ns>/remission/mob_profile/<name>.json`, server side only (not synced). **Reload:** datapack registries load with the world, so adding, editing or removing a profile needs a world reload (rejoin a singleplayer world, restart a server); `/reload` does not re-read profiles, but tags a profile names in `entities` do rebind on `/reload`. Existing hosts pick up changed `attributes` the next time they join a level after the reload.
@@ -213,12 +217,14 @@ Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired f
 | `remission:nidus_destroyed` | A player breaks a `remission:nidus` (survival or creative, harvested or not; `onDestroyedByPlayer`). Other removals (explosions, `/setblock`, pistons, edits) post `NidusDestroyedEvent` but fire no trigger. | `location`: vanilla location predicate, tested at the centre of the nidus's block after removal (a `block` or `fluid` predicate sees what replaced it). |
 | `remission:host_scanned` | A player takes a host scan with the scanner (a host; a non-host gives no scan and no trigger). | `entity`: entity predicate (or loot conditions) on the scanned host; `stage`: int range, the host stage scanned; `bestiary_types`: int range, the number of host types in the player's bestiary after this scan (`Bestiary`; types it does not list are not counted). |
 | `remission:block_scanned` | A player takes a block scan with the scanner. | `location`: vanilla location predicate at the centre of the scanned block (its `block` predicate sees the scanned block). |
+| `remission:surge_survived` (P4.3) | A surge ends (any reason) and the player was caught in it: inside its area at one of its 20-tick checks while it ran, not dead since, and online and alive at the end (Surges and miasma clouds, below). A surge stopped during its warning never started and awards nothing. | `intensity`: int range, the surge's intensity (1–10). |
 
 ```json
 {"criteria": {"nidus": {"trigger": "remission:nidus_destroyed"}}}
 {"criteria": {"cow": {"trigger": "remission:host_scanned", "conditions": {"entity": {"type": "minecraft:cow"}, "stage": {"min": 2}}}}}
 {"criteria": {"ten": {"trigger": "remission:host_scanned", "conditions": {"bestiary_types": {"min": 10}}}}}
 {"criteria": {"found": {"trigger": "remission:block_scanned", "conditions": {"location": {"block": {"blocks": "remission:nidus"}}}}}}
+{"criteria": {"storm": {"trigger": "remission:surge_survived", "conditions": {"intensity": {"min": 2}}}}}
 ```
 
 Custom stats (registry `minecraft:custom_stat`, holder `RemissionStats`, formatter `DEFAULT`), awarded at the same moments as the triggers; lang keys `stat.remission.<name>`:
@@ -228,10 +234,11 @@ Custom stats (registry `minecraft:custom_stat`, holder `RemissionStats`, formatt
 | `remission:nidi_destroyed` | nidi the player broke (as `nidus_destroyed`) |
 | `remission:hosts_scanned` | host scans taken (as `host_scanned`) |
 | `remission:blocks_scanned` | block scans taken (as `block_scanned`) |
+| `remission:surges_survived` | surges survived (as `surge_survived`; P4.3) |
 
-Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above).
+Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above); `SurgeTests` for `surge_survived` and its stat.
 
-"Variant" is reserved for resistant mutations; triggers and stats for systems that are not built yet arrive with them.
+"Variant" is reserved for resistant mutations; triggers and stats for systems that are not built yet arrive with them. P8.1 deferred surge survived to P4.3, which built it; region % cleansed (P5.2) and viral load (P5.1) are still to come.
 
 ## Debug commands `/remission` (built, P2.3)
 
@@ -245,9 +252,21 @@ Registered in `commands/RemissionCommands` on `RegisterCommandsEvent`. Every `/r
 
 Errors: `commands.remission.failed.no_living_targets` when `infect` or `cleanse` selects no living entity; `commands.remission.failed.immune` when every living target of `infect` is immune; `commands.remission.failed.not_living` (name) when `inspect` targets a non-living entity. Vanilla parse errors cover an out-of-range level and a multi-entity `inspect` selector. Example: `/execute store result score @s strain run remission inspect @e[type=minecraft:cow,limit=1,sort=nearest]`.
 
+## Surge commands `/remission surge` (built, P4.3)
+
+Registered with the `/remission` tree (`commands/SurgeCommands`), same permission level 2, acting on the source's dimension. Surges and their rules: Surges and miasma clouds, below.
+
+| Syntax | Effect | Result | Feedback |
+| --- | --- | --- | --- |
+| `/remission surge start [pos] [intensity]` | `pos`: block position, default the source's position; `intensity`: int 1–10, default 1. Begins a surge's warning from the indexed nidus nearest `pos` among those whose area (spread reach) holds `pos`. Works whether or not `[surges] scheduled` is on. | 1 | `commands.remission.surge.start.success` (origin x, y, z, intensity, warning ticks); broadcast to ops |
+| `/remission surge stop` | Ends the surge warning or running in this dimension now (`SurgeEndedEvent` reason `STOPPED` and survivors awarded if it had started; nothing if still warning). The next scheduled surge is due `intervalTicks` later. | 1 | `commands.remission.surge.stop.success`; broadcast to ops |
+| `/remission surge status` | Reports the current surge or when the next is due; changes nothing. | the surge's intensity, or 0 with none | `commands.remission.surge.status.warning` / `.running` (origin x, y, z, intensity, ticks until it starts / ends), `.none` (ticks until due), `.unscheduled` (scheduled surges off) |
+
+Errors: `commands.remission.surge.failed.running` when `start` finds a surge already warning or running in the dimension; `commands.remission.surge.failed.no_nidus` when no indexed nidus reaches `pos`; `commands.remission.surge.failed.none` when `stop` finds no surge. Example (an FTB Quests command reward, run as server): `/execute in minecraft:overworld run remission surge start 120 64 -40 2`.
+
 ## Quest-fired events (planned, P8.2)
 
-Commands (`/remission surge start <pos> [intensity]`, `/remission nidus seed <pos>`, `/remission region advance <id>`) under the same `/remission` root, usable from FTB Quests command rewards and KubeJS. Document exact syntax here when built.
+Commands (`/remission nidus seed <pos>`, `/remission region advance <id>`) under the same `/remission` root, usable from FTB Quests command rewards and KubeJS. Starting a surge is P4.3's `/remission surge start` (above); P8.2 builds on it rather than replacing it. Document exact syntax here when built.
 
 ## Festering land: chunk attachment, nidus, spread config (built, P4.1)
 
@@ -343,6 +362,41 @@ Changed in P4.6: P4.2 shipped one `#minecraft:base_stone_overworld` entry (stone
 
 Fester biomes are ordinary datapack biomes (`data/<ns>/worldgen/biome/<id>.json`). A biome a chunk flips into only changes colours, sky, fog, music, spawns and precipitation; its features and carvers never run on flipped land.
 
+## Surges and miasma clouds (built, P4.3)
+
+A surge belongs to one indexed nidus (its origin); its **area** is the chunks within that nidus's spread reach (Manhattan, `SpreadSettings.radius()`, 7 with the default `[spread]` config). At most one surge per dimension. Phases: **warning** (`warningTicks`; title, subtitle, raid horn and a yellow boss bar for players in the area), then **running** (`durationTicks`; purple boss bar), then ended by its duration (`ELAPSED`), its nidus leaving the index (`NIDUS_DESTROYED`) or a stop (`STOPPED`). While running: the origin nidus's live spread steps and its own chunk's growth are multiplied by `spreadMultiplier × intensity` before `StrainSpreadAttemptEvent` (catch-up is never multiplied), a wave of hosts comes every 200 ticks near each player in the area, and when it starts it releases miasma clouds. Players in the area while it runs are caught in it; dying drops a player out of that surge for good; at the end the caught players still online earn `remission:surge_survived` and `remission:surges_survived`.
+
+Config `config/remission-common.toml`, section `[surges]` (applied when next read; counts per unit of intensity):
+
+| Key | Default | Range | Meaning |
+| --- | --- | --- | --- |
+| `scheduled` | true | bool | Whether surges come due on their own. Commands and the API start them either way. |
+| `intervalTicks` | 24000 | 1200–2400000 | Game ticks from the end of a surge (or the first tick of the level) until the next is due. A due surge starts once a player (alive, not a spectator) is in some nidus's area, checked every 20 ticks; the origin is chosen among those nidi by a hash of the game time. |
+| `warningTicks` | 600 | 0–12000 | Warning before a surge starts. |
+| `durationTicks` | 2400 | 200–72000 | How long a started surge runs. |
+| `spreadMultiplier` | 4 | 1–100 | Factor on the origin's spread steps, times the intensity. |
+| `hostsPerWave` | 2 | 0–32 | Hosts tried near each player in the area per wave (every 200 ticks, the first when the surge starts), times the intensity. None on Peaceful. Spawned at most 2 per tick. |
+| `hostLevel` | 50 | 1–100 | Strain level of surge hosts (stage 2 with the default `[hosts] stageThresholds`). |
+| `maxHosts` | 16 | 0–256 | Most hosts one surge keeps alive (and loaded) at once; waves spawn none while it has this many. |
+| `clouds` | 3 | 0–32 | Miasma clouds released when a surge starts, times the intensity, at most 32. |
+
+Host spots: a column 8–20 blocks from the player in a loaded chunk inside the area at festering stage 1 or higher; in it the spot nearest the player's height within 16 blocks with a sturdy floor, two blocks of room, no other living entity in the way and the type's spawn placement. A covered spot (no sky above) also needs the type's own spawn rules for an event spawn (`MobSpawnType.EVENT`): dark enough for monsters, grass and light for animals. So a player on the surface meets hosts on the surface and a player in a cave meets them on the cave floor. The mob is finalised as an event spawn, then set to `hostLevel` with `CorruptionCause.SURGE` (riders too). Types: `#remission:surge_hosts` (above).
+
+Entity `remission:miasma_cloud` (misc category; `/summon remission:miasma_cloud ~ ~8 ~ {Radius:5.0f,Heading:90.0f}` works; saved with its chunk):
+
+| NBT | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `Radius` | float 0.5–16 | 4 | Horizontal half-size; the area is the bounding box, `2 × Radius` wide and 3 blocks tall from its position (the base). Synced. |
+| `Heading` | float degrees | 0 | Drift direction as entity yaw: 0 south (+z), 90 west, 180 north, 270 east. |
+| `Age` | int | 0 | Ticks lived. |
+| `Lifetime` | int ≥ 1 | 3600 | It dissipates (is removed) when `Age` reaches this. |
+
+Released clouds sit over a random column of a random loaded festering chunk within 3 chunks of a player in the area (or of the origin when none is), 8 blocks above the highest motion-blocking block, radius 4–6, lifetime 3600, random heading. A cloud drifts 0.04 blocks per tick along its heading, eases toward 8 blocks above the ground beneath it (0.05 blocks per tick at most), and never drifts over land that is not festering: if the next step would leave a loaded chunk at stage 1 or higher it turns right, left or back (first that stays), and holds still if none does. It cannot be attacked, pushed or collided with and ignores explosions. **It does nothing to what it touches yet**: P5.1 adds viral load for anything inside its bounding box.
+
+Saved data `data/remission_surges.dat` in the dimension folder (internal; read surges through the events and `/remission surge status`): `next_due` (game time) and `current` (`origin`, `intensity`, `warning_time`, `start_time`, `end_time`, `started`, and UUID lists `participants`, `fallen`, `hosts`).
+
+Events: `SurgeStartedEvent`, `SurgeEndedEvent` (Public API, below). Commands: Surge commands, above.
+
 ## Item contamination (planned, P10.6)
 
 Data component `remission:contaminated` on item stacks carried through festering chunks, a tag for containers that protect their contents, and a decontamination recipe type or KubeJS hook. Fields fixed in P10.6.
@@ -370,13 +424,15 @@ Conventions, for every event here and every event later items add:
 | `ChunkStageChangedEvent extends FesteringLandEvent` | `getLevel()`, `getChunk()` (`ChunkPos`), `getOldLevel()`, `getNewLevel()`, `getOldStage()`, `getNewStage()` | After the spread engine stores a chunk level whose festering stage differs from the old one: live passes and catch-up. A catch-up posts once per chunk, so stages can jump by more than one; changes within a stage post nothing. | no |
 | `NidusDestroyedEvent extends FesteringLandEvent` | `getLevel()`, `getPos()` (the nidus block) | After a nidus leaves the level's index: its block was broken, replaced or removed, or a spread pass found an index entry without its block. Its land keeps its level. No player is passed; quests use the `remission:nidus_destroyed` trigger (Advancement triggers and stats, above). To protect a nidus, cancel the block break. When the block was removed, it is posted from the block's `onRemove` inside `setBlockState`: listeners must not set the block at `getPos()` in the listener (defer it). | no |
 | `BlockFesteredEvent extends FesteringLandEvent` (P4.2) | `getLevel()`, `getPos()`, `getOldState()`, `getNewState()` | After a block in a festering chunk is replaced through `remission:festers_into` (Festering stages, above), once per block: it is block-scoped, so a chunk's stage batch posts one per replaced block, spread over the ticks the batch takes. The biome flip posts nothing. Listeners must not set the block at `getPos()` in the listener. | no |
+| `SurgeStartedEvent extends FesteringLandEvent` (P4.3) | `getLevel()`, `getOrigin()` (the nidus), `getIntensity()` (1–10), `getEndTime()` (game time it is due to end) | When a surge's warning runs out and it starts, after its clouds are released and before its first wave (Surges and miasma clouds, above). Never for a surge stopped during its warning. | no |
+| `SurgeEndedEvent extends FesteringLandEvent` (P4.3) | `getLevel()`, `getOrigin()`, `getIntensity()`, `getReason()` (`ELAPSED`, `NIDUS_DESTROYED`, `STOPPED`; treat unknown values as `STOPPED`), `getSurvivors()` (immutable list of the `ServerPlayer`s awarded `surge_survived`) | When a started surge ends, after acceleration and waves stopped and survivors were awarded. Its clouds keep drifting. | no |
 | `StrainSpreadAttemptEvent extends FesteringLandEvent` | `getLevel()`, `getFrom()`, `getTo()` (`ChunkPos`), `getAmount()` (level gain at multiplier 1, capped at the target), `isCatchUp()`, `getRateMultiplier()`/`setRateMultiplier(double)` (default 1; negative or NaN become 0) | Before every chunk-to-chunk step: each live step into a loaded chunk below its target whose parent passed the threshold, and once per nidus in reach when a reloaded chunk catches up (`isCatchUp()`, `getAmount()` covers every missed pass, `getFrom()` may be unloaded). The growth of a nidus's own chunk is not a spread attempt, and a step from a loaded parent below the threshold is held without an event (live and catch-up). | yes: cancelling (or multiplier 0) stops this step; chunks reached through it stay clean while the cancelled chunk is loaded. A step from an unloaded parent is not held (the parent counts as at its target), so keep a firebreak chunk loaded or cancel the steps behind it too |
 
 Spread rate: the gain is `amount * multiplier`, capped at the chunk's target. A fractional part is added as one more level with that probability, drawn from a hash of the two chunks and the game time, so slowed spread still advances on average and the same state and ticks give the same levels. Listeners compose by multiplying (`event.setRateMultiplier(event.getRateMultiplier() * 0.5)`). `last_update_game_time` moves to now only when a catch-up changed the chunk's level: passes shortened by a multiplier below 1 are then not credited again (the chunk ends below where full-rate spread would have taken it and continues from there), while a catch-up whose steps were all cancelled, scaled to 0 or held keeps the old time, so a later reload credits that history again, still capped at the target. A parent caught up first (see the rules above) contributes its level after its own catch-up, which converges on the same targets as live spread rather than replaying exact history.
 
 Re-entrancy: a host event listener that changes the same entity's level (`Corruption.set`) posts a nested event at once; later listeners of the outer event then see its stale values while queries return the nested change. Defer such changes to a later tick.
 
-`CorruptionCause` (enum, `HostEvent.getCause()`): `INFECTION` (killed by a host and infected in place or converted), `COMMAND` (`/remission infect` or `/remission cleanse`), `FESTERING_LAND` (prolonged exposure to festering land, P4.7), `OTHER` (any other caller). Later items insert their causes before `OTHER` (purification, P5.2), so never persist a cause by ordinal; treat unknown values as `OTHER`.
+`CorruptionCause` (enum, `HostEvent.getCause()`): `INFECTION` (killed by a host and infected in place or converted), `COMMAND` (`/remission infect` or `/remission cleanse`), `FESTERING_LAND` (prolonged exposure to festering land, P4.7), `SURGE` (spawned as a host by a surge; P4.3), `OTHER` (any other caller). Later items insert their causes before `OTHER` (purification, P5.2), so never persist a cause by ordinal; treat unknown values as `OTHER`.
 
 Queries, `CorruptionQueries` (static):
 
@@ -390,11 +446,10 @@ Queries, `CorruptionQueries` (static):
 
 Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; the default `festers_into` map turns grass at 1, trees and foliage at 2 and stone at 3, and the last stage flips the biome; Festering stages, above). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
 
-Planned by later items, added here when built: surge started / ended (P4.3), viral load changed and a player's viral load query (P5.1), block purified and chunk entered remission (P5.2).
+Planned by later items, added here when built: viral load changed and a player's viral load query (P5.1), block purified and chunk entered remission (P5.2).
 
 | Event | Fired by | Payload (planned) | Cancellable |
 | --- | --- | --- | --- |
-| surge started / ended | P4.3 | level, origin, intensity | no |
 | viral load changed | P5.1 | player, old and new value, cause | no |
 | block purified | P5.2 | level, pos, old and new block state, cause | no |
 | chunk entered remission | P5.2 | level, chunk pos, player (optional) | no |

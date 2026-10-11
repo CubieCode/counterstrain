@@ -370,11 +370,18 @@ final class SceneRunner {
         phase = Phase.SHOOTING;
     }
 
-    /** Camera in place, every chunk in view loaded and no section compiles queued. */
+    /**
+     * Camera in place, every chunk in view loaded, no section compiles queued, and no {@code tick step} still running on
+     * the server or the client (a shot command may step the frozen world; the shot shows where the steps end).
+     */
     private boolean isSettled(Minecraft mc) {
         boolean wantsScreen = scene.shots().get(shotIndex).press().isPresent();
         if (!pending.isDone() || mc.level == null || mc.player == null || (mc.screen != null) != wantsScreen
                 || mc.getOverlay() != null) {
+            return false;
+        }
+        MinecraftServer server = mc.getSingleplayerServer();
+        if ((server != null && server.tickRateManager().isSteppingForward()) || mc.level.tickRateManager().isSteppingForward()) {
             return false;
         }
         pending.join();

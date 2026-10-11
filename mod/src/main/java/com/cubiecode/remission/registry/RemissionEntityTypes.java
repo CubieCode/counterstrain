@@ -13,13 +13,13 @@ public final class RemissionEntityTypes {
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
             DeferredRegister.create(Registries.ENTITY_TYPE, Remission.MOD_ID);
 
-    /** A drifting miasma cloud released by a surge (P4.3). Its size follows its radius. */
+    /** A drifting miasma cloud released by a surge (P4.3). Its size follows its radius; its position syncs every tick. */
     public static final Supplier<EntityType<MiasmaCloud>> MIASMA_CLOUD = ENTITY_TYPES.register("miasma_cloud",
             () -> EntityType.Builder.<MiasmaCloud>of(MiasmaCloud::new, MobCategory.MISC)
                     .sized(MiasmaCloud.DEFAULT_RADIUS * 2, MiasmaCloud.HEIGHT)
                     .fireImmune()
                     .clientTrackingRange(10)
-                    .updateInterval(5)
+                    .updateInterval(1)
                     .build(Remission.id("miasma_cloud").toString()));
 
     private RemissionEntityTypes() {

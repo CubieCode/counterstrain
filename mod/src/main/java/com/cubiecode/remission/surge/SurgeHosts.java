@@ -27,6 +27,7 @@ import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.NaturalSpawner;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.event.EventHooks;
 
 /**
@@ -118,10 +119,10 @@ public final class SurgeHosts {
     }
 
     /**
-     * A sturdy floor under {@code pos}, room for the mob at it, the type's spawn placement (on the ground, in water...)
-     * and, where the spot is covered (no sky above it), the type's own spawn rules for an event spawn: dark enough for
-     * monsters, grass and light for animals, so cows stay out of caves. Open spots skip the rules' light and floor
-     * checks: a surge brings hosts out in daylight on festering land.
+     * A sturdy floor under {@code pos}, room for the mob at it (no blocks or other living entities in the way), the type's
+     * spawn placement (on the ground, in water...) and, where the spot is covered (no sky above it), the type's own spawn
+     * rules for an event spawn: dark enough for monsters, grass and light for animals, so cows stay out of caves. Open
+     * spots skip the rules' light and floor checks: a surge brings hosts out in daylight on festering land.
      */
     static boolean fits(ServerLevel level, BlockPos pos, EntityType<?> type, RandomSource random) {
         BlockPos below = pos.below();
@@ -134,8 +135,9 @@ public final class SurgeHosts {
                 return false;
             }
         }
-        if (!SpawnPlacements.isSpawnPositionOk(type, level, pos)
-                || !level.noCollision(type.getSpawnAABB(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5))) {
+        AABB box = type.getSpawnAABB(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        if (!SpawnPlacements.isSpawnPositionOk(type, level, pos) || !level.noCollision(box)
+                || !level.getEntitiesOfClass(LivingEntity.class, box).isEmpty()) {
             return false;
         }
         return level.canSeeSky(pos) || SpawnPlacements.checkSpawnRules(type, level, MobSpawnType.EVENT, pos, random);

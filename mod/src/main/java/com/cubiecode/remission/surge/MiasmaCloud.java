@@ -19,7 +19,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 
 /**
  * {@code remission:miasma_cloud}: an airborne area of miasma released by a surge (P4.3). It drifts slowly along its
@@ -96,9 +95,8 @@ public class MiasmaCloud extends Entity {
     @Override
     public void tick() {
         if (level().isClientSide) {
-            // Positions arrive every few ticks and snap; move along the synced velocity in between.
-            Vec3 motion = getDeltaMovement();
-            setPos(getX() + motion.x, getY() + motion.y, getZ() + motion.z);
+            // The server sends the position every tick it moves and the client takes it as is (no extrapolation), so a
+            // frozen or stepped world always shows the server's position.
             return;
         }
         if (++age >= lifetime) {

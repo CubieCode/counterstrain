@@ -621,7 +621,7 @@ public final class SurgeTests {
     // ---- helpers -----------------------------------------------------------------------------------------------------
 
     /** A survival server player at {@code pos} with a connection that drops what it is sent (see QuestTriggerTests). */
-    private static ServerPlayer player(GameTestHelper helper, BlockPos pos) {
+    static ServerPlayer player(GameTestHelper helper, BlockPos pos) {
         MinecraftServer server = helper.getLevel().getServer();
         CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(UUID.randomUUID(), "surge-test"), false);
         ServerPlayer player = new ServerPlayer(server, helper.getLevel(), cookie.gameProfile(), cookie.clientInformation());
