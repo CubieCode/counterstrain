@@ -74,7 +74,7 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.3: GPU workflow runs scenes
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p1.3-gpu-workflow-scenes
 - PR:
 - Depends on: P1.1
