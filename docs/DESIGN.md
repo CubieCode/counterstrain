@@ -81,7 +81,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 
 ### Research
 
-- A scanner turns hosts and blocks into data items (host scans and block scans, built in P6.1). Scanning samples is not assigned to a roadmap item yet: samples arrive in P7.1, and the analyzer (P7.2) is planned to turn them into data.
+- A scanner turns hosts and blocks into data items (host scans and block scans, built in P6.1). Scanning samples is not assigned to a roadmap item yet: the samples exist since P7.1, and the analyzer (P7.2) is planned to turn them into data.
 - A bestiary of host types that grows with installed mods, because host forms are derived from entity types at runtime (built in P6.2): each host scan records the type and its highest scanned host stage for that player, and a key (default M) opens the list.
 
 ### Tech chain
