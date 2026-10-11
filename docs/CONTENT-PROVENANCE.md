@@ -22,13 +22,19 @@ Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in t
 | `mod/src/main/resources/assets/remission/textures/entity/host/stage_2.png` | texture | ai (Claude Opus 5.5, 2026-10-11; value-noise script, not kept) | placeholder | Host overlay, stage 2: blotches over about half the surface plus dark veins. Same tiling rules as stage 1; should read as clearly worse than stage 1 at a glance. |
 | `mod/src/main/resources/assets/remission/textures/entity/host/stage_3.png` | texture | ai (Claude Opus 5.5, 2026-10-11; value-noise script, not kept) | placeholder | Host overlay, stage 3 (and any higher stage): about four fifths coverage, heavy veins. Same tiling rules. |
 | `mod/src/main/resources/assets/remission/textures/entity/host/veins_glow.png` | texture | ai (Claude Opus 5.5, 2026-10-11; value-noise script, not kept) | placeholder | Full-bright vein pass drawn from stage 3: thin sickly-green lines, transparent elsewhere. Same tiling rules; the art pass should settle the Strain's glow colour. |
+| `mod/src/main/resources/assets/remission/textures/item/scanner.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel-map script, not kept) | placeholder | Scanner (P6.1): handheld unit with an antenna, a green readout screen and two buttons. Should read as field lab equipment, not a weapon or magic item. |
+| `mod/src/main/resources/assets/remission/textures/item/host_scan.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel-map script, not kept) | placeholder | Host scan data item (P6.1): a violet data card with green readout lines. Shares a silhouette with the block scan; the art pass should keep the two distinguishable by colour at inventory size. |
+| `mod/src/main/resources/assets/remission/textures/item/block_scan.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel-map script, not kept) | placeholder | Block scan data item (P6.1): the host scan's card in slate teal with pale readout lines. |
 
 ## Models
 
-None yet; there are no hand-written or generated block or item models.
+Datagen item models are `procedural (datagen)` and follow their textures.
 
 | Path / ID | Type | Origin | Status | Notes |
 | --- | --- | --- | --- | --- |
+| `mod/src/generated/resources/assets/remission/models/item/scanner.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:scanner` (`RemissionItemModelProvider`, P6.1). |
+| `mod/src/generated/resources/assets/remission/models/item/host_scan.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:host_scan` (`RemissionItemModelProvider`, P6.1). |
+| `mod/src/generated/resources/assets/remission/models/item/block_scan.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:block_scan` (`RemissionItemModelProvider`, P6.1). |
 
 ## GUI art, icons and logos
 
@@ -68,6 +74,10 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.failed.not_living` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Command error: the target cannot carry the Strain (name). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.failed.no_living_targets` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Command error: no selected target can carry the Strain. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.overlayIntensity*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Client config label and tooltip for the host overlay opacity (P2.2). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.scanner*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Scanner name and tooltip hint (P6.1). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.host_scan*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Host scan name and its tooltip line (entity name, host stage) (P6.1). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.block_scan*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Block scan name and its tooltip line (block name) (P6.1). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:message.remission.scanner*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Action bar feedback after a scan: host scan recorded, block scan recorded, no Strain detected (P6.1). |
 
 ## Mod and pack metadata
 

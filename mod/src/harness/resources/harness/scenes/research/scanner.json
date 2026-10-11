@@ -1,0 +1,21 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamemode creative @a",
+    "fill -4 -61 -6 4 -61 0 minecraft:smooth_stone",
+    "fill -4 -60 -6 4 -57 -6 minecraft:white_concrete",
+    "summon minecraft:item_frame -2 -59 -5 {Facing:3b,Fixed:1b,Item:{id:\"remission:scanner\",count:1}}",
+    "summon minecraft:item_frame 0 -59 -5 {Facing:3b,Fixed:1b,Item:{id:\"remission:host_scan\",count:1,components:{\"remission:scan_data\":{entity:\"minecraft:cow\",stage:2}}}}",
+    "summon minecraft:item_frame 2 -59 -5 {Facing:3b,Fixed:1b,Item:{id:\"remission:block_scan\",count:1,components:{\"remission:scan_data\":{block:\"minecraft:stone\"}}}}",
+    "fill 17 -61 -3 25 -61 5 minecraft:smooth_stone",
+    "fill 16 -61 -4 26 -55 -4 minecraft:white_concrete",
+    {"spawn": "minecraft:armor_stand", "pos": [20.5, -60.0, 0.5], "yaw": 90.0, "nbt": "{ShowArms:1b,NoBasePlate:1b,Invisible:0b,Pose:{RightArm:[0f,0f,0f]},HandItems:[{id:\"remission:scanner\",count:1},{}]}"},
+    {"spawn": "minecraft:cow", "pos": [18.0, -60.0, 1.0], "yaw": -90.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"scanned\"]}"},
+    {"corrupt": "@e[tag=scanned]", "level": 50}
+  ],
+  "shots": [
+    {"name": "items", "camera": {"pos": [0.5, -60.0, -2.0], "yaw": 180.0, "pitch": 6.0}},
+    {"name": "in_hand", "camera": {"pos": [20.0, -60.0, -1.5], "yaw": 0.0, "pitch": 30.0}}
+  ]
+}

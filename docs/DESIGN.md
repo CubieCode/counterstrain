@@ -35,6 +35,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Items carried through festering land | **contaminated** (verb: decontaminate) | data component `remission:contaminated` (planned, P10.6) |
 | Drifting airborne Strain | **miasma clouds** | spawned by surges above festering land; add viral load to anything flying through |
 | The Counterstrain's deployable carrier | **dispersal payload** | block `remission:dispersal_payload`; can also ride a moving Create contraption through the optional integration |
+| Research records made by the scanner | **scans**: **host scans** and **block scans** | item `remission:scanner`; data items `remission:host_scan`, `remission:block_scan`; data component `remission:scan_data` |
 
 "Variant" always means a resistant mutation of the Strain, never a kind of host: scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
 
@@ -77,7 +78,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 
 ### Research
 
-- A scanner turns hosts, blocks and samples into data items.
+- A scanner turns hosts and blocks into data items (host scans and block scans, built in P6.1). Scanning samples is not assigned to a roadmap item yet: samples arrive in P7.1, and the analyzer (P7.2) is planned to turn them into data.
 - A bestiary of host types that grows with installed mods, because host forms are derived from entity types at runtime.
 
 ### Tech chain

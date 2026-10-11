@@ -27,6 +27,40 @@ Config `config/remission-common.toml`, `[hosts] stageThresholds = [1, 34, 67]`: 
 
 Sync: NeoForge attachment sync, wire format `CorruptionState.STREAM_CODEC` (var-int `level`, var-int `stage`), to players tracking the entity and to the entity itself if it is a player, on change, on start-tracking and on the player's login, respawn and dimension change. Clients read it with `Corruption.get`. Not copied on death or conversion. P4.4 adds the host corrupted / cleansed events, fired from `set`; the debug commands below drive it.
 
+## Scanner and data items (built, P6.1)
+
+Items: `remission:scanner` (stacks to 1; listed in the vanilla Tools and Utilities creative tab) and the data items `remission:host_scan` and `remission:block_scan`. Code: `research/Scanning` (behaviour), `research/ScanData` (component), `registry/RemissionDataComponents`.
+
+Scanning, server side (the client only claims the interaction):
+
+| Use the scanner on | Result |
+| --- | --- |
+| A host (any living entity with host stage ≥ 1, players included) | One `remission:host_scan` with `{"entity": <entity type id>, "stage": <stored host stage>}` into the inventory (dropped if full). Action bar `message.remission.scanner.host` (name, stage). The host is unchanged. |
+| A living entity that is not a host (stage 0, including a latent level below the first threshold) | No item. Action bar `message.remission.scanner.no_strain` (name). |
+| A non-living entity (item frame, boat, minecart) | Not a scan: the entity's own interaction runs as usual. |
+| Any block | One `remission:block_scan` with `{"block": <block id>}` (block id only, no state or block entity data). Action bar `message.remission.scanner.block` (name). |
+
+Every scan attempt (including the no-Strain case) puts the scanner on a 20-tick item cooldown; attempts during the cooldown do nothing. Entity scans are taken in `PlayerInteractEvent.EntityInteract` and `EntityInteractSpecific`, before the entity's own interaction, so scanning a villager does not open trading and scanning a horse does not mount it. Block scans run in `onItemUseFirst`, before the block's own use, so scanning a chest does not open it. No sneaking needed; spectators cannot scan.
+
+Data component `remission:scan_data`, saved with the stack (`components` in item NBT/JSON) and synced to clients for the tooltip. Exactly one of two shapes:
+
+```json
+{ "entity": "minecraft:cow", "stage": 2 }
+{ "block": "minecraft:stone" }
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `entity` | resource location | Scanned host's entity type. |
+| `stage` | int ≥ 1 | The host's stored stage at scan time (host scans only; never recomputed). |
+| `block` | resource location | Scanned block. |
+
+Ids are stored as plain ids, not registry holders, so a scan of a since-removed mod's entity or block still loads; its tooltip then shows the raw id. The component holds no timestamp or player, so equal scans stack and a recipe can match the whole component. Wire format (`ScanData.STREAM_CODEC`): var-int kind (0 host, 1 block), resource location, var-int stage (0 for blocks).
+
+Matching scans in pack recipes (1.21.1 ingredients): any scan of a kind with `{"item": "remission:host_scan"}`; a specific scan with NeoForge's components ingredient, e.g. `{"type": "neoforge:components", "items": "remission:host_scan", "components": {"remission:scan_data": {"entity": "minecraft:cow", "stage": 2}}}` (stage is part of the value, so list one ingredient per stage that should count). A data item without the component (from `/give`) is valid but blank: no tooltip line, and it matches only plain item ingredients.
+
+Not part of this contract yet: the `remission:host_scanned` trigger and `remission:hosts_scanned` stat (P8.1), per-player scan progress for the bestiary (P6.2) and scanning samples (unassigned).
+
 ## Entity tag `#remission:immune` (planned, P3.3)
 
 `data/<ns>/tags/entity_type/immune.json`, standard tag JSON (`{"replace": false, "values": ["minecraft:wither", "#c:bosses", {"id": "othermod:x", "required": false}]}`). Immune mobs never become hosts or convert. Defaults: Remission ships bosses and players-only types; the pack extends it.

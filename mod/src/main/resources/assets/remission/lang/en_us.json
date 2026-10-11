@@ -12,5 +12,14 @@
   "commands.remission.failed.not_living": "%s cannot carry the Strain",
   "commands.remission.failed.no_living_targets": "None of the targets can carry the Strain",
   "remission.configuration.overlayIntensity": "Host overlay intensity",
-  "remission.configuration.overlayIntensity.tooltip": "How strongly the Strain shows on hosts, from 0 (hidden) to 1 (full). Changes only what you see."
+  "remission.configuration.overlayIntensity.tooltip": "How strongly the Strain shows on hosts, from 0 (hidden) to 1 (full). Changes only what you see.",
+  "item.remission.scanner": "Scanner",
+  "item.remission.scanner.desc": "Use on a host or a block to record a scan",
+  "item.remission.host_scan": "Host Scan",
+  "item.remission.host_scan.subject": "%s, host stage %s",
+  "item.remission.block_scan": "Block Scan",
+  "item.remission.block_scan.subject": "%s",
+  "message.remission.scanner.host": "Host scan recorded: %s, host stage %s",
+  "message.remission.scanner.block": "Block scan recorded: %s",
+  "message.remission.scanner.no_strain": "No Strain detected in %s"
 }
