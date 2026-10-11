@@ -7,7 +7,8 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 /**
- * Custom payload registration (planned: corruption state sync to clients).
+ * Custom payload registration. None yet: corruption state reaches clients through NeoForge attachment sync
+ * ({@code RemissionAttachments.CORRUPTION}), which needs no payload here.
  * Bump {@link #PROTOCOL_VERSION} whenever a payload's wire format changes.
  */
 @EventBusSubscriber(modid = Remission.MOD_ID)
