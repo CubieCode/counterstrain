@@ -66,6 +66,15 @@ public final class RemissionAttachments {
                     .serialize(Codec.intRange(0, Integer.MAX_VALUE), stage -> stage > 0)
                     .build());
 
+    /**
+     * A mob's festering land exposure in ticks (P4.7): rises while it stands in festering land at or above the infection
+     * minimum stage and falls by the same amount outside it. Saved with the mob (never at 0) and server-only.
+     */
+    public static final Supplier<AttachmentType<Integer>> FESTERING_EXPOSURE = ATTACHMENT_TYPES.register("festering_exposure",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.intRange(0, Integer.MAX_VALUE), ticks -> ticks > 0)
+                    .build());
+
     private RemissionAttachments() {
     }
 }

@@ -21,8 +21,8 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 /**
  * How mobs become hosts. A {@link Mob} killed by a host (the damage source's responsible entity) does not die: it becomes a
  * host in place, or is replaced by its mob profile's {@code convert_to} type, at the first host stage. Immune mobs, mobs
- * that are already hosts and mobs whose profile turns off {@code conversion.on_kill} die normally. Infection from
- * festering land is a phase 4 source; {@link #canInfectFromFesteringLand} is its eligibility check and nothing calls it yet.
+ * that are already hosts and mobs whose profile turns off {@code conversion.on_kill} die normally. Mobs that stay in
+ * festering land become hosts the same way through {@link #infectFromFesteringLand}, driven by {@link FesteringExposure}.
  */
 @EventBusSubscriber(modid = Remission.MOD_ID)
 public final class Infection {
@@ -49,22 +49,47 @@ public final class Infection {
                 || !profile.map(p -> p.conversion().onKill()).orElse(true)) {
             return null;
         }
-        Optional<EntityType<?>> convertTo = profile.flatMap(MobProfile::convertTo).map(holder -> holder.value());
-        if (convertTo.isEmpty() || convertTo.get() == victim.getType()) {
-            victim.setHealth(victim.getMaxHealth());
-            Corruption.set(victim, initialLevel(), CorruptionCause.INFECTION);
-            return victim;
-        }
-        return convert(victim, convertTo.get());
+        return infect(victim, profile, CorruptionCause.INFECTION);
     }
 
     /**
      * Whether prolonged time in festering land may turn this mob into a host: not immune, not already a host, and its
-     * profile allows {@code conversion.festering_land}. Phase 4 adds the festering land exposure that calls this.
+     * profile allows {@code conversion.festering_land}.
      */
     public static boolean canInfectFromFesteringLand(Mob mob) {
+        return canInfectFromFesteringLand(mob, MobProfiles.find(mob));
+    }
+
+    /** {@link #canInfectFromFesteringLand(Mob)} with {@code profile} in place of the mob's own. */
+    public static boolean canInfectFromFesteringLand(Mob mob, Optional<MobProfile> profile) {
         return !Corruption.isImmune(mob) && !Corruption.isHost(mob)
-                && MobProfiles.find(mob).map(p -> p.conversion().festeringLand()).orElse(true);
+                && profile.map(p -> p.conversion().festeringLand()).orElse(true);
+    }
+
+    /**
+     * Turns a mob that built up enough festering land exposure into a host, in place or through the profile's
+     * {@code convert_to}, with {@link CorruptionCause#FESTERING_LAND}. Returns the new host, or {@code null} if the mob is
+     * not eligible or the conversion was refused. Server only.
+     */
+    @Nullable
+    public static Mob infectFromFesteringLand(Mob mob, Optional<MobProfile> profile) {
+        if (!canInfectFromFesteringLand(mob, profile)) {
+            return null;
+        }
+        return infect(mob, profile, CorruptionCause.FESTERING_LAND);
+    }
+
+    @Nullable
+    private static Mob infect(Mob victim, Optional<MobProfile> profile, CorruptionCause cause) {
+        Optional<EntityType<?>> convertTo = profile.flatMap(MobProfile::convertTo).map(holder -> holder.value());
+        if (convertTo.isEmpty() || convertTo.get() == victim.getType()) {
+            if (cause == CorruptionCause.INFECTION) {
+                victim.setHealth(victim.getMaxHealth());
+            }
+            Corruption.set(victim, initialLevel(), cause);
+            return victim;
+        }
+        return convert(victim, convertTo.get(), cause);
     }
 
     /** The Strain level a newly infected host starts at: the lowest host stage threshold. */
@@ -80,7 +105,7 @@ public final class Infection {
      */
     @Nullable
     @SuppressWarnings("unchecked")
-    private static Mob convert(Mob victim, EntityType<?> type) {
+    private static Mob convert(Mob victim, EntityType<?> type, CorruptionCause cause) {
         if (type.is(Corruption.IMMUNE)) {
             return null;
         }
@@ -98,7 +123,7 @@ public final class Infection {
         if (host == null) {
             return null;
         }
-        Corruption.set(host, initialLevel(), CorruptionCause.INFECTION);
+        Corruption.set(host, initialLevel(), cause);
         EventHooks.onLivingConvert(victim, host);
         return host;
     }

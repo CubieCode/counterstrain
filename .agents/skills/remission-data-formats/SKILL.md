@@ -89,7 +89,27 @@ Wire format (`BestiaryProgress.STREAM_CODEC`): var-int entry count, then per ent
 
 The victim dies normally when it is immune, already a host, its profile sets `conversion.on_kill` to false, `convert_to` names an immune type or a non-mob type (logged), or another mod vetoes the conversion. Players and other non-`Mob` living entities are never infected on kill.
 
-Festering land: `Infection.canInfectFromFesteringLand(Mob)` (not immune, not a host, profile `conversion.festering_land` not false) is the eligibility check for the phase 4 source; nothing calls it yet and no exposure is tracked (P4.7 builds this source).
+Festering land is the other infection source (Festering land infection, below). It converts the same way (in place or through `convert_to`) but does not heal an in-place host.
+
+## Festering land infection (built, P4.7)
+
+`com.cubiecode.remission.infection`, server side. A `Mob` builds up **exposure** while it is in a festering chunk at or above `[infection] festeringLandMinStage`, at any height (caves under a festering chunk count in full; stages are per chunk), and becomes a host once its exposure reaches `festeringLandExposureTicks`:
+
+- Eligible (`Infection.canInfectFromFesteringLand(Mob)`): not `#remission:immune`, not already a host, and its mob profile does not set `conversion.festering_land` to false. An ineligible mob in festering land has its exposure cleared. Players and other non-`Mob` entities never build exposure (viral load is the player system, P5.1).
+- Cadence: one `ExposureTracker` per server level, on `LevelTickEvent.Post`. Every 20 ticks a pass snapshots the level's mobs and checks up to 256 of them per tick, ending the tick early once 32 have become hosts (`ExposureSettings.INTERVAL_TICKS`, `MOB_BUDGET`, `INFECTION_BUDGET`; not configurable), so a pass over more mobs, or many mobs reaching the threshold together, continues on later ticks. Each checked mob gains, in qualifying land, or loses, anywhere else, the game ticks since the previous pass started (nothing on the first pass after the server starts or the source is turned back on). Mobs in chunks that are not entity-ticking are skipped and keep their exposure.
+- Infection: at the threshold the exposure is cleared and the mob becomes a host at the first host stage through `Corruption.set` with `CorruptionCause.FESTERING_LAND`, in place (not healed), or replaced through its profile's `convert_to` exactly as infection on kill does (vetoable by `LivingConversionEvent.Pre`; a vetoed or immune `convert_to` leaves the mob clean, and it builds exposure again). `HostCorruptedEvent` carries `FESTERING_LAND`.
+
+Entity attachment `remission:festering_exposure` (`RemissionAttachments.FESTERING_EXPOSURE`): int ticks ≥ 0, codec-serialized with the mob (`neoforge:attachments`, skipped at 0), server only, not synced or copied on conversion. `ExposureTracker.exposure(mob)` and `setExposure(mob, ticks)` read and write it (internal, not API).
+
+Config `config/remission-common.toml`, section `[infection]` (read at the start of each pass):
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `festeringLand` | bool | true | Festering land infection on or off. Off freezes every mob's exposure. |
+| `festeringLandMinStage` | int 1–8 | 2 | Lowest chunk festering stage (`[festering] stageThresholds`) that builds exposure. Above the number of stages, no land does. |
+| `festeringLandExposureTicks` | int 20–1728000 | 6000 | Exposure (game ticks in qualifying land, net of decay) at which a mob becomes a host. |
+
+Cost (foundry, `ExposureBenchmark`, `REMISSION_EXPOSURE_BENCHMARK=1`): see docs/ARCHITECTURE.md (Festering land infection).
 
 ## Entity tag `#remission:immune` (built, P3.3)
 
@@ -120,7 +140,7 @@ Datapack registry `remission:mob_profile` (`MobProfiles.KEY`), files `data/<ns>/
 | `attributes` | map attribute id → number | `{}` | Added (`add_value`) as permanent modifiers with id `remission:mob_profile` when the mob becomes a host, removed when it stops being one, reconciled with the current profile whenever a host joins a level. Attributes the type lacks are skipped. |
 | `convert_to` | entity type id | absent | Mob type that replaces this mob when a host kills it (Infection above). Must be a non-immune `Mob` type. |
 | `conversion.on_kill` | bool | true | Whether this mob becomes a host when a host kills it. |
-| `conversion.festering_land` | bool | true | Whether prolonged time in festering land can make this mob a host (phase 4). |
+| `conversion.festering_land` | bool | true | Whether prolonged time in festering land can make this mob a host (Festering land infection, P4.7). |
 
 All `conversion` flags describe the profiled mob as the one being infected. A profile that fails to decode (unknown `behaviour`, attribute or entity id) is a datapack registry error, which stops the world from loading. Lookup: `MobProfiles.find(Entity)` → `Optional<MobProfile>`; `MobProfiles.select(candidates, type)` is the same rule over a given list.
 
@@ -356,7 +376,7 @@ Spread rate: the gain is `amount * multiplier`, capped at the chunk's target. A 
 
 Re-entrancy: a host event listener that changes the same entity's level (`Corruption.set`) posts a nested event at once; later listeners of the outer event then see its stale values while queries return the nested change. Defer such changes to a later tick.
 
-`CorruptionCause` (enum, `HostEvent.getCause()`): `INFECTION` (killed by a host and infected in place or converted), `COMMAND` (`/remission infect` or `/remission cleanse`), `OTHER` (any other caller). Later items append causes (purification, P5.2); treat unknown values as `OTHER`.
+`CorruptionCause` (enum, `HostEvent.getCause()`): `INFECTION` (killed by a host and infected in place or converted), `COMMAND` (`/remission infect` or `/remission cleanse`), `FESTERING_LAND` (prolonged exposure to festering land, P4.7), `OTHER` (any other caller). Later items insert their causes before `OTHER` (purification, P5.2), so never persist a cause by ordinal; treat unknown values as `OTHER`.
 
 Queries, `CorruptionQueries` (static):
 

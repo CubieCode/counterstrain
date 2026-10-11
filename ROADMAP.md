@@ -271,7 +271,7 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.7: Festering land infects mobs
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: `feat/p4.7-festering-land-infection`
 - PR:
 - Depends on: P3.3, P4.1, P4.4
