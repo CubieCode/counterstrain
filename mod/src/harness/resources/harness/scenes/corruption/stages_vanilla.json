@@ -73,10 +73,10 @@
     {"corrupt": "@a", "level": 90}
   ],
   "shots": [
-    {"name": "stage_0", "camera": {"pos": [0.5, -60.0, 9.5], "yaw": 180.0, "pitch": 4.0}},
-    {"name": "stage_1", "camera": {"pos": [0.5, -60.0, 39.5], "yaw": 180.0, "pitch": 4.0}},
-    {"name": "stage_2", "camera": {"pos": [0.5, -60.0, 69.5], "yaw": 180.0, "pitch": 4.0}},
-    {"name": "stage_3", "camera": {"pos": [0.5, -60.0, 99.5], "yaw": 180.0, "pitch": 4.0}},
+    {"name": "stage_0", "camera": {"pos": [0.5, -60.0, 11.5], "yaw": 180.0, "pitch": 4.0}},
+    {"name": "stage_1", "camera": {"pos": [0.5, -60.0, 41.5], "yaw": 180.0, "pitch": 4.0}},
+    {"name": "stage_2", "camera": {"pos": [0.5, -60.0, 71.5], "yaw": 180.0, "pitch": 4.0}},
+    {"name": "stage_3", "camera": {"pos": [0.5, -60.0, 101.5], "yaw": 180.0, "pitch": 4.0}},
     {"name": "stage_3_oblique", "camera": {"pos": [14.5, -60.0, 98.5], "yaw": 125.0, "pitch": 8.0}},
     {"name": "player", "camera": {"pos": [40.5, -60.0, 0.5], "yaw": 0.0, "pitch": 0.0}, "view": "third_person_front"}
   ]

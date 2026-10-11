@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option (below). Everything below marked *planned* is a roadmap item.
+Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option; P2.3 adds the `/remission` debug commands (below). Everything below marked *planned* is a roadmap item.
 
 ## Repository and products
 
@@ -66,10 +66,11 @@ Internal Java system names and public API types may keep the generic word "corru
 ### Host rendering (phase 2, built in P2.2)
 
 - `HostOverlayLayer` is added in `EntityRenderersEvent.AddLayers` to every renderer that is a `LivingEntityRenderer`: each `getEntityTypes()` renderer plus every player skin renderer. No per-entity-type code, so modded mobs get it too. Renderers that are not living-entity renderers (the ender dragon's, GeckoLib-style renderers) cannot take layers and are skipped; the count is logged at startup. At render time the layer also skips a null model or texture, invisible entities and non-hosts.
-- The layer re-renders the parent model after the mob's own pass, so it inherits that frame's pose, animation, baby scaling and model-part visibility. Armour and held items are separate layers drawn over it.
+- The layer re-renders the parent model after the mob's own pass, so it inherits that frame's pose, baby scaling and model-part visibility. It calls `setupAnim` again with the frame's arguments before each pass, because some models keep per-draw state and clear it after drawing (Mekanism's robit model drops its entity and would draw nothing); vanilla `setupAnim` is idempotent. Armour and held items are separate layers drawn over it.
 - Render type `remission_host_overlay` (`HostRenderTypes`, memoised per mob texture and pattern): shader `remission:host_overlay` (vanilla `rendertype_entity_translucent` vertex stage, own fragment stage), translucent blending, no culling, lightmap and hurt overlay, colour writes only. It binds the mob's texture to sampler 0 and the Strain pattern to sampler 3, and discards fragments where the mob texture is transparent, so empty outer-layer boxes (hats, jackets, the drowned's outer layer) stay invisible. The pattern repeats at one pattern texel per mob texel whatever the mob texture's size.
 - Stage drives the look: `textures/entity/host/stage_1..3.png` (stages above 3, from extra thresholds, use stage 3), plus a full-bright `veins_glow.png` pass from stage 3. The client reads only the synced `stage`; it never restages. All four textures are placeholders (CONTENT-PROVENANCE).
 - Client config `hosts.overlayIntensity` (0–1, default 1) is the overlay's vertex alpha; 0 turns it off. Presentation only.
+- Limits: layers that draw their own model (armour, slime gel, the drowned's outer layer, sheep wool, saddles drawn by other layers) are not overlaid, so hosts under them look muted; renderers that are not `LivingEntityRenderer`s get nothing. Stage particles (DESIGN) are not built yet.
 - Harness scenes `corruption/stages_vanilla` and `corruption/stages_modded` (visual-checks) show stages 0–3 on a vanilla lineup (baby, armoured, player in third person) and on the Mekanism robit with non-standard vanilla renderers (armour stand, slimes, guardian, wither; the ender dragon as a renderer without the layer).
 
 ### Behaviour (phase 3)

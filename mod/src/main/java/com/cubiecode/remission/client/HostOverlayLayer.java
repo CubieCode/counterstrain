@@ -82,9 +82,13 @@ public final class HostOverlayLayer<T extends LivingEntity, M extends EntityMode
         int color = FastColor.ARGB32.colorFromFloat((float) intensity, 1.0F, 1.0F, 1.0F);
         int overlay = LivingEntityRenderer.getOverlayCoords(entity, 0.0F);
         ResourceLocation pattern = STAGE_PATTERNS[Math.min(state.stage(), STAGE_PATTERNS.length) - 1];
+        // Re-run the frame's animation before each pass: some models keep per-draw state and clear it after
+        // drawing (Mekanism's robit drops its entity), and for the rest setupAnim is idempotent.
+        model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         model.renderToBuffer(poseStack, buffer.getBuffer(HostRenderTypes.hostOverlay(texture, pattern)),
                 packedLight, overlay, color);
         if (state.stage() >= GLOW_STAGE) {
+            model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
             model.renderToBuffer(poseStack, buffer.getBuffer(HostRenderTypes.hostOverlay(texture, GLOW_PATTERN)),
                     LightTexture.FULL_BRIGHT, overlay, color);
         }
