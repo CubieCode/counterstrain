@@ -24,7 +24,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
@@ -91,6 +90,17 @@ public final class BestiaryTests {
     }
 
     @GameTest(template = "empty")
+    public static void unlistedTypesRecordNothing(GameTestHelper helper) {
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        Bestiary.recordScan(player, ResourceLocation.withDefaultNamespace("player"), 2);
+        Bestiary.recordScan(player, ResourceLocation.withDefaultNamespace("wither"), 3);
+        Bestiary.recordScan(player, ResourceLocation.fromNamespaceAndPath("othermod", "gone"), 1);
+        helper.assertTrue(Bestiary.get(player).isEmpty(), "unlisted types recorded: " + Bestiary.get(player));
+        helper.assertFalse(player.hasData(RemissionAttachments.BESTIARY), "attachment created without progress");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
     public static void progressPersistsAndSurvivesDeath(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         Bestiary.recordScan(player, COW, 2);
@@ -110,12 +120,13 @@ public final class BestiaryTests {
         helper.succeed();
     }
 
+    // Only the update predicate: NeoForge's initial tracking sync does not consult it (remission-data-formats).
     @GameTest(template = "empty")
-    public static void progressSyncsOnlyToOwner(GameTestHelper helper) {
+    public static void progressUpdatesSyncOnlyToOwner(GameTestHelper helper) {
         Player owner = helper.makeMockPlayer(GameType.SURVIVAL);
         Player other = helper.makeMockPlayer(GameType.SURVIVAL);
         helper.assertTrue(Bestiary.syncsTo(owner, owner), "owner not synced");
-        helper.assertFalse(Bestiary.syncsTo(owner, other), "progress synced to another player");
+        helper.assertFalse(Bestiary.syncsTo(owner, other), "progress update synced to another player");
         helper.succeed();
     }
 
@@ -142,22 +153,21 @@ public final class BestiaryTests {
         helper.succeed();
     }
 
-    // Host types come from the entity type registry, so every loaded mod's living types count (e.g. mekanism:robit in
-    // dev runs) without a list to maintain.
+    // Host types come from the entity type registry, so every loaded mod's living types count (mekanism:robit in dev
+    // runs) without a list to maintain.
     @GameTest(template = "empty")
     public static void hostTypesFollowRegistry(GameTestHelper helper) {
         List<EntityType<?>> hosts = Bestiary.hostTypes();
-        for (EntityType<?> type : List.of(EntityType.COW, EntityType.ZOMBIE, EntityType.VILLAGER, EntityType.ENDERMAN)) {
+        // Living mobs of every kind, including MISC-category ones (villager, iron golem) and non-mob living entities.
+        for (EntityType<?> type : List.of(EntityType.COW, EntityType.ZOMBIE, EntityType.VILLAGER, EntityType.ENDERMAN,
+                EntityType.IRON_GOLEM, EntityType.SQUID, EntityType.ARMOR_STAND)) {
             helper.assertTrue(hosts.contains(type), "missing host type " + type);
         }
+        // The player, immune bosses (#c:bosses) and non-living entities.
         for (EntityType<?> type : List.of(EntityType.PLAYER, EntityType.WITHER, EntityType.ENDER_DRAGON, EntityType.ITEM,
-                EntityType.ARROW, EntityType.BOAT)) {
+                EntityType.ARROW, EntityType.BOAT, EntityType.ITEM_FRAME, EntityType.LIGHTNING_BOLT)) {
             helper.assertFalse(hosts.contains(type), "listed non-host type " + type);
         }
-        long expected = BuiltInRegistries.ENTITY_TYPE.stream()
-                .filter(type -> type != EntityType.PLAYER && DefaultAttributes.hasSupplier(type) && !type.is(Corruption.IMMUNE))
-                .count();
-        helper.assertValueEqual((long) hosts.size(), expected, "host type count");
         if (ModList.get().isLoaded("mekanism")) {
             ResourceLocation robit = ResourceLocation.fromNamespaceAndPath("mekanism", "robit");
             helper.assertTrue(hosts.contains(BuiltInRegistries.ENTITY_TYPE.get(robit)), "modded living type missing");

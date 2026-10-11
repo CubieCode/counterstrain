@@ -43,8 +43,10 @@ public final class RemissionAttachments {
                     .build());
 
     /**
-     * Per-player bestiary progress (P6.2): highest host stage scanned per host type. Saved with the player (never empty),
-     * copied on death, and synced through NeoForge's attachment sync to the owning player only.
+     * Per-player bestiary progress (P6.2): highest host stage scanned per host type. Saved with the player (never empty)
+     * and copied on death. Through NeoForge's attachment sync, updates go to the owning player only; the initial sync when
+     * a client starts tracking the player ignores the predicate, so tracking clients also get the current map (harmless:
+     * the bestiary screen reads only the local player's progress).
      */
     public static final Supplier<AttachmentType<BestiaryProgress>> BESTIARY = ATTACHMENT_TYPES.register("bestiary",
             () -> AttachmentType.builder(() -> BestiaryProgress.EMPTY)
