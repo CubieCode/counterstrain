@@ -225,7 +225,7 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.3: Surges
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: `feat/p4.3-surges`
 - PR:
 - Depends on: P4.1, P3.1, P4.4, P8.1
