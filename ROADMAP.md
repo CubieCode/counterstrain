@@ -309,8 +309,8 @@ Goals: knowledge is gathered from the world and recorded.
 
 ### P6.3: Hidden bestiary types
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p6.3-bestiary-hidden
 - PR:
 - Depends on: P6.2
 - Scope: Entity type tag `#remission:bestiary_hidden`: tagged types are left out of the bestiary list and its host type total, and scans of them are not recorded as bestiary progress. Remission ships it with types survival players cannot normally meet as hosts (`minecraft:giant`, `minecraft:illusioner`, `minecraft:armor_stand`); packs extend or replace it. No spawn-egg or other heuristic, so modded mobs without eggs (the Mekanism robit) stay listed. Contract in remission-data-formats (Bestiary section) and docs/ARCHITECTURE.md.
