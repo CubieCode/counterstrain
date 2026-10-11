@@ -59,7 +59,7 @@ Ids are stored as plain ids, not registry holders, so a scan of a since-removed 
 
 Matching scans in pack recipes (1.21.1 ingredients): any scan of a kind with `{"item": "remission:host_scan"}`; a specific scan with NeoForge's components ingredient, e.g. `{"type": "neoforge:components", "items": "remission:host_scan", "components": {"remission:scan_data": {"entity": "minecraft:cow", "stage": 2}}}` (stage is part of the value, so list one ingredient per stage that should count). A data item without the component (from `/give`) is valid but blank: no tooltip line, and it matches only plain item ingredients.
 
-Not part of this contract yet: the `remission:host_scanned` trigger and `remission:hosts_scanned` stat (P8.1) and scanning samples (unassigned). Per-player scan progress: Bestiary, below.
+Each host scan fires `remission:host_scanned` and counts `remission:hosts_scanned`, each block scan fires `remission:block_scanned` and counts `remission:blocks_scanned` (Advancement triggers and stats, below). Not part of this contract yet: scanning samples (unassigned). Per-player scan progress: Bestiary, below.
 
 ## Bestiary (P6.2; hidden types P6.3)
 
@@ -78,7 +78,7 @@ Player attachment `remission:bestiary` (`BestiaryProgress`): the highest host st
 
 Entity tag `#remission:bestiary_hidden` (`Bestiary.HIDDEN`), `data/<ns>/tags/entity_type/bestiary_hidden.json`, standard tag JSON: living types that can still become hosts but that survival players cannot normally meet as hosts. Tagged types are left out of the bestiary list and its total, and their scans record no progress (the scan item is still given). Remission ships `minecraft:giant`, `minecraft:illusioner` and `minecraft:armor_stand`; a pack adds types with `"replace": false` or re-shows a default with `"replace": true` and its own list. There is no spawn-egg or other heuristic, so modded mobs without eggs (the Mekanism robit) stay listed. Tags are read on every check, so `/reload` applies at once on the server and, after the tag sync, on clients; progress already recorded for a newly hidden type is kept but not listed or counted.
 
-Wire format (`BestiaryProgress.STREAM_CODEC`): var-int entry count, then per entry a resource location and a var-int stage. The client opens the bestiary with the key mapping `key.remission.bestiary` (category `key.categories.remission`, default M). Not part of this contract: the `remission:host_scanned` trigger and `remission:hosts_scanned` stat (P8.1).
+Wire format (`BestiaryProgress.STREAM_CODEC`): var-int entry count, then per entry a resource location and a var-int stage. The client opens the bestiary with the key mapping `key.remission.bestiary` (category `key.categories.remission`, default M). The `host_scanned` trigger's `bestiary_types` condition counts this map's entries.
 
 ## Infection (built, P3.3)
 
@@ -157,23 +157,34 @@ One `remission:host_tissue` from the death loot of any host (the damage source c
 
 **KubeJS schemas:** Remission ships `data/remission/kubejs/recipe_schema/<type>.json` (keys with `name`, `role` input/output/other, `type` such as `ingredient`, `item_stack`, `ticks`, `optional`, `function_names`) so KubeJS 2101 can create and edit these recipes without a Java dependency on KubeJS. Model them on KubeJS's own `data/minecraft/kubejs/recipe_schema/cooking.json`. Recipe schema changes are contract changes.
 
-## Advancement triggers (planned, P8.1)
+## Advancement triggers and stats (built, P8.1)
 
-All `remission:<id>` criterion triggers with an optional `player` predicate plus:
+Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired from `quest/QuestProgress` on the server after the action succeeded. Every trigger takes the vanilla optional `player` (entity predicate or loot conditions); the rest are optional and an empty `conditions` (or none) matches every firing. Fake players (machines acting as players) fire nothing and earn no stats.
 
-| Trigger | Conditions |
+| Trigger | Fires when | Conditions |
+| --- | --- | --- |
+| `remission:nidus_destroyed` | A player breaks a `remission:nidus` (survival or creative, harvested or not; `onDestroyedByPlayer`). Other removals (explosions, `/setblock`, pistons, edits) post `NidusDestroyedEvent` but fire no trigger. | `location`: vanilla location predicate, tested at the centre of the nidus's block after removal (a `block` or `fluid` predicate sees what replaced it). |
+| `remission:host_scanned` | A player takes a host scan with the scanner (a host; a non-host gives no scan and no trigger). | `entity`: entity predicate (or loot conditions) on the scanned host; `stage`: int range, the host stage scanned; `bestiary_types`: int range, the number of host types in the player's bestiary after this scan (`Bestiary`; types it does not list are not counted). |
+| `remission:block_scanned` | A player takes a block scan with the scanner. | `location`: vanilla location predicate at the centre of the scanned block (its `block` predicate sees the scanned block). |
+
+```json
+{"criteria": {"nidus": {"trigger": "remission:nidus_destroyed"}}}
+{"criteria": {"cow": {"trigger": "remission:host_scanned", "conditions": {"entity": {"type": "minecraft:cow"}, "stage": {"min": 2}}}}}
+{"criteria": {"ten": {"trigger": "remission:host_scanned", "conditions": {"bestiary_types": {"min": 10}}}}}
+{"criteria": {"found": {"trigger": "remission:block_scanned", "conditions": {"location": {"block": {"blocks": "remission:nidus"}}}}}}
+```
+
+Custom stats (registry `minecraft:custom_stat`, holder `RemissionStats`, formatter `DEFAULT`), awarded at the same moments as the triggers; lang keys `stat.remission.<name>`:
+
+| Stat | Counts |
 | --- | --- |
-| `region_cleansed` | `region` (string id, optional), `min_percent` (0–100) |
-| `nidus_destroyed` | `nidus` (block or tag, optional) |
-| `host_scanned` | `entity` (entity predicate), `min_unique` (int, optional) |
-| `surge_survived` | `min_intensity` (int, optional) |
-| `viral_load` | `min` / `max` (viral load thresholds, optional) |
+| `remission:nidi_destroyed` | nidi the player broke (as `nidus_destroyed`) |
+| `remission:hosts_scanned` | host scans taken (as `host_scanned`) |
+| `remission:blocks_scanned` | block scans taken (as `block_scanned`) |
 
-Example: `{"criteria": {"nidus": {"trigger": "remission:nidus_destroyed", "conditions": {}}}}`. "Variant" is reserved for resistant mutations; a trigger for sequencing one may follow in P9.1.
+Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above).
 
-## Stats (planned, P8.1)
-
-Custom stats under `minecraft:custom`: `remission:nidi_destroyed`, `remission:chunks_cleansed`, `remission:hosts_scanned`, `remission:surges_survived`. FTB Quests stat tasks read them.
+"Variant" is reserved for resistant mutations; triggers and stats for systems that are not built yet arrive with them.
 
 ## Debug commands `/remission` (built, P2.3)
 

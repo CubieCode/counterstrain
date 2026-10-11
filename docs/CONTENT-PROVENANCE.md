@@ -97,6 +97,7 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:key.categories.remission` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Controls screen category for Remission key mappings (P6.2). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:key.remission.bestiary` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Key mapping name for opening the bestiary (P6.2). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:gui.remission.bestiary*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Bestiary screen title, progress line (scanned of total host types) and per-row status (highest host stage scanned, not scanned) (P6.2). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:stat.remission.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Statistics screen names for the custom stats `nidi_destroyed`, `hosts_scanned` and `blocks_scanned` (P8.1). |
 
 ## Mod and pack metadata
 

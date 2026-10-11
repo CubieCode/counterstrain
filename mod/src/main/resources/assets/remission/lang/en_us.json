@@ -45,5 +45,8 @@
   "gui.remission.bestiary.title": "Bestiary",
   "gui.remission.bestiary.progress": "%s of %s host types scanned",
   "gui.remission.bestiary.scanned": "Host stage %s",
-  "gui.remission.bestiary.unscanned": "Not scanned"
+  "gui.remission.bestiary.unscanned": "Not scanned",
+  "stat.remission.nidi_destroyed": "Nidi Destroyed",
+  "stat.remission.hosts_scanned": "Hosts Scanned",
+  "stat.remission.blocks_scanned": "Blocks Scanned"
 }

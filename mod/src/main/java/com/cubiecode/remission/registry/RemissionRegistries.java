@@ -18,5 +18,6 @@ public final class RemissionRegistries {
         RemissionRecipeTypes.RECIPE_SERIALIZERS.register(modBus);
         RemissionTriggers.TRIGGER_TYPES.register(modBus);
         RemissionDataComponents.DATA_COMPONENTS.register(modBus);
+        RemissionStats.CUSTOM_STATS.register(modBus);
     }
 }
