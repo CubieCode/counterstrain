@@ -24,9 +24,10 @@ Outputs go to `.local/runs/client-<UTC>/`, with `.local/runs/latest` pointing to
 - `framebuffer.png`: last Xvfb frame (timeout runs only; a scene run exits before capture).
 - `screenshots/`: `--scene` only, `<shot>.png` per shot plus `harness-result.txt` (scene, status, shots, failure message).
 - `renderer.txt`: renderer verdict.
-- `result.txt`: reason, exit code, leftover processes and status.
+- `capture.mp4` / `capture.log`: `--record` only.
+- `result.txt`: reason, exit code, leftover processes, capture and status.
 
-No motion capture: foundry has no user-level ffmpeg with `x11grab` (Playwright's bundled build in `~/.cache/ms-playwright/` cannot grab X11), so runs produce stills only; compare them with `tools/compare-screenshots.sh` (visual-checks).
+`--record [seconds]` records the display to `capture.mp4` (plus `capture.log`). A wrapper inside `xvfb-run` starts ffmpeg (`x11grab` on the run's display, outside `vglrun`, H.264 `veryfast` CRF 28, at most 1280 px wide, 30 fps, 2 threads) once `latest.log` shows the `GL info` line, and stops it with SIGINT when the client exits, before Xvfb goes away, so the MP4 is finalised; a timeout also stops ffmpeg first. With a number, ffmpeg stops after that many seconds. ffmpeg is foundry's system `/usr/bin/ffmpeg` (8.0.1, host-installed; the project needs no root); `FFMPEG=/path` overrides it. Without ffmpeg, `x11grab` or `libx264` the script fails before taking the GPU lock; a requested clip that ends up missing or unreadable fails the run (`capture=` in `result.txt`). Recording does not change the game's screenshots. Compare stills with `tools/compare-screenshots.sh` (visual-checks).
 
 A healthy run reaches the title screen about 10 s after the `GL info` line. Look at `framebuffer.png` to see where it stopped (loading warnings, crash screen, title).
 

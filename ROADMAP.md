@@ -63,7 +63,7 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.2: Image comparison and motion capture
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p1.2-motion-capture
 - PR: https://github.com/CubieCode/counterstrain/pull/10
 - Depends on: P1.1

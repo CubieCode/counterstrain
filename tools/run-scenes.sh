@@ -5,10 +5,12 @@
 #
 #   tools/run-scenes.sh [--scenes "area/a area/b"] [--list]
 #                       [--resolution 1920x1080] [--timeout 600] [--gpu-wait 1800]
+#                       [--record [seconds]]
 #
 # Without --scenes every scene under mod/src/harness/resources/harness/scenes/
 # runs, in sorted order (--scenes takes IDs separated by spaces or commas).
-# --list prints the scene IDs and exits.
+# --list prints the scene IDs and exits. --record is passed to every client run
+# (each clip lands in that run's capture.mp4).
 # Every scene runs even after a failure. A scene fails if the client run fails
 # (GPU renderer not found, crash, timeout, harness status other than ok) or its
 # comparison exits 1 (differs) or 2 (error); exit 3 (no reference) is reported,
@@ -32,6 +34,10 @@ while (($#)); do
     --scenes) read -r -a scenes <<<"${2//,/ }"; shift 2 ;;
     --list) list=1; shift ;;
     --resolution|--timeout|--gpu-wait) client_args+=("$1" "${2:?}"); shift 2 ;;
+    --record)
+      client_args+=(--record)
+      if [[ "${2:-}" =~ ^[0-9]+$ ]]; then client_args+=("$2"); shift; fi
+      shift ;;
     -h|--help) awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac
