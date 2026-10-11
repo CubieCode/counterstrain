@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run harness scenes one after another through tools/run-client-headless.sh
-# --scene, compare their screenshots when tools/compare-screenshots.sh exists,
-# and write a summary. Used by gpu-smoke.yml; works the same locally.
+# --scene, compare their screenshots with tools/compare-screenshots.sh and
+# write a summary. Used by gpu-smoke.yml; works the same locally.
 #
 #   tools/run-scenes.sh [--scenes "area/a area/b"] [--list]
 #                       [--resolution 1920x1080] [--timeout 600] [--gpu-wait 1800]
@@ -54,7 +54,6 @@ out="$local_dir/scene-runs/$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$out"
 ln -sfn "$(basename "$out")" "$local_dir/scene-runs/latest"
 compare="$repo_root/tools/compare-screenshots.sh"
-[[ -x "$compare" ]] || log "tools/compare-screenshots.sh not found; screenshots are not compared"
 
 printf 'scene\tverdict\trun\tcompare\n' >"$out/summary.tsv"
 failed=0
@@ -70,10 +69,8 @@ for scene in "${scenes[@]}"; do
   # lock errors; don't attribute an older run to this scene.
   [[ -n "$run" && "$run" != "$before" ]] || run=-
 
-  comparison=unavailable
-  if [[ "$verdict" == fail ]]; then
-    comparison=skipped
-  elif [[ -x "$compare" ]]; then
+  comparison=skipped
+  if [[ "$verdict" == pass ]]; then
     scene_out="$out/${scene//\//__}"
     mkdir -p "$scene_out"
     code=0

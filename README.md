@@ -39,7 +39,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `cd mod && ./gradlew runServer` | Dedicated dev server (`mod/run/server`, accept the EULA there first) |
 | `tools/run-client-headless.sh --timeout 180` | Dev client on foundry's GPU; logs in `.local/runs/latest/` |
 | `tools/run-client-headless.sh --scene smoke/mob_lineup` | Dev-only harness scene: fixed world, screenshots in `.local/runs/latest/screenshots/`, then exits |
-| `tools/run-scenes.sh [--scenes "a/b c/d"]` | Run every harness scene (or the listed ones) headlessly, compare screenshots when P1.2's `compare-screenshots.sh` exists; summary in `.local/scene-runs/latest/` |
+| `tools/run-scenes.sh [--scenes "a/b c/d"]` | Run every harness scene (or the listed ones) headlessly, compare their screenshots with the references; summary in `.local/scene-runs/latest/` |
 | `tools/verify-gpu-render.sh LOG` | Fail unless a client log names the RTX 4070 |
 | `tools/compare-screenshots.sh --scene <id> --actual DIR --out DIR` | Diff a scene run's screenshots against the reviewed references in `tools/visual-references/` (diff images, exit 1 on a difference); `--self-test` runs synthetic cases |
 | `tools/collect-screenshots.sh` | Copy screenshots to `.local/screenshots/latest/` |

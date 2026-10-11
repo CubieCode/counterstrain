@@ -3,8 +3,8 @@ name: GPU client smoke test
 # tools/run-client-headless.sh --scene) on foundry's RTX 4070 through Xvfb +
 # VirtualGL. A scene fails if the log does not name the GPU renderer, the game
 # crashes or times out, the harness does not report status=ok, or its
-# screenshots differ from the references (when tools/compare-screenshots.sh
-# exists). Logs, screenshots, diffs and the summary are uploaded either way.
+# screenshots differ from the reviewed references (tools/compare-screenshots.sh).
+# Logs, screenshots, diffs and the summary are uploaded either way.
 # Triggers: manual dispatch, or a same-repo PR carrying the `gpu-smoke` label
 # (runs when the label is added and on each push while it stays).
 # The runner is `lab` on foundry: no sudo, Xvfb and /opt/VirtualGL provided by
