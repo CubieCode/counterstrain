@@ -124,9 +124,9 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.3: Debug commands
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p2.3-debug-commands
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/9
 - Depends on: P2.1
 - Scope: `/remission infect <targets> <level>`, `/remission cleanse <targets>`, `/remission inspect <target>`; permission level 2.
 - Acceptance: Commands work with selectors; gametests drive them. Ledger updated for command feedback lang strings.
