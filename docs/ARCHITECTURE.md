@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config (below). Everything below marked *planned* is a roadmap item.
+Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option (below). Everything below marked *planned* is a roadmap item.
 
 ## Repository and products
 
@@ -34,9 +34,9 @@ Phase 0 was scaffold only: deferred registers, configs, payload registrar, datag
 | Package | Contents |
 | --- | --- |
 | `Remission` | `@Mod` common entrypoint, `MOD_ID`, logger, `id()` |
-| `client/` | `@Mod(dist = CLIENT)` entrypoint; renderers, layers, client payload handling, client config screen |
+| `client/` | `@Mod(dist = CLIENT)` entrypoint, client config screen, `HostOverlayLayer` and `HostRenderTypes` (host rendering, below); planned: renderers, client payload handling |
 | `server/` | `@Mod(dist = DEDICATED_SERVER)` entrypoint; dedicated-server-only setup |
-| `config/` | `RemissionCommonConfig` (gameplay: `hosts.stageThresholds`), `RemissionClientConfig` (presentation; no options yet) |
+| `config/` | `RemissionCommonConfig` (gameplay: `hosts.stageThresholds`), `RemissionClientConfig` (presentation: `hosts.overlayIntensity`) |
 | `registry/` | One `DeferredRegister` holder per kind: blocks, items, attachments, loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
 | `network/` | `RegisterPayloadHandlersEvent` registrar, `PROTOCOL_VERSION`; no payloads yet (corruption uses attachment sync) |
 | `data/` | `GatherDataEvent` wiring and providers (blockstates, item models, tags, recipes, loot tables, global loot modifiers) |
@@ -61,7 +61,16 @@ Internal Java system names and public API types may keep the generic word "corru
 - Server API `Corruption.get(entity)` (never creates the attachment), `Corruption.set(entity, level)` (clamps, restages from config, removes the attachment at 0, no-op if unchanged, throws on the client), `Corruption.isHost(entity)`. P4.4 adds the host corrupted / cleansed events, fired from `set`.
 - Stages are computed when a level is set, never on load or on the client, because common config is not synced and may differ per side. Changing the thresholds restages a host only when its level next changes.
 - **Sync decision: NeoForge attachment sync** (`AttachmentType.Builder#sync(StreamCodec)`, present in 21.1.259), not a custom payload. NeoForge's `AttachmentSync` sends `setData`/`removeData` changes to `chunkMap.getPlayersWatching(entity)` plus the entity itself when it is a player, sends the full state in the start-tracking pairing data (`ServerEntity.sendPairingData`), and resends a player's own attachments on login, respawn and dimension change. That covers every case P2.1 requires with no Remission code, removal included. Synced attachment types are a synced registry, so client and server must both have Remission (already required: `side="BOTH"`). `RemissionNetwork.PROTOCOL_VERSION` is unchanged; the wire format is `CorruptionState.STREAM_CODEC` (two var-ints), so changing it is a protocol change for the synced registry. A custom payload would only be worth it for batching or per-player filtering beyond tracking, which nothing needs yet.
-- Client: `CorruptionLayer` added to every `LivingEntityRenderer` in `EntityRenderersEvent.AddLayers` (`getEntityTypes()` plus player skins), rendering the parent model with an overlay render type. No per-entity-type code.
+- Client: `HostOverlayLayer` draws hosts from the synced state (host rendering, below).
+
+### Host rendering (phase 2, built in P2.2)
+
+- `HostOverlayLayer` is added in `EntityRenderersEvent.AddLayers` to every renderer that is a `LivingEntityRenderer`: each `getEntityTypes()` renderer plus every player skin renderer. No per-entity-type code, so modded mobs get it too. Renderers that are not living-entity renderers (the ender dragon's, GeckoLib-style renderers) cannot take layers and are skipped; the count is logged at startup. At render time the layer also skips a null model or texture, invisible entities and non-hosts.
+- The layer re-renders the parent model after the mob's own pass, so it inherits that frame's pose, animation, baby scaling and model-part visibility. Armour and held items are separate layers drawn over it.
+- Render type `remission_host_overlay` (`HostRenderTypes`, memoised per mob texture and pattern): shader `remission:host_overlay` (vanilla `rendertype_entity_translucent` vertex stage, own fragment stage), translucent blending, no culling, lightmap and hurt overlay, colour writes only. It binds the mob's texture to sampler 0 and the Strain pattern to sampler 3, and discards fragments where the mob texture is transparent, so empty outer-layer boxes (hats, jackets, the drowned's outer layer) stay invisible. The pattern repeats at one pattern texel per mob texel whatever the mob texture's size.
+- Stage drives the look: `textures/entity/host/stage_1..3.png` (stages above 3, from extra thresholds, use stage 3), plus a full-bright `veins_glow.png` pass from stage 3. The client reads only the synced `stage`; it never restages. All four textures are placeholders (CONTENT-PROVENANCE).
+- Client config `hosts.overlayIntensity` (0–1, default 1) is the overlay's vertex alpha; 0 turns it off. Presentation only.
+- Harness scenes `corruption/stages_vanilla` and `corruption/stages_modded` (visual-checks) show stages 0–3 on a vanilla lineup (baby, armoured, player in third person) and on the Mekanism robit with non-standard vanilla renderers (armour stand, slimes, guardian, wither; the ender dragon as a renderer without the layer).
 
 ### Behaviour (phase 3)
 

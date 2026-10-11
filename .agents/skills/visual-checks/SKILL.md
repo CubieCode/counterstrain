@@ -35,6 +35,9 @@ Visual evidence is only valid from a GPU run. The log must name the RTX 4070 (he
 - `setup`: a string is a server command without the slash (permission 4); `{"command": ..., "requires_mod": ...}` is its object form. `{"spawn": <entity id>, "pos", "yaw", "nbt"}` adds the entity directly: no `finalizeSpawn`, so no random equipment, babies or variants, and it works for types `/summon` refuses (the robit). `requires_mod` skips a step when that mod is absent (`-Pdev_runtime_mods=false`). Any failing step fails the scene.
 - `shots`: `name` (`[a-z0-9_]+`, saved as `<name>.png`) and `camera`, the player's feet position and rotation as for `/tp x y z yaw pitch`. The flat surface is y = -60.
 - Ticks stay frozen for the whole scene, so mobs, fluids and animations do not move between shots.
+- `{"corrupt": <entity selector>, "level": 0-100}` (P2.2) sets the Strain level of every living entity the selector matches through the server API (`Corruption.set`, staged by the run's common config), players included; it fails when nothing matches. Tag spawned mobs (`Tags:["stage_2"]` in `nbt`) and select them by tag.
+- A shot's optional `view` sets the camera type: `first_person` (default), `third_person_back` or `third_person_front`, e.g. to see the player. The scene's player is a spectator unless setup changes it (`gamemode creative @a`; a spectator renders only its head); a non-spectator falls, so its camera positions must stand on the ground (y = -60).
+- `corruption/stages_vanilla` (shots `stage_0`..`stage_3`, `stage_3_oblique`, `player`) and `corruption/stages_modded` (same stage shots plus `ender_dragon`) are the host overlay scenes (P2.2): one lineup per stage, 30 blocks apart on z, levels 0, 20, 50, 90.
 
 **Scene discipline**, so images are comparable (the harness enforces the first four and the default 1920x1080; scenes add `NoAI`):
 - Superflat world, fixed seed.

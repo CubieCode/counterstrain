@@ -1,5 +1,6 @@
 package com.cubiecode.remission.harness;
 
+import com.cubiecode.remission.corruption.CorruptionState;
 import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -10,8 +11,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Stream;
+import net.minecraft.client.CameraType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
@@ -32,29 +37,34 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
     ).apply(i, Scene::new));
 
     /**
-     * One setup step: either a server {@code command} (no leading slash) or a direct
-     * {@code spawn} of an entity at {@code pos} facing {@code yaw}, with optional SNBT
-     * {@code nbt}. Spawning skips {@code finalizeSpawn} (no random equipment or variants) and
-     * works for entity types that {@code /summon} refuses. Skipped when {@code requires_mod}
-     * is not loaded.
+     * One setup step: a server {@code command} (no leading slash), a direct {@code spawn} of
+     * an entity at {@code pos} facing {@code yaw} with optional SNBT {@code nbt}, or a
+     * {@code corrupt} step that sets the Strain {@code level} of every living entity matched
+     * by an entity selector through the server API (players included). Spawning skips
+     * {@code finalizeSpawn} (no random equipment or variants) and works for entity types that
+     * {@code /summon} refuses. Skipped when {@code requires_mod} is not loaded.
      */
     record Step(Optional<String> command, Optional<ResourceLocation> spawn, Optional<Vec3> pos, float yaw,
-                String nbt, Optional<String> requiresMod) {
+                String nbt, Optional<String> corrupt, int level, Optional<String> requiresMod) {
         static final Codec<Step> CODEC = RecordCodecBuilder.<Step>create(i -> i.group(
                 Codec.STRING.optionalFieldOf("command").forGetter(Step::command),
                 ResourceLocation.CODEC.optionalFieldOf("spawn").forGetter(Step::spawn),
                 Vec3.CODEC.optionalFieldOf("pos").forGetter(Step::pos),
                 Codec.FLOAT.optionalFieldOf("yaw", 0.0F).forGetter(Step::yaw),
                 Codec.STRING.optionalFieldOf("nbt", "{}").forGetter(Step::nbt),
+                Codec.STRING.optionalFieldOf("corrupt").forGetter(Step::corrupt),
+                Codec.intRange(0, CorruptionState.MAX_LEVEL).optionalFieldOf("level", 0).forGetter(Step::level),
                 Codec.STRING.optionalFieldOf("requires_mod").forGetter(Step::requiresMod)
-        ).apply(i, Step::new)).validate(step -> step.command().isPresent() == step.spawn().isPresent()
-                ? DataResult.error(() -> "a setup step needs exactly one of command or spawn")
+        ).apply(i, Step::new)).validate(step -> Stream.of(step.command(), step.spawn(), step.corrupt())
+                .filter(Optional::isPresent).count() != 1
+                ? DataResult.error(() -> "a setup step needs exactly one of command, spawn or corrupt")
                 : step.spawn().isPresent() && step.pos().isEmpty()
                         ? DataResult.error(() -> "spawn " + step.spawn().get() + " needs pos")
                         : DataResult.success(step));
 
         static Step command(String command) {
-            return new Step(Optional.of(command), Optional.empty(), Optional.empty(), 0.0F, "{}", Optional.empty());
+            return new Step(Optional.of(command), Optional.empty(), Optional.empty(), 0.0F, "{}", Optional.empty(), 0,
+                    Optional.empty());
         }
     }
 
@@ -67,14 +77,24 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
         ).apply(i, Camera::new));
     }
 
-    /** One screenshot, saved as {@code <name>.png}. */
-    record Shot(String name, Camera camera) {
+    /**
+     * One screenshot, saved as {@code <name>.png}. {@code view} is the camera type:
+     * {@code first_person} (default), {@code third_person_back} or {@code third_person_front}.
+     */
+    record Shot(String name, Camera camera, CameraType view) {
+        private static final Codec<CameraType> VIEW_CODEC = Codec.STRING.comapFlatMap(
+                v -> Arrays.stream(CameraType.values()).filter(t -> t.name().toLowerCase(Locale.ROOT).equals(v))
+                        .findFirst().map(DataResult::success)
+                        .orElseGet(() -> DataResult.error(() -> "unknown view " + v)),
+                t -> t.name().toLowerCase(Locale.ROOT));
+
         static final Codec<Shot> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.STRING.validate(n -> n.matches("[a-z0-9_]+")
                                 ? DataResult.success(n)
                                 : DataResult.error(() -> "shot name must match [a-z0-9_]+: " + n))
                         .fieldOf("name").forGetter(Shot::name),
-                Camera.CODEC.fieldOf("camera").forGetter(Shot::camera)
+                Camera.CODEC.fieldOf("camera").forGetter(Shot::camera),
+                VIEW_CODEC.optionalFieldOf("view", CameraType.FIRST_PERSON).forGetter(Shot::view)
         ).apply(i, Shot::new));
     }
 

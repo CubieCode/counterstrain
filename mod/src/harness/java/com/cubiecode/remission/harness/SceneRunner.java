@@ -1,6 +1,8 @@
 package com.cubiecode.remission.harness;
 
+import com.cubiecode.remission.corruption.Corruption;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.sun.jna.NativeLibrary;
 import java.io.IOException;
@@ -23,6 +25,7 @@ import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -36,6 +39,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
@@ -226,8 +230,10 @@ final class SceneRunner {
             }
             if (step.command().isPresent()) {
                 runCommand(server, step.command().get());
-            } else {
+            } else if (step.spawn().isPresent()) {
                 spawn(server.overworld(), step);
+            } else {
+                corrupt(server, step.corrupt().get(), step.level());
             }
         }
     }
@@ -255,6 +261,25 @@ final class SceneRunner {
             throw new IllegalStateException("could not spawn " + type + " at " + pos);
         }
         RemissionHarness.LOGGER.debug("Scene {}: spawned {} at {}", sceneId, type, pos);
+    }
+
+    /** Sets the Strain level of every living entity the selector matches; fails if none match. */
+    private void corrupt(MinecraftServer server, String selector, int level) {
+        List<? extends Entity> targets;
+        try {
+            targets = EntityArgument.entities().parse(new StringReader(selector))
+                    .findEntities(server.createCommandSourceStack());
+        } catch (CommandSyntaxException e) {
+            throw new IllegalStateException("bad selector for corrupt " + selector + ": " + e.getMessage(), e);
+        }
+        List<LivingEntity> living = targets.stream()
+                .filter(LivingEntity.class::isInstance).map(LivingEntity.class::cast).toList();
+        if (living.isEmpty()) {
+            throw new IllegalStateException("corrupt " + selector + " matched no living entity");
+        }
+        living.forEach(entity -> Corruption.set(entity, level));
+        RemissionHarness.LOGGER.debug("Scene {}: corrupted {} entities ({}) to level {}", sceneId, living.size(),
+                selector, level);
     }
 
     private void runCommand(MinecraftServer server, String command) {
@@ -295,6 +320,7 @@ final class SceneRunner {
         shotIndex = index;
         stableTicks = 0;
         Scene.Camera camera = scene.shots().get(index).camera();
+        mc.options.setCameraType(scene.shots().get(index).view());
         MinecraftServer server = mc.getSingleplayerServer();
         pending = CompletableFuture.runAsync(() -> {
             ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
