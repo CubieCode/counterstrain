@@ -363,9 +363,10 @@ Goals: quests and scripts can observe and drive Remission.
 
 ### P8.1: Advancement triggers and stats
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p8.1-triggers-stats
 - PR: https://github.com/CubieCode/counterstrain/pull/38
+- Validation: PR #38; triggers `nidus_destroyed`, `host_scanned`, `block_scanned` and matching stats; QuestTriggerTests plus 91/91 gametests; GPU dev run (RTX 4070, scene `quest/triggers`) completed all six FTB Quests advancement and stat tasks; CI green.
 - Depends on: P4.1, P6.1
 - Scope: Triggers and stats for region % cleansed, nidus destroyed (`remission:nidus_destroyed`, stat `remission:nidi_destroyed`), host scanned, surge survived, and others the pack needs.
 - Acceptance: Schemas in remission-data-formats; FTB Quests tasks gate on them in a dev run.
