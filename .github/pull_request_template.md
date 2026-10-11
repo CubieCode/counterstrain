@@ -1,4 +1,4 @@
-<!-- Title: `<ID>: <title>` for roadmap work (AGENTS.md). The squash commit takes this title and body. -->
+<!-- Title: `<ID>: <title>` for roadmap work (AGENTS.md). The squash commit takes only this title; the body stays on the PR. -->
 
 ## Result
 
