@@ -76,7 +76,7 @@ Internal Java system names and public API types may keep the generic word "corru
 - Stage drives the look: `textures/entity/host/stage_1..3.png` (stages above 3, from extra thresholds, use stage 3), plus a full-bright `veins_glow.png` pass from stage 3. The client reads only the synced `stage`; it never restages. All four textures are placeholders (CONTENT-PROVENANCE).
 - Client config `hosts.overlayIntensity` (0–1, default 1) is the overlay's vertex alpha; 0 turns it off. Presentation only.
 - Limits: layers that draw their own model (armour, slime gel, the drowned's outer layer, sheep wool, saddles drawn by other layers) are not overlaid, so hosts under them look muted (roadmap item P2.4); renderers that are not `LivingEntityRenderer`s get nothing. Stage particles (DESIGN) are not built yet.
-- Harness scenes `corruption/stages_vanilla` and `corruption/stages_modded` (visual-checks) show stages 0–3 on a vanilla lineup (baby, armoured, player in third person) and on the Mekanism robit with non-standard vanilla renderers (armour stand, slimes, guardian, wither; the ender dragon as a renderer without the layer).
+- Harness scenes `corruption/stages_vanilla` and `corruption/stages_modded` (visual-checks) show stages 0–3 on a vanilla lineup (baby, armoured, player in third person) and on the Mekanism robit with non-standard vanilla renderers (armour stand, slimes, guardian). The wither and the ender dragon are immune bosses (`#c:bosses` in `#remission:immune`, P3.3): the scene still corrupts them, but they stay clean beside the hosts, so the `ender_dragon` shot (a renderer without the layer) and the wither now show an immune boss rendering normally.
 
 ### Research (phase 6, built in P6.1)
 
