@@ -157,8 +157,8 @@ Goals: hosts of any kind behave as hostile Strain-infected creatures, infect oth
 
 ### P3.1: Goal injection and attribute patching
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p3.1-host-goals
 - PR:
 - Depends on: P2.1
 - Scope: `EntityJoinLevelEvent` stripping of passive goals and injection of target/attack goals; `EntityAttributeModificationEvent` adding attack damage to all types; default profiles by mob category.
