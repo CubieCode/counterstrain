@@ -309,9 +309,10 @@ Goals: knowledge is gathered from the world and recorded.
 
 ### P6.3: Hidden bestiary types
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p6.3-bestiary-hidden
 - PR: https://github.com/CubieCode/counterstrain/pull/31
+- Validation: PR #31; `#remission:bestiary_hidden` (giant, illusioner, armour stand by default) hides types from the bestiary list and total (79 host types in the dev runtime, robit still listed); BestiaryTests incl. live tag rebind, 87/87 gametests; `research/bestiary` list reference updated and reviewed, gpu-smoke green on RTX 4070; CI green.
 - Depends on: P6.2
 - Scope: Entity type tag `#remission:bestiary_hidden`: tagged types are left out of the bestiary list and its host type total, and scans of them are not recorded as bestiary progress. Remission ships it with types survival players cannot normally meet as hosts (`minecraft:giant`, `minecraft:illusioner`, `minecraft:armor_stand`); packs extend or replace it. No spawn-egg or other heuristic, so modded mobs without eggs (the Mekanism robit) stay listed. Contract in remission-data-formats (Bestiary section) and docs/ARCHITECTURE.md.
 - Acceptance: Gametests show tagged types absent from the list and total, a pack tag hiding another type and `replace` re-showing a default, and the robit still listed in the dev runtime; `research/bestiary` reference updated for the new total and reviewed from a GPU run.
