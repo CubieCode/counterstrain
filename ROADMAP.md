@@ -327,8 +327,8 @@ Goals: the Strain becomes a resource processed by machines into tools for the fi
 
 ### P7.1: Miasma and samples
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p7.1-miasma-samples
 - PR:
 - Depends on: P3.3
 - Scope: `remission:miasma` fluid (and Mekanism chemical `remission:miasma` via optional integration in `integration/mekanism/`), `remission:host_tissue`, `remission:nidus_core` and `remission:festered_soil` sample items and their loot.
