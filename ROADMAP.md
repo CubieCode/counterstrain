@@ -362,8 +362,8 @@ Goals: quests and scripts can observe and drive Remission.
 
 ### P8.1: Advancement triggers and stats
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p8.1-triggers-stats
 - PR:
 - Depends on: P4.1, P6.1
 - Scope: Triggers and stats for region % cleansed, nidus destroyed (`remission:nidus_destroyed`, stat `remission:nidi_destroyed`), host scanned, surge survived, and others the pack needs.
