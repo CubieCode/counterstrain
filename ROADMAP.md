@@ -157,7 +157,7 @@ Goals: hosts of any kind behave as hostile Strain-infected creatures, infect oth
 
 ### P3.1: Goal injection and attribute patching
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p3.1-host-goals
 - PR:
 - Depends on: P2.1
