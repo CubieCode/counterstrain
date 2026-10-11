@@ -124,8 +124,8 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.3: Debug commands
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: `feat/p2.3-debug-commands`
 - PR:
 - Depends on: P2.1
 - Scope: `/remission infect <targets> <level>`, `/remission cleanse <targets>`, `/remission inspect <target>`; permission level 2.
