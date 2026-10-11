@@ -2,6 +2,7 @@ package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.loot.IsCorruptedCondition;
+import com.cubiecode.remission.loot.IsFesteringCondition;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.storage.loot.predicates.LootItemConditionType;
@@ -14,6 +15,9 @@ public final class RemissionLootConditions {
 
     public static final Supplier<LootItemConditionType> IS_CORRUPTED = LOOT_CONDITION_TYPES.register("is_corrupted",
             () -> new LootItemConditionType(IsCorruptedCondition.CODEC));
+
+    public static final Supplier<LootItemConditionType> IS_FESTERING = LOOT_CONDITION_TYPES.register("is_festering",
+            () -> new LootItemConditionType(IsFesteringCondition.CODEC));
 
     private RemissionLootConditions() {
     }

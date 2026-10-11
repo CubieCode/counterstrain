@@ -138,6 +138,10 @@ configurations {
 }
 
 dependencies {
+    // Optional mod-side integrations (integration/<modid>/): compiled against, never bundled or required,
+    // and loaded only when ModList reports the mod.
+    compileOnly "maven.modrinth:mekanism:${mekanism_version}"
+
     if (project.dev_runtime_mods.toBoolean()) {
         localRuntime "maven.modrinth:rhino:${rhino_version}"
         localRuntime "maven.modrinth:better-advanced-tooltips:${better_advanced_tooltips_version}"

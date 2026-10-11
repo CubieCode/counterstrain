@@ -1,6 +1,7 @@
 package com.cubiecode.remission.data;
 
 import com.cubiecode.remission.registry.RemissionBlocks;
+import com.cubiecode.remission.registry.RemissionItems;
 import java.util.Set;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.loot.BlockLootSubProvider;
@@ -15,8 +16,8 @@ public final class RemissionBlockLootProvider extends BlockLootSubProvider {
 
     @Override
     protected void generate() {
-        // A nidus drops nothing: nidus cores (the sample item) come with the research items.
-        add(RemissionBlocks.NIDUS.get(), noDrop());
+        // A broken nidus drops its core (the sample item), never itself, so a nidus cannot be carried and replanted.
+        add(RemissionBlocks.NIDUS.get(), createSingleItemTable(RemissionItems.NIDUS_CORE.get()));
     }
 
     // Every Remission block must have a loot table; datagen fails if one is missing.

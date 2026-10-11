@@ -23,3 +23,12 @@ description='''${mod_description}'''
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+
+# Optional integrations (integration/<modid>/): never required; the range only rejects versions whose API differs.
+# Mekanism 10.7 unified gases into chemicals, which the miasma chemical (P7.1) is built on.
+[[dependencies.${mod_id}]]
+    modId="mekanism"
+    type="optional"
+    versionRange="[10.7,)"
+    ordering="NONE"
+    side="BOTH"

@@ -1,6 +1,7 @@
 {
   "entries": [
-    "remission:host_samples"
+    "remission:host_samples",
+    "remission:festered_soil_samples"
   ],
   "replace": false
 }

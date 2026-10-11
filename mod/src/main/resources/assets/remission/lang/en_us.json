@@ -48,5 +48,10 @@
   "gui.remission.bestiary.unscanned": "Not scanned",
   "stat.remission.nidi_destroyed": "Nidi Destroyed",
   "stat.remission.hosts_scanned": "Hosts Scanned",
-  "stat.remission.blocks_scanned": "Blocks Scanned"
+  "stat.remission.blocks_scanned": "Blocks Scanned",
+  "block.remission.miasma": "Miasma",
+  "item.remission.miasma_bucket": "Miasma Bucket",
+  "item.remission.nidus_core": "Nidus Core",
+  "item.remission.festered_soil": "Festered Soil",
+  "chemical.remission.miasma": "Miasma"
 }
