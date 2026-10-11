@@ -2,9 +2,22 @@
 
 Counterstrain (pack) and Remission (mod) are built in phases. Phase 0 is complete. Every later item needs an explicit implementation assignment; a scaffold or docs request does not authorise feature work. See [DESIGN](docs/DESIGN.md) for the concept and [ARCHITECTURE](docs/ARCHITECTURE.md) for systems and contracts.
 
-Statuses: `todo` → `in-progress` → `review` → `done`, or `blocked` with reason. Done means accepted and merged on main. Workers own only their item's Status/Owner/PR fields; the coordinator marks done after merge. One item, one branch `feat/<id-lower>-<slug>`, one PR `<ID>: <title>`. Use the [roadmap-workflow](.agents/skills/roadmap-workflow/SKILL.md) skill.
+Statuses: `todo` → `in-progress` → `review` → `done`, or `blocked` with reason. Done means accepted and merged on main. Workers own only their item's Status/Owner/PR fields; the coordinator marks done after merge. One item, one Orca worktree (lane), one branch `feat/<id-lower>-<slug>`, one PR `<ID>: <title>`. Each item uses the [roadmap-workflow](.agents/skills/roadmap-workflow/SKILL.md) skill; coordinating parallel lanes and reviews uses [roadmap-orchestrate](.agents/skills/roadmap-orchestrate/SKILL.md). Run only when dependencies are done on main. Waves below are candidates, subject to real file overlap and the serialization gates in roadmap-orchestrate.
 
 Each phase lists goals, deliverables (items) and exit criteria. Phases with visual output name the **harness scenes** and screenshots that prove them; those images come from a GPU run on foundry (renderer verified, never llvmpipe) and are reviewed per the visual-checks skill. Until P1.1 lands, a scene means a manual setup documented in the PR plus collected screenshots.
+
+## Safe waves
+
+All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a lock), so keep waves at four lanes or fewer. One owner per wave for build/version files, the registry and network spine, contracts (remission-data-formats) and pack membership. Generated files (`mod/src/generated/`, `pack/index.toml`) are regenerated after rebasing, never hand-merged.
+
+- A: P1.1 + P2.1. P2.1 owns the registry and network spine; P1.1 owns the dev-only harness and `tools/run-client-headless.sh`.
+- B: P2.2 + P2.3 + P1.2 + P1.3, after A. P1.2 owns comparison scripts; P1.3 owns `gpu-smoke.yml`; P2.2 owns client rendering; P2.3 owns commands.
+- C: P3.1 + P3.3 + P4.1 + P6.1, after P2.1. Agree the `mob_profile` record (P3.3 owns the contract) before P3.1 starts; registry and lang edits append-only; one registry-spine owner.
+- D: P3.2 + P4.2 + P5.1 + P6.2. P4.2 owns new blocks, textures and biome data; P5.1 owns the player attachment and HUD.
+- E: P4.3 + P5.2 + P7.1.
+- F: P7.2 → P7.3 serially (recipe types and KubeJS schemas are contracts), with P8.1 in parallel (owns triggers and stats contracts).
+- G: P8.2 + P9.1, then P9.2.
+- H: P10.1 → P10.2 → P10.3 serially (one pack-content owner); then P11.1 → P11.2.
 
 ## Phase 0: Scaffold
 

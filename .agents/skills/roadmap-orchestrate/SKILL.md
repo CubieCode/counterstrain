@@ -1,0 +1,22 @@
+---
+name: roadmap-orchestrate
+description: Coordinate explicitly assigned parallel Counterstrain/Remission roadmap work across Orca worktrees on foundry, brief and supervise lanes, review PRs, resolve dependencies and merge when authorised.
+---
+
+# Roadmap coordination
+
+Adapted from worktui-orchestrate. This skill coordinates an assigned run; it is not permission to start feature work from a scaffold or docs request.
+
+Resolve Orca as in roadmap-workflow (`orca-ide` on foundry) and load the executable's `skills get orca-cli` and `skills get orchestration` guides, plus placement and worker-contract references when needed. Follow current command syntax; do not copy stale flags from templates. Distinguish a full handoff (transfer and stop) from supervised work (task DAG, workers and monitoring), and use only the relevant flow.
+
+Select work: read up-to-date main without overwriting uncommitted work. Pick only assigned `todo` items whose dependencies are `done` on main. Candidate waves are in ROADMAP "Safe waves"; check actual file overlap before trusting them. Cap at four workers unless the user says otherwise. foundry is one machine: Gradle builds, gametests and client runs from all lanes share its CPU, RAM and one RTX 4070, so prefer fewer lanes when several need GPU evidence. Announce the batch, owned files and gates before launching.
+
+Gates: appoint one owner per wave for each serialization gate: build/version files (`mod/gradle.properties`, `mod/build.gradle`, wrapper), the registry and network spine (`RemissionRegistries`, registry holders, `RemissionNetwork` protocol version), config specs and `RemissionDataGenerators`, remission-data-formats contracts plus docs/ARCHITECTURE, and pack membership (`pack/pack.toml`, `pack/mods/`). Agree contracts (record shapes, payloads, schemas, recipe types, trigger ids) before dependent lanes start. Generated outputs (`mod/src/generated/`, `pack/index.toml`) are never hand-merged: lanes regenerate after rebasing. Keep claim ownership in the coordinator run so two branches never claim one item.
+
+Briefs: each lane gets an independent Orca worktree from the repo default base and a brief with: item ID, exact scope, dependencies, owned files, agreed contracts, acceptance and exit criteria (including harness scenes/screenshots), specialised skills (always roadmap-workflow; neoforge-mod-dev, remission-data-formats, packwiz-pack, kubejs-scripting, ftb-quests-authoring, headless-client, visual-checks as relevant), branch name and gates. The `orca.yaml` setup hook isolates each lane (own `mod/run/`, `.local/`, `runServer` port) and copies nothing private. Client runs queue on the shared GPU lock; tell lanes not to bypass it. Use the live guide's supervised run/task/worker commands and monitoring loop; do not resend accepted prompts or launch duplicate workers when receipt status is uncertain.
+
+Review: on worker_done, review the PR diff against scope and acceptance, the mod/pack boundary (the mod never depends on the pack), contract docs updated with code, 1.21.1 API use, client/common separation, tick budgets, and visual evidence (GPU renderer line, screenshots actually looked at). Request a read-only review worker if the run includes parallel review. Send blocking findings back to the original lane; stop after two unsuccessful fix rounds and report. Confirm GitHub CI on the current head (runs on foundry's runners via `vars.RUNNER`). Rebase conflicts are resolved in the lane: combine ROADMAP edits by item, preserve others' status, regenerate generated files, rerun checks.
+
+Merge only if the run authorises merging, review is clean, CI passes and visual/product gates are satisfied; otherwise leave the PR in review and say why. Merge contract and registry-spine changes in dependency order. After an authorised merge, mark the item done in a small coordinator commit or PR, then recompute readiness on main. Never treat a branch's self-marked done as satisfying another branch's dependency.
+
+Finish with one digest: item outcomes, PR links, checks, visual evidence, held decisions. Settle, release or retain every worker per the live guide; preserve worktrees with unresolved work. Do not silently begin unassigned phases.

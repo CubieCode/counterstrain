@@ -54,6 +54,7 @@ Rules:
 - Confirm GPU use from the game log: NeoForge's early display logs `GL info: NVIDIA GeForce RTX 4070/PCIe/SSE2 GL version 4.6.0 NVIDIA 595.91.07`. llvmpipe, or no renderer line, is a failed run.
 - Server-side work (`build`, `runData`, `runGameTestServer`, `runServer`) needs no display wrapper.
 - Until the phase 1 harness exists the client never quits by itself; the timeout is the normal end of a smoke run.
+- One GPU serves every Orca lane and CI job: the script takes an exclusive lock (`~/.cache/counterstrain/gpu.lock`, `flock`) and waits up to `--gpu-wait` seconds (default 1800) before failing. The timeout starts once the lock is held.
 
 ## Visual checks
 

@@ -49,7 +49,8 @@ Dev runs include KubeJS, ProbeJS, FTB Quests, EMI + JEI, Mekanism, AE2 and Journ
 ```text
 mod/                 Remission NeoForge project (Gradle wrapper, gradle.properties)
 pack/                Counterstrain packwiz pack, kubejs/, config/ftbquests/
-tools/               Build, pack, release and headless-client scripts (bash, no root)
+tools/               Build, pack, release, headless-client and worktree setup scripts (bash, no root)
+orca.yaml            Orca setup hook (runs tools/worktree-setup.sh per worktree)
 docs/                Design, architecture, lore and development environment
 ROADMAP.md           Phases, items, status
 .agents/skills/      Canonical agent skills (project and vendored)
@@ -59,6 +60,12 @@ ROADMAP.md           Phases, items, status
 ```
 
 Read [AGENTS](AGENTS.md) before changing anything. `CLAUDE.md` references `AGENTS.md`.
+
+## Orca
+
+Roadmap work runs in Orca worktrees on foundry, one lane per item. `orca.yaml` runs `tools/worktree-setup.sh` on each new worktree: it selects Java 21, installs packwiz if missing, gives the lane its own `runServer` port (`mod/run/server/server.properties`), then runs `./gradlew build` and `tools/pack.sh check`. Nothing is copied from the root checkout or other lanes; each lane has its own `mod/run/` and `.local/`, while Gradle and packwiz caches in `$HOME` are shared. All lanes share one GPU: `tools/run-client-headless.sh` holds an exclusive lock (`~/.cache/counterstrain/gpu.lock`) and queues other lanes for up to `--gpu-wait` seconds.
+
+Use `roadmap-workflow` for one item and `roadmap-orchestrate` for supervised parallel work and review. ROADMAP lists candidate waves.
 
 ## Remission in the pack
 
