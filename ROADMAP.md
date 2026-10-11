@@ -52,7 +52,7 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.1: Dev-only scene harness
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p1.1-scene-harness
 - PR:
 - Depends on: P0.1
