@@ -20,6 +20,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P2.4 (follow-up to P2.2) can join any wave after B, or run alone. It owns `client/` host rendering and the `corruption/*` scenes and their references.
 - C: P3.1 + P3.3 + P4.1 + P6.1, after P2.1. Agree the `mob_profile` record (P3.3 owns the contract) before P3.1 starts; registry and lang edits append-only; one registry-spine owner.
 - D: P4.4 + P3.2 + P6.2. P4.4 owns the `api/` package and the API section of remission-data-formats.
+- P4.5 (follow-up to P4.1) runs before P4.3 or alone; it owns `world/SpreadEngine`.
 - E: P4.2 + P4.3. P4.2 owns new blocks, textures and biome data; P4.3 owns surge scheduling and miasma clouds. Each adds its own API events; append-only edits in `api/`, one remission-data-formats owner (P4.2).
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - G: P7.2 → P7.3 serially (recipe types and KubeJS schemas are contracts), with P8.1 in parallel (owns triggers and stats contracts).
@@ -240,7 +241,18 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing
 - Parallel: Owns `api/` and the API contract section in its wave
 
-Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented.
+### P4.5: Live spread waits for catch-up
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.1, P4.4
+- Scope: Fix a P4.1 ordering bug found during P4.4: a live pass (`SpreadEngine.visit`) can step a chunk that has just loaded and is still queued for catch-up, which writes `last_update_game_time = now` so the queued catch-up then credits almost none of the time the chunk was away. Live passes must not advance a chunk (or its time) before its pending catch-up has run, for example by skipping queued chunks in `visit` until they are caught up, or by catching them up first within the tick budget. Firebreak and multiplier behaviour (P4.4) and the catch-up budget are unchanged. Update the catch-up rules in docs/ARCHITECTURE.md and remission-data-formats if their wording changes.
+- Acceptance: A gametest reloads a chunk while a live pass is due and shows it ends at the same level as when no live pass runs before its catch-up; existing spread, catch-up and PublicApiTests still pass; `SpreadBenchmark` live and catch-up figures recorded in the PR with no meaningful regression.
+- Skills: neoforge-mod-dev, minecraft-testing, remission-data-formats
+- Parallel: Owns `world/SpreadEngine` and its tests; run it before P4.3 (surges also change spread) or alone.
+
+Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, a follow-up added after P4.4, is not part of these exit criteria.
 
 ## Phase 5: Viral load and early purification
 
