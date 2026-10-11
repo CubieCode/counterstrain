@@ -23,6 +23,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P4.5 (follow-up to P4.1) runs before P4.3 or alone; it owns `world/SpreadEngine`.
 - P6.3 (follow-up to P6.2) can join any wave or run alone; it owns `research/Bestiary` and the bestiary scene reference.
 - E: P4.2 (done), then P4.3 (after P4.5 and P8.1, both done). P4.3 owns surge scheduling, miasma clouds, its surge API events and the surge survived trigger and stat, and is the remission-data-formats owner while it runs; append-only edits in `api/` and `quest/`.
+- P4.6 and P4.7 (follow-ups to P4.2 and P3.3) can join wave E with P4.3 or run alone. P4.6 owns `world/FesteringStages` and `world/FesterMaps` and runs before P5.2; P4.7 owns `infection/`. With P4.3 in the same wave, appoint one owner for config specs and one for remission-data-formats.
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - G: P7.2 → P7.3 serially (recipe types and KubeJS schemas are contracts), after P8.1 (done; later items append their triggers and stats to its contracts).
 - H: P8.2 + P9.1, then P8.3 + P9.2. P8.2 owns command syntax; P8.3 owns the KubeJS binding contract.
@@ -227,8 +228,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Owner:
 - PR:
 - Depends on: P4.1, P3.1, P4.4, P8.1
-- Scope: Periodic surges that accelerate spread, spawn hosts and release miasma clouds (drifting airborne areas above festering land; their viral load effect is added by P5.1), with warnings; config and command to trigger. Emits surge started and surge ended events. Adds the surge survived advancement trigger and stat, following P8.1's trigger and stat conventions.
-- Acceptance: Gametests for scheduling and cloud spawning and drift; harness scenes `world/surge` and `world/miasma_cloud`. Ledger updated; placeholders marked.
+- Scope: Periodic surges that accelerate spread, spawn hosts (on the surface and in caves and other covered spaces under festering chunks) and release miasma clouds (drifting airborne areas above festering land; their viral load effect is added by P5.1), with warnings; config and command to trigger. Emits surge started and surge ended events. Adds the surge survived advancement trigger and stat, following P8.1's trigger and stat conventions.
+- Acceptance: Gametests for scheduling, host spawning on the surface and underground, and cloud spawning and drift; harness scenes `world/surge` and `world/miasma_cloud`. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
 ### P4.4: Public API and events
@@ -255,7 +256,29 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Skills: neoforge-mod-dev, minecraft-testing, remission-data-formats
 - Parallel: Owns `world/SpreadEngine` and its tests; run it before P4.3 (surges also change spread) or alone.
 
-Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, a follow-up added after P4.4, is not part of these exit criteria.
+### P4.6: Underground festering
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.2
+- Scope: Festering reaches caves. P4.2 festers only the surface (down to 5 blocks into the ground), so a player can tunnel under a stage 4 chunk and see untouched rock. From a late stage (default stage 3), blocks with a `remission:festers_into` entry that face cave air become a festered skin on cave walls, floors and ceilings; rock inside the ground and ores (no default entry) are left alone, so mining stays viable. Festering is complete down to a depth limit (default about Y=0) and sparse, by a deterministic hash, below it; the limit is a constant, not config. Adds default entries for deepslate and tuff (with a festered deepslate block if festered stone does not read well there) and an optional per-entry underground stage in the data map (contract in remission-data-formats), so packs can tune or turn cave festering off. The cave skin must read clearly differently from sculk in the Deep Dark. The scan walks the chunk section by section, skips sections with no festerable block in their palette, runs on its own per-tick budget and resumes after an unload. Posts `BlockFesteredEvent` per replaced block. The biome flip already covers every height and is unchanged.
+- Acceptance: Gametests for exposed-only replacement (rock inside the ground and ores untouched), the stage gate, the depth limit and sparse festering below it, determinism, turning it off through the data map, and resuming after an unload; per-tick cost measured on foundry and recorded in the PR next to P4.2's 0.12 ms; harness scene `world/caves` (a carved cave under chunks at each stage, including one in deepslate next to sculk), reviewed, with no lighting artefacts. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, minecraft-world-generation, remission-data-formats, visual-checks, content-provenance
+- Parallel: Owns `world/FesteringStages`, `world/FesterMaps` and the festering section of remission-data-formats; do not run alongside P5.2, whose purification undoes festering.
+
+### P4.7: Festering land infects mobs
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P3.3, P4.1, P4.4
+- Scope: Build the festering land infection source that P3.3 stubbed (`Infection.canInfectFromFesteringLand`, profile flag `conversion.festering_land`). Mobs that pass that check build up exposure while inside a festering chunk at or above a minimum stage, at any height, underground included; exposure decays outside festering land and is saved with the mob. Past a threshold the mob becomes a host through the corruption API with a new `CorruptionCause` (festering land), and its `convert_to` profile entry applies as it does for infection on kill. Config: on/off, minimum stage and exposure time. Exposure is checked on an interval with a per-tick budget, not for every mob every tick. This is what creates the first hosts in normal play. Documents the source, the new cause and the config in remission-data-formats and docs/ARCHITECTURE.md.
+- Acceptance: Gametests: an eligible mob in a festering chunk becomes a host after the exposure time, on the surface and in a cave; immune mobs, hosts and mobs whose profile sets `conversion.festering_land` to false never do; nothing happens below the minimum stage or with the source turned off; exposure decays after the mob leaves; `convert_to` applies; `HostCorruptedEvent` carries the new cause. Server tick cost with a few hundred mobs in festering land measured on foundry and recorded in the PR.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing
+- Parallel: Owns `infection/` and its config section; appends to `api/CorruptionCause`.
+
+Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, P4.6 and P4.7, follow-ups added after P4.4, are not part of these exit criteria.
 
 ## Phase 5: Viral load and early purification
 
@@ -267,8 +290,8 @@ Goals: the player can survive the Strain and push it back locally.
 - Owner:
 - PR:
 - Depends on: P4.1, P4.4, P4.3, P8.1
-- Scope: Player attachment `viral_load`; gain in festering chunks, from drinking water from (or swimming in) water in festering chunks, and from flying through miasma clouds; land gain falls off with height above the ground (config: on/off, falloff curve), so airborne players and vehicles avoid the worst of it; decay; escalating debuffs; HUD element; sync. Emits viral load changed and adds the viral load query. Adds any viral load advancement triggers and stats the pack needs, following P8.1's conventions.
-- Acceptance: Gametests for gain (land, drinking, swimming, miasma clouds), altitude falloff (on and off) and decay; harness scene `survival/hud`. Ledger updated; placeholders marked.
+- Scope: Player attachment `viral_load`; gain in festering chunks, from drinking water from (or swimming in) water in festering chunks, and from flying through miasma clouds; land gain falls off with height above the ground (config: on/off, falloff curve), so airborne players and vehicles avoid the worst of it, while underground (caves, tunnels, bases below a festering chunk) gain is at full strength, so digging in is no refuge; decay; escalating debuffs; HUD element; sync. Emits viral load changed and adds the viral load query. Adds any viral load advancement triggers and stats the pack needs, following P8.1's conventions.
+- Acceptance: Gametests for gain (land, drinking, swimming, miasma clouds), altitude falloff (on and off), full gain underground and decay; harness scene `survival/hud`. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
 ### P5.2: Handheld purifier, quarantine pylons and mendroot
