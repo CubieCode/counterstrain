@@ -19,7 +19,7 @@ import net.minecraft.world.level.ChunkPos;
  * its target gains from its <em>parent</em>, the neighbour one step closer to the nidus (along the larger axis
  * offset first), when the parent has reached the threshold; an unloaded parent is assumed to be at its own target. A
  * pass stops after {@code chunkBudget} visits and resumes on the next tick, so the same state and the same ticks always
- * give the same levels.
+ * give the same levels. A chunk still queued for catch-up is skipped (it counts as a visit) until it is caught up.
  *
  * <p>Catch-up: a chunk that loads again is queued; up to {@code catchUpBudget} queued chunks per tick are moved toward
  * each nidus target by the passes they missed since {@code max(last change, nidus indexed)}, in closed form. The land
@@ -176,6 +176,15 @@ public final class SpreadEngine {
         return true;
     }
 
+    /**
+     * Whether a chunk has a queue entry not yet covered by a catch-up. A live pass skips it, so the pass cannot move its
+     * last change to now and the catch-up then credits every pass it missed (including the skipped one).
+     */
+    private boolean awaitingCatchUp(long chunk) {
+        Integer entries = queued.get(chunk);
+        return entries != null && entries > covered.getOrDefault(chunk, 0);
+    }
+
     /** Marks every queue entry of a chunk just caught up as done, so they are skipped. */
     private void cover(long chunk) {
         Integer rest = queued.get(chunk);
@@ -305,7 +314,7 @@ public final class SpreadEngine {
         int dx = offset[0];
         int dz = offset[1];
         long chunk = ChunkPos.asLong(ChunkPos.getX(origin) + dx, ChunkPos.getZ(origin) + dz);
-        if (!land.isLoaded(chunk)) {
+        if (!land.isLoaded(chunk) || awaitingCatchUp(chunk)) {
             return;
         }
         int distance = Math.abs(dx) + Math.abs(dz);
