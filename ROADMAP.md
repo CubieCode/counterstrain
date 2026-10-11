@@ -113,8 +113,8 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.2: Generic host render layer
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p2.2-host-render-layer
 - PR:
 - Depends on: P2.1, P1.1
 - Scope: Layer added to every living-entity renderer (including players) in `EntityRenderersEvent.AddLayers`, re-rendering the parent model with a stage-dependent Strain overlay; client config for intensity. Placeholder art.
