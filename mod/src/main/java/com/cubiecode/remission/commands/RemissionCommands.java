@@ -18,13 +18,16 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
  * {@code /remission} debug commands (permission level 2): {@code infect <targets> <level>}, {@code cleanse <targets>} and
- * {@code inspect <target>}. They read and write host state only through {@link Corruption}.
+ * {@code inspect <target>}. They read and write host state only through {@link Corruption}; {@code infect} skips
+ * {@linkplain Corruption#isImmune immune} targets.
  */
 public final class RemissionCommands {
     public static final int PERMISSION_LEVEL = 2;
 
     private static final SimpleCommandExceptionType ERROR_NO_LIVING_TARGETS = new SimpleCommandExceptionType(
             Component.translatable("commands.remission.failed.no_living_targets"));
+    private static final SimpleCommandExceptionType ERROR_ALL_IMMUNE = new SimpleCommandExceptionType(
+            Component.translatable("commands.remission.failed.immune"));
     private static final DynamicCommandExceptionType ERROR_NOT_LIVING = new DynamicCommandExceptionType(
             entity -> Component.translatable("commands.remission.failed.not_living", entity));
 
@@ -50,10 +53,13 @@ public final class RemissionCommands {
                                         EntityArgument.getEntity(context, "target"))))));
     }
 
-    /** Sets every living target to {@code level}; returns the number of targets changed. */
+    /** Sets every living, non-immune target to {@code level}; returns the number of targets changed. */
     private static int infect(CommandSourceStack source, Collection<? extends Entity> targets, int level)
             throws CommandSyntaxException {
-        List<LivingEntity> hosts = livingTargets(targets);
+        List<LivingEntity> hosts = livingTargets(targets).stream().filter(entity -> !Corruption.isImmune(entity)).toList();
+        if (hosts.isEmpty()) {
+            throw ERROR_ALL_IMMUNE.create();
+        }
         CorruptionState state = CorruptionState.NONE;
         for (LivingEntity host : hosts) {
             state = Corruption.set(host, level);

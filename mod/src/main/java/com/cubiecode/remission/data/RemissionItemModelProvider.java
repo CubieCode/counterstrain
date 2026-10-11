@@ -16,5 +16,6 @@ public final class RemissionItemModelProvider extends ItemModelProvider {
         basicItem(RemissionItems.SCANNER.get());
         basicItem(RemissionItems.HOST_SCAN.get());
         basicItem(RemissionItems.BLOCK_SCAN.get());
+        basicItem(RemissionItems.HOST_TISSUE.get());
     }
 }

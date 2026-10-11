@@ -1,0 +1,15 @@
+{
+  "type": "remission:add_item",
+  "conditions": [
+    {
+      "condition": "remission:is_corrupted"
+    },
+    {
+      "condition": "minecraft:damage_source_properties"
+    }
+  ],
+  "item": {
+    "count": 1,
+    "id": "remission:host_tissue"
+  }
+}
