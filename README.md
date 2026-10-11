@@ -1,8 +1,10 @@
 # Counterstrain
 
-Counterstrain is a quest-driven, tech-focused Minecraft 1.21.1 (NeoForge) modpack inspired by Blightfall. You crash-land on a world overrun by a spreading corruption and climb a tech tree toward a self-spreading cure. **Remission** is the custom mod at its core: corruption as a state on any mob, spreading land corruption from hearts, purification, research and the counter-strain endgame. Remission ships generic defaults and never depends on the pack; Counterstrain adds the story, quests, recipes and balance.
+Counterstrain is a quest-driven, tech-focused Minecraft 1.21.1 (NeoForge) modpack. You crash-land on a world overrun by the Strain, an engineered organism spreading through mobs and land, and climb a tech tree toward the Counterstrain, a self-spreading cure. **Remission** is the custom mod at its core: any mob can become a host, land festers outward from nidi, and you push back with purification, research and finally the Counterstrain. Remission ships generic defaults and a public API, and never depends on the pack; Counterstrain adds the story, quests, recipes, balance and mod integrations. Terms are defined in the [glossary](docs/DESIGN.md#glossary).
 
-Status: phase 0 (scaffold) is complete. No gameplay is implemented yet; see the [roadmap](ROADMAP.md), [design](docs/DESIGN.md) and [architecture](docs/ARCHITECTURE.md).
+Inspired by Blightfall.
+
+Status: phase 0 (scaffold) is complete. No gameplay is implemented yet; see the [roadmap](ROADMAP.md), [design](docs/DESIGN.md) and [architecture](docs/ARCHITECTURE.md). Player-facing content and its origin (AI, procedural, human, licensed) is tracked in [content provenance](docs/CONTENT-PROVENANCE.md).
 
 ## Stack and decisions
 
@@ -52,7 +54,7 @@ mod/                 Remission NeoForge project (Gradle wrapper, gradle.properti
 pack/                Counterstrain packwiz pack, kubejs/, config/ftbquests/
 tools/               Build, pack, release, headless-client and worktree setup scripts (bash, no root)
 orca.yaml            Orca setup hook (runs tools/worktree-setup.sh per worktree)
-docs/                Design, architecture, lore and development environment
+docs/                Design, architecture, lore, content provenance and development environment
 ROADMAP.md           Phases, items, status
 .agents/skills/      Canonical agent skills (project and vendored)
 .claude/skills       Symlink to .agents/skills

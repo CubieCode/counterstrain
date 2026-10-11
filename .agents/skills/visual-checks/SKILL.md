@@ -1,6 +1,6 @@
 ---
 name: visual-checks
-description: Capture and review screenshots of corrupted mobs, blocks, effects and UI on foundry, and decide whether visual exit criteria are met. Covers the manual flow now and the P1 harness scenes later.
+description: Capture and review screenshots of hosts, festering blocks, effects and UI on foundry, and decide whether visual exit criteria are met. Covers the manual flow now and the P1 harness scenes later.
 ---
 
 # Visual checks
@@ -20,12 +20,14 @@ Visual evidence is only valid from a GPU run. The log must name the RTX 4070 (he
 - Mobs spawned with `NoAI:1` for static lineups.
 - 1920x1080. Default resource pack and video settings (record any change).
 
-Name scenes `<area>/<subject>` as in ROADMAP (`corruption/stages_vanilla`, `world/stages`, `purification/ward_radius`).
+Name scenes `<area>/<subject>` as in ROADMAP (`corruption/stages_vanilla`, `world/stages`, `purification/pylon_radius`, `integration/create_fan_purify`).
 
 **What to look for:**
-- **Corrupted mobs:** the overlay follows the mob's own model, including animated parts, baby variants, armour and held items. Stages are distinguishable at a glance. No z-fighting, black or magenta textures, or missing layers on modded models. Compare with an uncorrupted lineup in the same scene.
-- **Blocks and land:** stage textures tile without seams. Biome colour flips cleanly at chunk borders. No lighting holes. Particles are on screen but don't flood it.
-- **Effects and UI:** HUD and exposure meter legible at 1920x1080 and at GUI scale 2/3. Text fits. Colours hold up in the dark.
+- **Hosts:** the Strain overlay follows the mob's own model, including animated parts, baby mobs, armour and held items. Stages are distinguishable at a glance. No z-fighting, black/magenta missing-texture checkerboards, or missing layers on modded models. Compare with an uninfected lineup in the same scene.
+- **Festering land:** stage textures tile without seams. Biome colour flips cleanly at chunk borders. No lighting holes. Particles are on screen but don't flood it.
+- **Effects and UI:** HUD and viral load meter legible at 1920x1080 and at GUI scale 2/3. Text fits. Colours hold up in the dark.
+
+- **Provenance markers:** placeholder textures show the 2×2 magenta corner marker and placeholder GUI/promo art the "PLACEHOLDER" label; art whose CONTENT-PROVENANCE row is `final` shows neither. A mismatch is a bug (content-provenance skill).
 
 Always compare against the previous accepted image for the same scene, and against vanilla for "does it still look like Minecraft".
 

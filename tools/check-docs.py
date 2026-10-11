@@ -171,7 +171,7 @@ def check_links_and_paths():
                     if cls not in CLASSES and not planned:
                         fail(f"{doc}:{line_no}", f"class {cls} not found in mod/src")
                 # Gradle properties passed as -Pname or named directly.
-                for prop in re.findall(r"-P(\w+)", token) + re.findall(r"^(dev_\w+|mod_\w+|neo_version)$", token):
+                for prop in re.findall(r"(?<!\w)-P(\w+)", token) + re.findall(r"^(dev_\w+|mod_\w+|neo_version)$", token):
                     if prop not in GRADLE and prop not in ("client_width", "client_height"):
                         fail(f"{doc}:{line_no}", f"Gradle property {prop} not in mod/gradle.properties")
                 # Workflows by file name.

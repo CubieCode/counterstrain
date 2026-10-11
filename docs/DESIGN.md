@@ -2,77 +2,153 @@
 
 ## Overview
 
-Inspired by Blightfall. The player crash-lands on a world overrun by a spreading corruption and works up a tech tree toward an endgame, self-spreading cure. Corruption is never a static biome to avoid: it grows from hearts, converts mobs and land, adapts to the player's tools, and is finally beaten by turning its own spread engine against it.
+Inspired by Blightfall; Counterstrain uses its own vocabulary and reuses none of Blightfall's or Thaumcraft's terms.
+
+The player crash-lands on a world overrun by **the Strain**, an engineered organism spreading through mobs and land, and works up a tech tree toward **the Counterstrain**, a self-spreading cure. The Strain is never a static biome to avoid: it grows from nidi, turns mobs into hosts and land into festering ground, adapts to the player's tools, and is finally beaten by turning its own spread engine against it.
 
 Two products, one repository:
 
-- **Remission** (mod): generic corruption, purification, research and cure systems. Works with vanilla and modded mobs, ships sane defaults, exposes data and scripting surfaces, and never depends on the pack.
-- **Counterstrain** (pack): the story, quest chapters, crash-site start, recipes, progression gating and balance, built with KubeJS, FTB Quests and datapacks on top of Mekanism, AE2, Create and Ars Nouveau.
+- **Remission** (mod): generic Strain, purification, research and cure systems. Works with vanilla and modded mobs, ships sane defaults, exposes data, scripting and API surfaces, and never depends on the pack.
+- **Counterstrain** (pack): the story, quest chapters, crash-site start, recipes, progression gating, balance and mod integrations, built with KubeJS, FTB Quests and datapacks on top of Mekanism, AE2, Create, Ars Nouveau and the [integrations](#pack-integrations) below.
+
+## Glossary
+
+Every doc, quest, lang string, lore entry, command and content ID uses these terms. When a new concept needs a name, add it here in the same change.
+
+| Concept | Term | IDs / examples |
+| --- | --- | --- |
+| The corruption | **the Strain** | prose: "Strain-infected", "the Strain spreads" |
+| Spread sources | **nidus** (plural **nidi**) | block `remission:nidus`, item `remission:nidus_core` |
+| Infected mobs | **hosts** | "a host cow"; the bestiary lists host types |
+| Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone`, biome `remission:fester` |
+| Boundary between festering land and reclaimed land | **frontier** | "hold the frontier" |
+| Periodic spread bursts | **surges** | "the nidus surges at the season change" |
+| Extracted resource | **miasma** | fluid `remission:miasma`; Mekanism chemical `remission:miasma` when Mekanism is present |
+| Player exposure meter | **viral load** | player attachment `viral_load` |
+| Radius wards | **quarantine pylons** | `remission:quarantine_pylon` |
+| Cleansing plants | **mendroot** | `remission:mendroot` |
+| Reclaimed land | **remission zones** | "chunks in remission" |
+| Resistant mutations | **variants** | "sequence the variant"; `CorruptionState` field `variant` |
+| Endgame cure | **the Counterstrain** | "unstable Counterstrain prototypes", "the final deployment" |
+| Samples | host tissue, **nidus cores**, festered soil | `remission:host_tissue`, `remission:nidus_core`, `remission:festered_soil` |
+| Items carried through festering land | **contaminated** (verb: decontaminate) | data component `remission:contaminated` (planned, P10.6) |
+
+"Variant" always means a resistant mutation of the Strain, never a kind of host: scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
+
+### Naming rule
+
+- **Player-facing text, content registry IDs (blocks, items, fluids, chemicals, biomes, effects), lang keys, quest text and IDs, lore, advancement triggers, stats and commands** use the glossary terms.
+- **Internal Java system names and public API types may keep the generic word "corruption"**: `CorruptionState`, the `corruption` entity attachment, the chunk corruption level, the `remission:is_corrupted` loot condition, the `corruption/` package. Those names read naturally to other mod and pack developers who have never seen the glossary. Do not rename them to Strain terms, and do not "fix" player-facing text back to "corruption".
 
 ## Pillars
 
-1. **Any mob can be corrupted.** Corruption is state on the entity, not a new entity type, so every installed mod widens the bestiary.
-2. **The land fights back.** Corruption is visible, spreads from destroyable sources, and keeps moving while you are away.
-3. **Progress is reclaimed ground.** Cleansed land is the reward and the score; quests and bonuses key off it.
+1. **Any mob can become a host.** Infection is state on the entity, not a new entity type, so every installed mod widens the bestiary.
+2. **The land fights back.** Festering is visible, spreads from destroyable nidi, and keeps moving while you are away.
+3. **Progress is reclaimed ground.** Remission zones are the reward and the score; quests and bonuses key off them.
 4. **Science, not magic missiles.** You win by sampling, analysing and engineering, using the pack's tech mods.
-5. **Mod generic, pack specific.** Every number and story beat the pack might want to change is data or script.
+5. **Mod generic, pack specific.** Every number and story beat the pack might want to change is data, script or an API hook.
 
 ## Remission systems
 
-### Corrupted mobs (state, not entities)
+### Hosts (state, not entities)
 
-- A Data Attachment on `LivingEntity` holds corruption level/stage (and later, strain). Synced to tracking clients (custom payload, or NeoForge 21.1's built-in attachment sync; decided in phase 2).
-- **Visuals:** a render layer added to every living-entity renderer in `EntityRenderersEvent.AddLayers` re-renders the mob's own model with a corruption overlay (tint, emissive veins, particles by stage).
-- **Behaviour:** on `EntityJoinLevelEvent`, corrupted `Mob`s lose passive goals (breed, tempt, flee, follow parent) and gain targeting and melee/ranged attack goals. `Attributes.ATTACK_DAMAGE` (and anything else attacks need) is added to every entity type via `EntityAttributeModificationEvent`. Fallbacks for brain-based mobs (villagers, piglins, axolotls), flying and swimming mobs.
-- **Conversion:** a kill by a corrupted mob, or prolonged exposure in corrupted land, flips the victim's state. The `convert_to` override can replace the victim with another entity type.
-- **Drops:** a Global Loot Modifier gated on a custom `remission:is_corrupted` loot condition adds samples and blight drops.
+- A Data Attachment on `LivingEntity` holds corruption level and stage (and later, `variant`). Synced to tracking clients (custom payload, or NeoForge 21.1's built-in attachment sync; decided in phase 2).
+- **Visuals:** a render layer added to every living-entity renderer in `EntityRenderersEvent.AddLayers` re-renders the mob's own model with a Strain overlay (tint, emissive veins, particles by stage).
+- **Behaviour:** on `EntityJoinLevelEvent`, host `Mob`s lose passive goals (breed, tempt, flee, follow parent) and gain targeting and melee/ranged attack goals. `Attributes.ATTACK_DAMAGE` (and anything else attacks need) is added to every entity type via `EntityAttributeModificationEvent`. Fallbacks for brain-based mobs (villagers, piglins, axolotls), flying and swimming mobs.
+- **Infection:** a kill by a host, or prolonged time in festering land, infects the victim. The `convert_to` override can replace the victim with another entity type.
+- **Drops:** a Global Loot Modifier gated on the `remission:is_corrupted` loot condition adds host tissue and other samples.
 - **Overrides:** `#remission:immune` entity tag; per-mob JSON loaded from datapacks (attributes, behaviour profile, convert-to entity). Schemas: remission-data-formats skill.
 
-### World corruption
+### Festering land
 
-- Per-chunk corruption level (chunk Data Attachment) driving visible stages: blighted grass, dead trees and foliage, corrupted stone, and finally a biome flip.
-- Spread originates from **hearts/nodes** (blocks or structures). Destroying a heart stops its spread but does not cleanse land.
+- Per-chunk corruption level (chunk Data Attachment) driving visible festering stages: festering grass, festering trees and foliage, festered stone, and finally a biome flip to `remission:fester` (or a per-biome fester variant set by data, so modded biomes fester too).
+- The Strain spreads from **nidi** (blocks or structures). Destroying a nidus stops its spread but does not cleanse land.
 - **Catch-up:** unloaded chunks record a timestamp; on load they fast-forward deterministically, bounded per tick.
-- **Surges:** periodic events that accelerate spread and spawn corrupted mobs, telegraphed to players.
+- **Surges:** periodic events that accelerate spread and spawn hosts, telegraphed to players.
 
-### Survival and purification
+### Viral load and purification
 
-- Player exposure meter (attachment) with escalating debuffs; serums and gear reduce it.
-- Tools by scale: handheld purifier, ward totems with a radius, large powered purifiers, cleansing plants.
-- Reclaimed land grants bonuses (spawn safety, growth, resource yields; tunable).
+- **Viral load:** a player attachment that rises in festering chunks, with escalating debuffs; serums and gear reduce it. Drinking water from, or swimming in, water in festering chunks also adds viral load. There are no climate mods: viral load is the only exposure system.
+- **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot.
+- **Remission zones:** purified chunks enter remission and grant bonuses (spawn safety, growth, resource yields; tunable).
 
 ### Research
 
-- A scanner turns mobs, blocks and samples into data items.
-- A bestiary of corrupted variants that grows with installed mods, because variants are derived from entity types at runtime.
+- A scanner turns hosts, blocks and samples into data items.
+- A bestiary of host types that grows with installed mods, because host forms are derived from entity types at runtime.
 
 ### Tech chain
 
-- Blight as a fluid (and Mekanism chemical when Mekanism is present).
-- Samples: tissue, heart cores, soil.
+- Miasma as a fluid (and Mekanism chemical when Mekanism is present).
+- Samples: host tissue, nidus cores, festered soil.
 - Machines: analyzer, sequencer, synthesizer, each a recipe type KubeJS can edit.
-- Products: personal serums, purifier fuel, unstable prototype strains.
+- Products: personal serums, purifier fuel, unstable Counterstrain prototypes.
 
-### Endgame cure
+### Endgame: the Counterstrain
 
-- A counter-strain uses the same chunk spread engine in reverse.
-- Corruption adapts: resistant strains appear in response to the player's methods.
+- The Counterstrain uses the same chunk spread engine in reverse.
+- The Strain adapts: resistant variants appear in response to the player's methods.
 - A final deployment defence event, after which the world visibly heals.
 
 ### Quest hooks
 
-- Advancement triggers and stats: region % cleansed, heart destroyed, variant scanned, surge survived (and more as systems land), usable by FTB Quests or any quest mod.
-- Hooks for quests to fire corruption events (start a surge, seed a heart, advance a region).
-- Optional JourneyMap overlay of corrupted and cleansed land (polygon overlays on the full-screen map and minimap).
+- Advancement triggers and stats: region % cleansed, nidus destroyed, host scanned, surge survived (and more as systems land), usable by FTB Quests or any quest mod.
+- Hooks for quests to fire Strain events (start a surge, seed a nidus, advance a region).
+- Optional JourneyMap overlay of festering land and remission zones (polygon overlays on the full-screen map and minimap).
+
+### Public API and events
+
+Remission exposes generic hooks in `com.cubiecode.remission.api` so integrations, addons and KubeJS build on its systems instead of patching them. The package and its conventions are P4.4; every later system item adds and documents its own events.
+
+- **Events** (NeoForge events on `NeoForge.EVENT_BUS`, server side): host corrupted, host cleansed, block festered, block purified, chunk stage changed, chunk entered remission, nidus destroyed, surge started, surge ended, viral load changed, and a cancellable Strain spread attempt (chunk to chunk, with a rate multiplier) so firebreaks, seasons and wards can slow or stop spread without patching the engine.
+- **Queries:** corruption stage at a position or chunk, whether an entity is a host, a player's viral load.
+- Types may use "corruption" (naming rule above), for example `HostCorruptedEvent`, `ChunkStageChangedEvent`.
+
+Integrations prefer pack-side KubeJS and datapacks built on these hooks (KubeJS bindings: P8.3). Mod-side integration code lives only in `integration/<modid>/`, uses `compileOnly` APIs and is guarded by `ModList`, the pattern P8.2 uses for JourneyMap. Remission never hard-depends on an integrated mod.
 
 ## Counterstrain pack
 
-- **Story:** crash landing, find the first heart, learn what the blight is, build toward the cure ([lore](LORE.md)).
-- **Quest loop per region:** find heart, research, gear up, destroy, purify, move on; the last region ends in the cure deployment.
+- **Story:** crash landing, locate the first nidus, learn what the Strain is, engineer the Counterstrain ([lore](LORE.md)).
+- **Quest loop per region:** locate the nidus → research → gear up → destroy the nidus → purify → next region; the last region ends in the Counterstrain deployment.
 - **Start:** a crash-site map/structure with a guided first chapter.
-- **Progression:** KubeJS recipe gating through Mekanism, AE2, Create and Ars Nouveau tiers, using Remission samples and data items as keys.
-- **Worldgen:** datapack and KubeJS tweaks for heart placement, biome corruption and pacing.
+- **Progression:** KubeJS recipe gating through Mekanism, AE2, Create and Ars Nouveau tiers and the integration gates below, using Remission samples and data items as keys.
+- **Worldgen:** datapack and KubeJS tweaks for nidus placement, festering and pacing.
+
+## Pack integrations
+
+Each tie-in creates a progression gate. **Pack-side** means KubeJS scripts and datapacks on Remission's data, recipe and API surfaces; **mod-side optional** means Java in `integration/<modid>/` against the other mod's `compileOnly` API, loaded only when that mod is present. Pack-side is the default; mod-side is used only where the other mod's content can be registered or hooked only from Java. Built in phase 10; pack membership is P10.1. Availability (a 1.21.1 NeoForge release on Modrinth or CurseForge) was checked on 2026-10-11.
+
+| Mod | Tie-in | Gate | Side and reasoning |
+| --- | --- | --- | --- |
+| Create | Encased fans with a purifying catalyst cleanse blocks in their stream; fan walls act as Strain firebreaks; track in festering chunks degrades | Kinetics needed before you can hold a frontier | Mod-side optional: fan processing types and in-stream block effects are Java registrations. Firebreaks use the spread attempt event. |
+| Mekanism | Miasma as a Mekanism chemical; late-game sequencing and Counterstrain stabilisation use Mekanism processing | Late-game lab requires Mekanism infrastructure | Chemical: mod-side optional (P7.1; chemicals are Java registrations). Processing chains: pack-side KubeJS recipes (P10.2). |
+| PneumaticCraft: Repressurized | Miasma pressurised for analysis; drones patrol frontiers and plant mendroot | Automated reclamation locked behind pressure tech | Pack-side: pressure chamber and thermo plant recipes are data; drones plant mendroot with stock programs if mendroot is a plantable item. |
+| Applied Energistics 2 | Research data stored in AE2; the sequencer reads from the network; AE2 cables in festering chunks degrade without shielding | Reliable research network needs shielded cabling | Storage and sequencer: pack-side (machines expose standard item capabilities). Cable degradation: mod-side optional, because cable parts live inside AE2's cable bus. |
+| Ars Nouveau | A Cleanse glyph; host summons; source (mana) drawn from festering land is unstable and can backfire | Early, risky magical purification before tech catches up | Mod-side optional: glyphs and source generation hooks are Java registrations. |
+| Occultism | Spirits harvested from hosts, bound to work in festering zones the player can't safely enter | Mid-game remote work in hostile zones | Pack-side: ritual recipes are data; host essence comes from the host loot modifier; spirits go in `#remission:immune`. |
+| Botania | A purifying flower that consumes the Strain as fuel; Strain-laced mana fouls the mana spreaders it touches | Alternative purification route | **Unavailable on 1.21.1 — revisit.** No official 1.21.1 NeoForge release; an unofficial port (Botania Revived) exists on CurseForge. |
+| Serene Seasons | The Strain spreads faster in summer and goes dormant in winter; nidi surge at season changes | Winter becomes the season to push | Pack-side: a KubeJS handler on the spread attempt event sets the rate multiplier from the season and starts surges on season change. Its 1.21.1 NeoForge files are marked beta. |
+| Farmer's Delight | Festering crops; purifying meals granting viral load resistance | Food becomes expedition prep | Pack-side: festering conversions and food items are data and KubeJS; the resistance effect is Remission's. |
+| Productive Bees | Strain-resistant bee lines bred from purified hives that cleanse land they pollinate | Mid-game foreshadowing of the Counterstrain | Bee types and breeding: pack-side (data). The pollination cleanse is pack-side if Productive Bees exposes a data-driven bee effect, otherwise mod-side optional; decided in P10.4. |
+| Iron's Spells 'n Spellbooks | Spellcasting host bosses; a Strain-themed spell school dropped by them | Boss-gated combat progression | Bosses: pack-side (mob profiles, loot). Spell school: mod-side optional, because schools and spells are Java registrations. |
+| Waystones | Waystones in festering chunks go dark until purified; remission zones become fast-travel hubs | Travel network grows with reclaimed land | Mod-side optional: blocking teleports and darkening the stone need Waystones' Java API. |
+| Immersive Engineering | A multiblock "quarantine arc" that holds a large frontier; the excavator mines nidus cores out of festered deposits | Large-scale containment and late sample supply | Quarantine arc: mod-side optional (multiblocks are Java). Excavator: pack-side (mineral mixes are data). |
+| MineColonies | Colonies can only be founded in remission zones; colonists are vulnerable to the Strain and guards fight hosts; surges threaten colonies | Rebuilding civilisation is the reward for reclaimed land | Mod-side optional: colony founding and guard targeting need MineColonies' Java API. Colonist infection and surges are generic. Available on CurseForge only. |
+| Sophisticated Backpacks / Storage | Items carried through festering zones become contaminated unless stored in a sealed upgrade; contaminated items must be decontaminated before use | Expedition logistics and early sealed-storage goal | Contamination is a generic Remission mechanic any pack can use. The sealed upgrade is mod-side optional, because upgrades are Java registrations. |
+| Simple Voice Chat | Hosts are drawn to players' voices, so talking in festering zones is dangerous (optional, server-configurable) | Atmosphere rather than a hard gate | Mod-side optional: Simple Voice Chat's server plugin API is Java only. |
+| Create: Steam 'n' Rails | Rail lines are the supply lines into reclaimed regions; track in festering chunks degrades | Mid-game logistics between remission zones | **Unavailable on 1.21.1 — revisit.** The official project stops at 1.20.1; an unofficial NeoForge port is in beta. Create's own track degradation is covered by the Create tie-in. |
+| Patchouli or Modonomicon | An in-game field journal that fills in as you scan hosts, find logs and destroy nidi, carrying the story alongside quests | Lore delivery tied to research progress | Pack-side: books and unlocks are data keyed on Remission advancements. Which book mod is decided in P10.7. |
+| Biomes O' Plenty / Terralith | More biome variety for the Strain to fester through, each with its own fester variant | Worldgen variety, no gate | Pack-side: per-biome fester variants are data. Biomes O' Plenty's 1.21.1 NeoForge files are marked beta. |
+
+## AI-generated content policy
+
+All AI-generated **player-facing content** is documented and replaceable in a later art and writing pass (P12.2). The ledger is [CONTENT-PROVENANCE](CONTENT-PROVENANCE.md); the rules for agents are in the [content-provenance](../.agents/skills/content-provenance/SKILL.md) skill.
+
+- **Scope:** textures, models, GUI art, particles, sounds, icons and logos, lang strings and item/block descriptions, quest titles and text, lore and field journal entries, in-world signs or books, and store page copy (Modrinth/CurseForge summaries, descriptions, gallery images). Code, build files and internal docs are out of scope.
+- **Ledger:** every PR that adds or changes player-facing content adds or updates its rows in the same PR. Replacements change a row's origin and status instead of deleting it.
+- **Placeholder images are obviously placeholders:** block, item and entity textures carry a 2×2 magenta (`#FF00FF`) square in the top-left corner (scaled for larger textures); GUI art, icons, logos, gallery and promo images carry a visible "PLACEHOLDER" label. Placeholder sounds are recorded in the ledger only. Final art never carries the marker.
+- **AI-written text** is listed in the ledger with status `draft`; in-game text carries no visible marker.
 
 ## Out of scope (for now)
 
-Multiplayer team mechanics beyond what FTB Teams provides, custom dimensions, new mob entity types (corruption is state), and Fabric or other loaders.
+Multiplayer team mechanics beyond what FTB Teams provides, custom dimensions, new mob entity types (infection is state), climate and temperature mods, and Fabric or other loaders.

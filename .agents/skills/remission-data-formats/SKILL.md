@@ -1,15 +1,17 @@
 ---
 name: remission-data-formats
-description: Define, change or consume Remission's pack-facing data contracts (entity tags, per-mob override JSON, loot condition, recipe types, KubeJS schemas, advancement triggers, stats). Keep these schemas current with the code.
+description: Define, change or consume Remission's pack-facing contracts (entity tags, per-mob override JSON, loot condition, recipe types, KubeJS schemas, advancement triggers, stats, commands, public API events and their KubeJS bindings). Keep these schemas current with the code.
 ---
 
 # Remission data formats
 
 These are contracts between the mod and any pack. Every schema below is a **stub** (status `planned`) until the roadmap item named implements it; then update its status, fields and example in this file and docs/ARCHITECTURE.md in the same PR. Never ship a reader for a format that is not documented here. Paths use 1.21.1 singular folders; `<ns>` is any datapack namespace (the pack uses `counterstrain` or overrides `remission`).
 
+Names follow the glossary and naming rule in docs/DESIGN.md: content IDs, triggers, stats and commands use Strain terms (`nidus`, `host`, `miasma`, `fester`); system names such as `CorruptionState`, the `corruption` attachment and `remission:is_corrupted` keep "corruption". Do not rename either.
+
 ## Entity tag `#remission:immune` (planned, P3.3)
 
-`data/<ns>/tags/entity_type/immune.json`, standard tag JSON (`{"replace": false, "values": ["minecraft:wither", "#c:bosses", {"id": "othermod:x", "required": false}]}`). Immune mobs never become corrupted or convert. Defaults: Remission ships bosses and players-only types; the pack extends it.
+`data/<ns>/tags/entity_type/immune.json`, standard tag JSON (`{"replace": false, "values": ["minecraft:wither", "#c:bosses", {"id": "othermod:x", "required": false}]}`). Immune mobs never become hosts or convert. Defaults: Remission ships bosses and players-only types; the pack extends it.
 
 ## Mob profile (planned, P3.3)
 
@@ -22,22 +24,22 @@ Datapack registry `remission:mob_profile`, files `data/<ns>/remission/mob_profil
   "behaviour": "melee",
   "attributes": { "minecraft:generic.attack_damage": 4.0, "minecraft:generic.movement_speed": 0.3 },
   "convert_to": "minecraft:zombie",
-  "conversion": { "on_kill": true, "exposure": true }
+  "conversion": { "on_kill": true, "festering_land": true }
 }
 ```
 
-`entities`: id, tag or list (HolderSet). `behaviour`: `melee` | `ranged` | `flying` | `swimming` | `passive_hostile` | `none` (planned enum). `attributes`: added as modifiers while corrupted. `convert_to`: optional entity id replacing the victim on conversion. Highest `priority` wins per entity; mobs with no profile use category defaults.
+`entities`: id, tag or list (HolderSet). `behaviour`: `melee` | `ranged` | `flying` | `swimming` | `passive_hostile` | `none` (planned enum). `attributes`: added as modifiers while the mob is a host. `convert_to`: optional entity id replacing the victim on conversion. `conversion`: whether a kill by this host (`on_kill`) and time in festering chunks (`festering_land`) infect. Highest `priority` wins per entity; mobs with no profile use category defaults.
 
 ## Loot condition `remission:is_corrupted` (planned, P3.3)
 
-`{"condition": "remission:is_corrupted", "entity": "this", "min_stage": 1}`. Used in loot tables and global loot modifiers. GLMs: `data/<ns>/loot_modifiers/<name>.json`, listed in `data/neoforge/loot_modifiers/global_loot_modifiers.json` (`{"replace": false, "entries": ["remission:corrupted_samples"]}`). Remission's own defaults are datagen (`RemissionLootModifierProvider`).
+`{"condition": "remission:is_corrupted", "entity": "this", "min_stage": 1}`: true when the entity is a host at or above the stage. Used in loot tables and global loot modifiers. GLMs: `data/<ns>/loot_modifiers/<name>.json`, listed in `data/neoforge/loot_modifiers/global_loot_modifiers.json` (`{"replace": false, "entries": ["remission:host_samples"]}`). Remission's own defaults are datagen (`RemissionLootModifierProvider`).
 
 ## Recipe types (planned, P7.2)
 
 `remission:analyzing`, `remission:sequencing`, `remission:synthesizing`, files `data/<ns>/recipe/<name>.json`:
 
 ```json
-{ "type": "remission:analyzing", "ingredient": {"item": "remission:tissue_sample"}, "fluid": {"id": "remission:blight", "amount": 250}, "results": [{"id": "remission:data_fragment", "count": 1}], "energy": 2000, "time": 100 }
+{ "type": "remission:analyzing", "ingredient": {"item": "remission:host_tissue"}, "fluid": {"id": "remission:miasma", "amount": 250}, "results": [{"id": "remission:data_fragment", "count": 1}], "energy": 2000, "time": 100 }
 ```
 
 1.21.1 ingredient objects are `{"item": ...}`/`{"tag": ...}`; results `{"id", "count"}`. Final fields are fixed in P7.2.
@@ -51,17 +53,48 @@ All `remission:<id>` criterion triggers with an optional `player` predicate plus
 | Trigger | Conditions |
 | --- | --- |
 | `region_cleansed` | `region` (string id, optional), `min_percent` (0–100) |
-| `heart_destroyed` | `heart` (block or tag, optional) |
-| `variant_scanned` | `entity` (entity predicate), `min_unique` (int, optional) |
+| `nidus_destroyed` | `nidus` (block or tag, optional) |
+| `host_scanned` | `entity` (entity predicate), `min_unique` (int, optional) |
 | `surge_survived` | `min_intensity` (int, optional) |
-| `corrupted` / `cleansed_self` | exposure thresholds (planned) |
+| `viral_load` | `min` / `max` (viral load thresholds, optional) |
 
-Example: `{"criteria": {"heart": {"trigger": "remission:heart_destroyed", "conditions": {}}}}`.
+Example: `{"criteria": {"nidus": {"trigger": "remission:nidus_destroyed", "conditions": {}}}}`. "Variant" is reserved for resistant mutations; a trigger for sequencing one may follow in P9.1.
 
 ## Stats (planned, P8.1)
 
-Custom stats under `minecraft:custom`: `remission:hearts_destroyed`, `remission:chunks_cleansed`, `remission:variants_scanned`, `remission:surges_survived`. FTB Quests stat tasks read them.
+Custom stats under `minecraft:custom`: `remission:nidi_destroyed`, `remission:chunks_cleansed`, `remission:hosts_scanned`, `remission:surges_survived`. FTB Quests stat tasks read them.
 
 ## Quest-fired events (planned, P8.2)
 
-Commands (`/remission surge start <pos> [intensity]`, `/remission heart seed <pos>`, `/remission region advance <id>`) usable from FTB Quests command rewards and KubeJS; a KubeJS binding may follow. Document exact syntax here when built.
+Commands (`/remission surge start <pos> [intensity]`, `/remission nidus seed <pos>`, `/remission region advance <id>`) usable from FTB Quests command rewards and KubeJS. Debug commands (P2.3): `/remission infect <targets> <level>`, `/remission cleanse <targets>`, `/remission inspect <target>`. Document exact syntax here when built.
+
+## Fester variants (planned, P4.2)
+
+Per-source-biome fester target so modded biomes fester into their own variant, falling back to `remission:fester`. Shape (data map on `minecraft:worldgen/biome` or a datapack registry) is fixed in P4.2; the pack uses it for Biomes O' Plenty and Terralith (P10.7).
+
+## Item contamination (planned, P10.6)
+
+Data component `remission:contaminated` on item stacks carried through festering chunks, a tag for containers that protect their contents, and a decontamination recipe type or KubeJS hook. Fields fixed in P10.6.
+
+## Public API events and queries (planned, P4.4)
+
+Package `com.cubiecode.remission.api`; nothing outside it is public. Events are NeoForge events posted server side on `NeoForge.EVENT_BUS` after the change is applied, except the cancellable spread attempt, which is posted before. Batched changes (catch-up, stage batches) post one event per chunk unless the event is block-scoped. Java names may use "corruption".
+
+| Event | Fired by | Payload (planned) | Cancellable |
+| --- | --- | --- | --- |
+| host corrupted | P2.1 setter, infection (P3.3) | entity, old and new state, cause | no |
+| host cleansed | P2.1 setter, purification | entity, old state, cause | no |
+| chunk stage changed | P4.1 | level, chunk pos, old and new stage | no |
+| nidus destroyed | P4.1 | level, pos, player (optional) | no |
+| Strain spread attempt | P4.1 | level, from and to chunk, rate multiplier (mutable) | yes |
+| block festered | P4.2 | level, pos, old and new block state | no |
+| surge started / ended | P4.3 | level, origin, intensity | no |
+| viral load changed | P5.1 | player, old and new value, cause | no |
+| block purified | P5.2 | level, pos, old and new block state, cause | no |
+| chunk entered remission | P5.2 | level, chunk pos, player (optional) | no |
+
+Queries: corruption stage at a position or chunk, `isHost(entity)`, a player's viral load (P5.1). Exact class names, fields and firing rules are recorded here by the item that builds them.
+
+## KubeJS event bindings (planned, P8.3)
+
+The API events above exposed to KubeJS server scripts through an optional `integration/kubejs/` plugin (no hard KubeJS dependency), with cancellation and the spread multiplier writable from script. Event group and method names are fixed in P8.3 and mirrored in kubejs-scripting.

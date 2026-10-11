@@ -21,4 +21,10 @@ Recipes: `event.shaped(Item.of('x', n), [rows], {A: 'id'})`, `event.shapeless`, 
 
 Remission recipe types (`remission:analyzing`, `sequencing`, `synthesizing`) get KubeJS methods from JSON schemas the mod ships in `data/remission/kubejs/recipe_schema/` (remission-data-formats). Once P7 lands: `event.recipes.remission.analyzing(...)`, plus `event.remove({type: 'remission:analyzing'})`. If ProbeJS does not show them, the schema is missing or invalid; fix the mod, do not hand-write `event.custom` workarounds in the pack.
 
+Remission API events (planned, P8.3): Remission's public API events (host corrupted, nidus destroyed, Strain spread attempt, chunk entered remission and the rest listed in remission-data-formats) are exposed to server scripts through an optional binding. Use them for pack-side integrations (for example a Serene Seasons spread multiplier) instead of polling or patching; event group and method names are fixed in P8.3 and recorded here.
+
+Integrations: pack-side tie-ins from DESIGN's Pack integrations table live in `server_scripts/integrations/<modid>.js` (one file per mod, header naming the gate it creates), loaded only when the mod is present (`Platform.isLoaded('<modid>')`).
+
+Names: item, block and fluid IDs, tooltips and lang use the DESIGN glossary (`remission:miasma`, `remission:nidus_core`, "festering"). Anything a script adds that players see (startup-registered items, tooltips, lang, textures under `kubejs/assets/`) is player-facing content: add ledger rows to docs/CONTENT-PROVENANCE.md and mark placeholder textures (content-provenance skill).
+
 Gating: lock items behind Remission data items and samples by replacing inputs or removing and re-adding recipes; record each gate's quest in the script header. Balance numbers live in the pack, never in the mod. Test with a playtest instance: `/reload`, then check JEI and `logs/kubejs/server.log` for errors.
