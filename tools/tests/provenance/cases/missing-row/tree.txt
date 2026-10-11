@@ -1,0 +1,3 @@
+mod/src/main/resources/assets/remission/textures/block/nidus.png <- marked_16.png
+pack/kubejs/assets/counterstrain/sounds/alarm.ogg
+mod/src/generated/resources/assets/remission/models/item/mendroot.json

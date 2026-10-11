@@ -85,7 +85,7 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.4: Provenance check
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p1.4-provenance-check
 - PR:
 - Depends on: P0.1

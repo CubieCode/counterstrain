@@ -1,0 +1,2 @@
+mod/src/main/resources/assets/remission/textures/block/nidus.png (docs/CONTENT-PROVENANCE.md:5): status placeholder but the 2x2 #FF00FF placeholder marker is missing
+mod/src/main/resources/assets/remission/textures/block/nidus_big.png (docs/CONTENT-PROVENANCE.md:6): status placeholder but the 4x4 #FF00FF placeholder marker is missing

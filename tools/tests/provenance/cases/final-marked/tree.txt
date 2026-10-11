@@ -1,0 +1,1 @@
+mod/src/main/resources/assets/remission/textures/item/mendroot.png <- marked_indexed_16.png

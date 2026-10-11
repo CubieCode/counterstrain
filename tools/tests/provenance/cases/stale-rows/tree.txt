@@ -1,0 +1,2 @@
+mod/src/main/resources/assets/remission/textures/block/kept.png <- plain_16.png
+mod/src/main/resources/assets/remission/textures/block/dup.png <- plain_16.png

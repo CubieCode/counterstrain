@@ -1,0 +1,6 @@
+# Test ledger for the placeholder-unmarked case (tools/check-provenance.py --self-test).
+
+| Path / ID | Type | Origin | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/textures/block/nidus.png` | texture | ai (fixture) | placeholder | Marker forgotten. |
+| `mod/src/main/resources/assets/remission/textures/block/nidus_big.png` | texture | ai (fixture) | placeholder | 2x2 marker on a 32x32 texture is too small. |
