@@ -8,6 +8,7 @@ All development, builds, tests and visual checks run on the home server `foundry
 - GPU: NVIDIA RTX 4070, driver 595.91.07 (headless server branch, open kernel module) plus `libnvidia-gl-595-server` for OpenGL/EGL.
 - Work runs as user `lab`, which has GPU device access but **no sudo**. Never attempt system package installs or anything needing root. If something is missing, stop and report it.
 - Self-hosted GitHub Actions runners on the same machine (labels `self-hosted`, `foundry`, `gpu`) run as `lab`, so the same commands work in CI.
+- The runners are in the CubieCode org runner group "Foundry", which must grant this repository access (and allow public repositories). The org variable `RUNNER` (`["self-hosted","foundry"]`) sends CI there. Because the repository is public, CI routes pull requests from forks to `ubuntu-latest`. Release and GPU workflows can only be started by people with write access.
 
 ## Java
 

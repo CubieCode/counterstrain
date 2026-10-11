@@ -3,7 +3,8 @@ name: CI
 # Docs-only changes skip both jobs.
 #
 # Runners: vars.RUNNER selects them (JSON, e.g. ["self-hosted","foundry"]);
-# unset means ubuntu-latest. Self-hosted jobs run as `lab` without sudo, so no
+# unset means ubuntu-latest. The repository is public, so pull requests from
+# forks always run on ubuntu-latest and never execute untrusted code on foundry. Self-hosted jobs run as `lab` without sudo, so no
 # step may install system packages. Java comes from setup-java (Temurin 21,
 # matching .sdkmanrc); packwiz is built by tools/install-packwiz.sh.
 # Integration-test mods (KubeJS, EMI, JEI, ...) are disabled here so CI tests
@@ -22,7 +23,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   mod:
-    runs-on: ${{ fromJSON(vars.RUNNER || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((github.event.pull_request.head.repo.fork && '"ubuntu-latest"') || vars.RUNNER || '"ubuntu-latest"') }}
     timeout-minutes: 30
     defaults:
       run:
@@ -57,7 +58,7 @@ jobs:
           if-no-files-found: ignore
 
   pack:
-    runs-on: ${{ fromJSON(vars.RUNNER || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((github.event.pull_request.head.repo.fork && '"ubuntu-latest"') || vars.RUNNER || '"ubuntu-latest"') }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
