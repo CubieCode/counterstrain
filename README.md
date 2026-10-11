@@ -38,6 +38,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `cd mod && ./gradlew runGameTestServer` | Run gametests headlessly, exit non-zero on failure |
 | `cd mod && ./gradlew runServer` | Dedicated dev server (`mod/run/server`, accept the EULA there first) |
 | `tools/run-client-headless.sh --timeout 180` | Dev client on foundry's GPU; logs in `.local/runs/latest/` |
+| `tools/run-client-headless.sh --scene smoke/mob_lineup` | Dev-only harness scene: fixed world, screenshots in `.local/runs/latest/screenshots/`, then exits |
 | `tools/verify-gpu-render.sh LOG` | Fail unless a client log names the RTX 4070 |
 | `tools/collect-screenshots.sh` | Copy screenshots to `.local/screenshots/latest/` |
 | `python3 -I tools/check-docs.py` | Check docs, roadmap, READMEs and skills against the code (docs-sync skill) |

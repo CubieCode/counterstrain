@@ -26,6 +26,15 @@ sourceSets.main.resources {
     exclude '.cache'
 }
 
+// Dev-only scene harness (ROADMAP P1.1): its own mod, loaded only by runClient and never
+// packaged in the jar. See tools/run-client-headless.sh --scene.
+sourceSets {
+    harness {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
 repositories {
     exclusiveContent {
         forRepository {
@@ -59,10 +68,30 @@ neoForge {
         minecraftVersion = project.parchment_minecraft_version
     }
 
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+        remission_harness {
+            sourceSet(sourceSets.harness)
+        }
+    }
+
     runs {
         client {
             client()
             gameDirectory = project.file('run/client')
+            // The client run alone carries the harness mod; it stays inert unless a scene is set.
+            sourceSet = sourceSets.harness
+            loadedMods = [mods."${mod_id}", mods.remission_harness]
+            def harnessScene = project.findProperty('harness_scene')
+            if (harnessScene) {
+                systemProperty 'remission.harness.scene', harnessScene
+                def harnessOutput = project.findProperty('harness_output')
+                if (harnessOutput) {
+                    systemProperty 'remission.harness.output', harnessOutput
+                }
+            }
             // Window size; tools/run-client-headless.sh matches it to the virtual display.
             programArguments.addAll '--width', project.findProperty('client_width') ?: '1280',
                     '--height', project.findProperty('client_height') ?: '720'
@@ -72,6 +101,7 @@ neoForge {
         server {
             server()
             gameDirectory = project.file('run/server')
+            loadedMods = [mods."${mod_id}"]
             programArgument '--nogui'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
@@ -80,12 +110,14 @@ neoForge {
         gameTestServer {
             type = 'gameTestServer'
             gameDirectory = project.file('run/gametest')
+            loadedMods = [mods."${mod_id}"]
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
         data {
             data()
             gameDirectory = project.file('run/data')
+            loadedMods = [mods."${mod_id}"]
             programArguments.addAll '--mod', project.mod_id, '--all',
                     '--output', file('src/generated/resources/').getAbsolutePath(),
                     '--existing', file('src/main/resources/').getAbsolutePath()
@@ -96,17 +128,13 @@ neoForge {
             logLevel = org.slf4j.event.Level.DEBUG
         }
     }
-
-    mods {
-        "${mod_id}" {
-            sourceSet(sourceSets.main)
-        }
-    }
 }
 
 // localRuntime: present in dev runs, never published as a dependency.
 configurations {
     runtimeClasspath.extendsFrom localRuntime
+    harnessCompileClasspath.extendsFrom compileClasspath
+    harnessRuntimeClasspath.extendsFrom runtimeClasspath
 }
 
 dependencies {
@@ -184,6 +212,11 @@ tasks.named('jar', Jar).configure {
     from(rootProject.file('../LICENSE')) {
         rename { licenseName }
     }
+}
+
+// `build` compiles the harness so it cannot rot, but the jar never contains it.
+tasks.named('check').configure {
+    dependsOn tasks.named('harnessClasses')
 }
 
 tasks.withType(JavaCompile).configureEach {

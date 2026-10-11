@@ -33,6 +33,7 @@ Use the wrapper:
 
 ```sh
 tools/run-client-headless.sh --timeout 180 [--resolution 1920x1080]
+tools/run-client-headless.sh --scene smoke/mob_lineup     # harness scene: screenshots, then exits
 ```
 
 It runs exactly:
@@ -53,22 +54,23 @@ Rules:
 - Always `--no-daemon` for client runs (or start the Gradle daemon itself under `vglrun`). A daemon started without `vglrun` launches the game without the GPU redirect: llvmpipe software rendering, or failure.
 - Confirm GPU use from the game log: NeoForge's early display logs `GL info: NVIDIA GeForce RTX 4070/PCIe/SSE2 GL version 4.6.0 NVIDIA 595.91.07`. llvmpipe, or no renderer line, is a failed run.
 - Server-side work (`build`, `runData`, `runGameTestServer`, `runServer`) needs no display wrapper.
-- Until the phase 1 harness exists the client never quits by itself; the timeout is the normal end of a smoke run.
+- Without `--scene` the client never quits by itself; the timeout is the normal end of a smoke run. With `--scene <id>` the dev-only harness builds the scene, saves its screenshots to `.local/runs/latest/screenshots/` and exits; the run passes only on exit code 0 and `status=ok` in `harness-result.txt`, and the timeout (600 s by default) is only a safety bound. A whole scene run takes about 40 s on foundry.
+- Never run `./gradlew --stop` while another lane may be running a client: it also stops the single-use daemon behind `--no-daemon`, killing that lane's game mid-run ("Gradle build daemon has been stopped: stop command received").
 - One GPU serves every Orca lane and CI job: the script takes an exclusive lock (`~/.cache/counterstrain/gpu.lock`, `flock`) and waits up to `--gpu-wait` seconds (default 1800) before failing. The timeout starts once the lock is held.
 
 ## Visual checks
 
-No screenshot automation or live viewing (VNC etc.) exists yet. Visual evidence comes from:
+No live viewing (VNC etc.) exists. Visual evidence comes from:
+- harness scenes: `tools/run-client-headless.sh --scene <id>` writes fixed-name screenshots to `.local/runs/client-<UTC>/screenshots/` (the dev-only `harness` source set; see the visual-checks skill for the scene format);
 - the final-frame `framebuffer.png` of a headless run;
-- in-game screenshots (F2, saved to `mod/run/client/screenshots/`), collected with `tools/collect-screenshots.sh`;
-- the phase 1 test harness, which will load fixed scenes, take screenshots and quit. See the visual-checks skill.
+- in-game screenshots (F2, saved to `mod/run/client/screenshots/`), collected with `tools/collect-screenshots.sh`.
 
 ## Run and output locations
 
 | Path | Contents |
 | --- | --- |
 | `mod/run/{client,server,gametest,data}/` | Game directories per run type (gitignored) |
-| `.local/runs/client-<UTC>/` | `console.log`, `latest.log`, `debug.log`, `framebuffer.png`, `renderer.txt`, `result.txt` |
+| `.local/runs/client-<UTC>/` | `console.log`, `latest.log`, `debug.log`, `framebuffer.png`, `renderer.txt`, `result.txt`; with `--scene`, `screenshots/<shot>.png` and `screenshots/harness-result.txt` |
 | `.local/screenshots/<UTC>/` | Collected screenshots for review |
 | `.local/dist/` | Pack exports |
 | `.local/instance/` | Default local test instance for `tools/build-mod.sh` |

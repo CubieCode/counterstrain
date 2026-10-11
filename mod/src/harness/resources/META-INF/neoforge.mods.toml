@@ -1,0 +1,18 @@
+# Dev-only scene harness (roadmap P1.1). Lives in the `harness` source set, is loaded
+# only by the runClient configuration and never ships in the Remission jar.
+modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+
+[[mods]]
+modId="remission_harness"
+version="0.0.0-dev"
+displayName="Remission Scene Harness (dev only)"
+description='''Loads a fixed test world, runs a named scene, takes screenshots and quits. Inert unless -Dremission.harness.scene is set.'''
+
+[[dependencies.remission_harness]]
+    modId="remission"
+    type="required"
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="CLIENT"
