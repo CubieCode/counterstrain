@@ -12,6 +12,7 @@ Visual evidence is only valid from a GPU run. The log must name the RTX 4070 (he
 - `framebuffer.png` from a timeout run of `tools/run-client-headless.sh`: the last frame, good for "reaches title/world, no error screen".
 - In-game screenshots: F2 writes to `mod/run/client/screenshots/`. foundry has no input device, so these come only from a client run elsewhere with the same pack and scene.
 - `tools/collect-screenshots.sh [game-dir] [--clear]` copies PNGs (and the last framebuffer) into `.local/screenshots/<UTC>/`; review from `.local/screenshots/latest/`.
+- Motion clips: unavailable. foundry has no ffmpeg with X11 capture (`x11grab`) as a user-level install; the only copy, Playwright's build in `~/.cache/ms-playwright/`, decodes MJPEG and encodes VP8 only. Third-party binaries are not downloaded (P1.2 decision). Until a user-level ffmpeg with `x11grab` exists, review motion from still shots and say in the PR that motion was not recorded.
 
 **Harness scenes** live in `mod/src/harness/resources/harness/scenes/<area>/<subject>.json` (dev-only `harness` source set, never in the jar). The harness fixes the world: it deletes and recreates the superflat save `remission_harness` (seed 1210101, no structures, spectator, mob spawning, daylight and weather cycles off) and pins image options in memory (GUI hidden, clouds off, render distance 8, FOV 70, fancy graphics, smooth lighting, brightness 0.5). Then it sets time and weather, runs `/tick freeze`, runs `setup` in order, and for each shot teleports the camera, waits until chunks around it are loaded and no section compiles are queued for 40 ticks, and saves the frame. Format:
 
@@ -52,11 +53,21 @@ Name scenes `<area>/<subject>` as in ROADMAP (`corruption/stages_vanilla`, `worl
 
 - **Provenance markers:** placeholder textures show the 2×2 magenta corner marker and placeholder GUI/promo art the "PLACEHOLDER" label; art whose CONTENT-PROVENANCE row is `final` shows neither. A mismatch is a bug (content-provenance skill).
 
-Always compare against the previous accepted image for the same scene, and against vanilla for "does it still look like Minecraft".
+Always compare against the accepted reference for the same scene (below), and against vanilla for "does it still look like Minecraft".
 
-**Recording:** list in the PR each scene, the image paths or artifact name, the renderer line, and what you checked. Attach or upload images; don't commit run output. Committed references, if any, follow the P1.2 decision. Say plainly when a check could not be done.
+**References and comparison:** reviewed reference images are committed in `tools/visual-references/<scene>/<shot>.png`, one directory per harness scene, so local runs and the GPU workflow compare against the same set. Keep the set small: only scenes named in exit criteria (now `smoke/mob_lineup`, about 1 MB), the harness's 1920x1080 PNGs unchanged (no re-encoding, so unchanged runs hit the byte-identical fast path), and replace files instead of adding variants. They are screenshots of the running game used as test fixtures, never shipped, and sit outside the provenance check's scan roots, so they take no CONTENT-PROVENANCE rows. Compare a run with:
 
-**Acceptance:** P1.2 adds a tolerant image diff against reviewed references and decides where those references live; until then, compare repeated runs and the previous PR's images by eye (on foundry repeated runs of a frozen scene are byte-identical). A visual exit criterion is met only when:
+```sh
+tools/compare-screenshots.sh --scene <id> --actual .local/runs/latest/screenshots --out .local/compare/<id>
+```
+
+It writes `<shot>-diff.png` (the actual image dimmed to grey, pixels over the threshold red, smaller differences yellow) and `compare-result.txt` (per shot: status, differing pixels, sub-threshold pixels, largest channel delta, ratio). A pixel differs when any RGBA channel moves by more than `--threshold` (default 24 of 255); a shot passes when at most `--max-diff-ratio` of its pixels differ (default 0.0005, about 1000 pixels at 1920x1080). Exit 0 = all shots within tolerance, 1 = a shot differs, is missing, has no reference or changed size, 2 = usage or tool error, 3 = no reference for the scene. `tools/compare-screenshots.sh` wraps `tools/compare-screenshots.py` (standard library Python, PNGs decoded with zlib): about 2 s for two identical 1920x1080 shots and longer for real differences. `--self-test` runs synthetic cases. On foundry, repeated runs of a frozen scene are byte-identical, so any difference is real; the tolerance absorbs driver or minor rendering noise.
+
+**Updating references:** only for an intentional, reviewed change. Run the scene from a GPU-verified run, look at every shot and its diff image, then rerun the comparison with `--accept` (copies the actual shots over the references and drops shots the scene no longer takes) and commit the new PNGs in the same PR as the change that caused them, with the reason in the PR body. A new scene's first reference is made the same way (exit 3, then `--accept`). Never accept to make a failing check pass without looking.
+
+**Recording:** list in the PR each scene, the image paths or artifact name, the renderer line, the comparison result and what you checked. Attach or upload images; don't commit run output (only reviewed references, as above). Say plainly when a check could not be done.
+
+**Acceptance:** A visual exit criterion is met only when:
 - the listed scenes run in the GPU workflow,
 - diffs are within tolerance or intentional changes have been reviewed and the references updated,
 - an agent or human has looked at the images.

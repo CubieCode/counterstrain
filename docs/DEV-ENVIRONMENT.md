@@ -65,6 +65,10 @@ No live viewing (VNC etc.) exists. Visual evidence comes from:
 - the final-frame `framebuffer.png` of a headless run;
 - in-game screenshots (F2, saved to `mod/run/client/screenshots/`), collected with `tools/collect-screenshots.sh`.
 
+Scene screenshots are compared with the reviewed references committed in `tools/visual-references/<scene>/` by `tools/compare-screenshots.sh --scene <id> --actual <screenshots dir> --out <dir>` (bash and standard-library Python; diff images and `compare-result.txt`; thresholds, exit codes and the reference update rule in the visual-checks skill).
+
+Motion capture is unavailable: there is no user-level ffmpeg with X11 capture (`x11grab`) on foundry. The only ffmpeg present, Playwright's bundled build under `~/.cache/ms-playwright/`, is limited to MJPEG input and VP8 output, and the project does not download third-party binaries.
+
 ## Run and output locations
 
 | Path | Contents |
@@ -72,5 +76,6 @@ No live viewing (VNC etc.) exists. Visual evidence comes from:
 | `mod/run/{client,server,gametest,data}/` | Game directories per run type (gitignored) |
 | `.local/runs/client-<UTC>/` | `console.log`, `latest.log`, `debug.log`, `framebuffer.png`, `renderer.txt`, `result.txt`; with `--scene`, `screenshots/<shot>.png` and `screenshots/harness-result.txt` |
 | `.local/screenshots/<UTC>/` | Collected screenshots for review |
+| `.local/compare/<scene>/` | Suggested `--out` for `tools/compare-screenshots.sh`: `<shot>-diff.png`, `compare-result.txt` |
 | `.local/dist/` | Pack exports |
 | `.local/instance/` | Default local test instance for `tools/build-mod.sh` |
