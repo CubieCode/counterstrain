@@ -20,6 +20,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | The corruption | **the Strain** | prose: "Strain-infected", "the Strain spreads" |
 | Spread sources | **nidus** (plural **nidi**) | block `remission:nidus`, item `remission:nidus_core` |
 | Infected mobs | **hosts** | "a host cow"; the bestiary lists host types |
+| How far the Strain has taken a host | **Strain level** (0–100) and **host stage** | config `hosts.stageThresholds`; `CorruptionState` fields `level`, `stage` |
 | Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone`, biome `remission:fester` |
 | Boundary between festering land and reclaimed land | **frontier** | "hold the frontier" |
 | Periodic spread bursts | **surges** | "the nidus surges at the season change" |
@@ -54,7 +55,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 
 ### Hosts (state, not entities)
 
-- A Data Attachment on `LivingEntity` holds corruption level and stage (and later, `variant`). Synced to tracking clients (custom payload, or NeoForge 21.1's built-in attachment sync; decided in phase 2).
+- A Data Attachment on `LivingEntity` holds corruption level and stage (and later, `variant`). Synced to tracking clients through NeoForge 21.1's built-in attachment sync (decided in P2.1; ARCHITECTURE).
 - **Visuals:** a render layer added to every living-entity renderer in `EntityRenderersEvent.AddLayers` re-renders the mob's own model with a Strain overlay (tint, emissive veins, particles by stage).
 - **Behaviour:** on `EntityJoinLevelEvent`, host `Mob`s lose passive goals (breed, tempt, flee, follow parent) and gain targeting and melee/ranged attack goals. `Attributes.ATTACK_DAMAGE` (and anything else attacks need) is added to every entity type via `EntityAttributeModificationEvent`. Fallbacks for brain-based mobs (villagers, piglins, axolotls), flying and swimming mobs.
 - **Infection:** a kill by a host, or prolonged time in festering land, infects the victim. The `convert_to` override can replace the victim with another entity type.

@@ -102,7 +102,7 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.1: Corruption attachment and sync
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p2.1-corruption-attachment
 - PR:
 - Depends on: P0.1

@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-Phase 0 is scaffold only. Remission registers its deferred registers, configs, payload registrar, datagen providers and one smoke gametest, all with no entries. Everything below marked *planned* is a roadmap item.
+Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config (below). Everything below marked *planned* is a roadmap item.
 
 ## Repository and products
 
@@ -36,13 +36,14 @@ Phase 0 is scaffold only. Remission registers its deferred registers, configs, p
 | `Remission` | `@Mod` common entrypoint, `MOD_ID`, logger, `id()` |
 | `client/` | `@Mod(dist = CLIENT)` entrypoint; renderers, layers, client payload handling, client config screen |
 | `server/` | `@Mod(dist = DEDICATED_SERVER)` entrypoint; dedicated-server-only setup |
-| `config/` | `RemissionCommonConfig` (gameplay), `RemissionClientConfig` (presentation); no options yet |
+| `config/` | `RemissionCommonConfig` (gameplay: `hosts.stageThresholds`), `RemissionClientConfig` (presentation; no options yet) |
 | `registry/` | One `DeferredRegister` holder per kind: blocks, items, attachments, loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
-| `network/` | `RegisterPayloadHandlersEvent` registrar, `PROTOCOL_VERSION` |
+| `network/` | `RegisterPayloadHandlersEvent` registrar, `PROTOCOL_VERSION`; no payloads yet (corruption uses attachment sync) |
 | `data/` | `GatherDataEvent` wiring and providers (blockstates, item models, tags, recipes, loot tables, global loot modifiers) |
+| `corruption/` | `CorruptionState` record and codecs, `Corruption` server API (`get`, `set`, `isHost`) |
 | `gametest/` | `@GameTestHolder` classes; `remission:empty` is a 3x3x3 air template |
 | *planned* `api/` | Public events and queries for integrations, addons and KubeJS (P4.4) |
-| *planned* `corruption/`, `world/`, `purification/`, `research/`, `tech/`, `cure/`, `quest/`, `integration/` | Feature systems by roadmap phase |
+| *planned* `world/`, `purification/`, `research/`, `tech/`, `cure/`, `quest/`, `integration/` | Feature systems by roadmap phase |
 
 Resources: `src/main/resources` (hand-written: lang, textures, structures), `src/generated/resources` (datagen, committed), `src/main/templates/META-INF/neoforge.mods.toml` (expanded from `gradle.properties`).
 
@@ -52,10 +53,13 @@ Internal Java system names and public API types may keep the generic word "corru
 
 ## Planned systems and data flow
 
-### Corruption state (phase 2)
+### Corruption state (phase 2, built in P2.1)
 
-- `AttachmentType<CorruptionState>` (attachment `corruption`) on entities: level/stage (later `variant`, the resistant mutation a host carries), codec-serialized, copied on death only where intended.
-- Sync: server is authoritative. On change and on start-tracking, send to tracking players. Option A: custom `CustomPacketPayload` registered in `RemissionNetwork`. Option B: NeoForge 21.1.259's `AttachmentType.Builder#sync(StreamCodec)`, which exists in this version. Choose in phase 2 and record the decision here.
+- `CorruptionState(level, stage)` in `corruption/`: `level` 0–100 (`MAX_LEVEL`), `stage` the number of `hosts.stageThresholds` entries the level met when it was set (default `[1, 34, 67]`, so stages 1–3; 0 means not a host). `variant` (the resistant mutation a host carries) is reserved for P9.1 and not stored yet. Field-level contract: remission-data-formats.
+- Attachment `remission:corruption` (`RemissionAttachments.CORRUPTION`) on any entity; the API takes `LivingEntity`. Codec-serialized with the entity (`neoforge:attachments`), skipped at level 0, so it survives save/reload and dimension change (non-player entities are recreated with `restoreFrom`, which copies saved data; players keep their entity). Not copied on death or living conversion; P3.3 decides whether infection carries through conversion.
+- Server API `Corruption.get(entity)` (never creates the attachment), `Corruption.set(entity, level)` (clamps, restages from config, removes the attachment at 0, no-op if unchanged, throws on the client), `Corruption.isHost(entity)`. P4.4 adds the host corrupted / cleansed events, fired from `set`.
+- Stages are computed when a level is set, never on load or on the client, because common config is not synced and may differ per side. Changing the thresholds restages a host only when its level next changes.
+- **Sync decision: NeoForge attachment sync** (`AttachmentType.Builder#sync(StreamCodec)`, present in 21.1.259), not a custom payload. NeoForge's `AttachmentSync` sends `setData`/`removeData` changes to `chunkMap.getPlayersWatching(entity)` plus the entity itself when it is a player, sends the full state in the start-tracking pairing data (`ServerEntity.sendPairingData`), and resends a player's own attachments on login, respawn and dimension change. That covers every case P2.1 requires with no Remission code, removal included. Synced attachment types are a synced registry, so client and server must both have Remission (already required: `side="BOTH"`). `RemissionNetwork.PROTOCOL_VERSION` is unchanged; the wire format is `CorruptionState.STREAM_CODEC` (two var-ints), so changing it is a protocol change for the synced registry. A custom payload would only be worth it for batching or per-player filtering beyond tracking, which nothing needs yet.
 - Client: `CorruptionLayer` added to every `LivingEntityRenderer` in `EntityRenderersEvent.AddLayers` (`getEntityTypes()` plus player skins), rendering the parent model with an overlay render type. No per-entity-type code.
 
 ### Behaviour (phase 3)
