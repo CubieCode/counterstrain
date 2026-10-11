@@ -259,8 +259,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.6: Underground festering
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p4.6-underground-festering
 - PR:
 - Depends on: P4.2
 - Scope: Festering reaches caves. P4.2 festers only the surface (down to 5 blocks into the ground), so a player can tunnel under a stage 4 chunk and see untouched rock. From a late stage (default stage 3), blocks with a `remission:festers_into` entry that face cave air become a festered skin on cave walls, floors and ceilings; rock inside the ground and ores (no default entry) are left alone, so mining stays viable. Festering is complete down to a depth limit (default about Y=0) and sparse, by a deterministic hash, below it; the limit is a constant, not config. Adds default entries for deepslate and tuff (with a festered deepslate block if festered stone does not read well there) and an optional per-entry underground stage in the data map (contract in remission-data-formats), so packs can tune or turn cave festering off. The cave skin must read clearly differently from sculk in the Deep Dark. The scan walks the chunk section by section, skips sections with no festerable block in their palette, runs on its own per-tick budget and resumes after an unload. Posts `BlockFesteredEvent` per replaced block. The biome flip already covers every height and is unchanged.
