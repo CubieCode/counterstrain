@@ -43,6 +43,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `tools/run-scenes.sh [--scenes "a/b c/d"] [--record]` | Run every harness scene (or the listed ones) headlessly, compare their screenshots with the references; summary in `.local/scene-runs/latest/` |
 | `tools/verify-gpu-render.sh LOG` | Fail unless a client log names the RTX 4070 |
 | `tools/compare-screenshots.sh --scene <id> --actual DIR --out DIR` | Diff a scene run's screenshots against the reviewed references in `tools/visual-references/` (diff images, exit 1 on a difference); `--self-test` runs synthetic cases |
+| `tools/cleanup-worktrees.sh [--dry-run]` | Remove lane worktrees and local branches whose PR is merged (clean tree, tip = merged head); keeps everything else and says why |
 | `tools/collect-screenshots.sh` | Copy screenshots to `.local/screenshots/latest/` |
 | `python3 -I tools/check-docs.py` | Check docs, roadmap, READMEs and skills against the code (docs-sync skill) |
 | `tools/check-provenance.sh` | Fail if an image, sound or model lacks a [content provenance](docs/CONTENT-PROVENANCE.md) row or a texture's placeholder marker disagrees with its status; `--self-test` runs the fixtures in `tools/tests/provenance/` |
