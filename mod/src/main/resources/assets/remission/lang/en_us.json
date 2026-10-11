@@ -1,3 +1,6 @@
 {
-  "remission.configuration.title": "Remission"
+  "remission.configuration.title": "Remission",
+  "remission.configuration.hosts": "Hosts",
+  "remission.configuration.stageThresholds": "Host stage thresholds",
+  "remission.configuration.stageThresholds.tooltip": "Strain level at which a host reaches each stage. A host's stage is how many of these levels it has reached."
 }
