@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option; P2.3 adds the `/remission` debug commands (below). Phase 3 has started: P3.1 adds host goals and attack attributes (Behaviour, below). Phase 6 has started: P6.1 adds the scanner and scan data items (research, below). Everything below marked *planned* is a roadmap item.
+Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option; P2.3 adds the `/remission` debug commands (below). Phase 3 has started: P3.1 adds host goals and attack attributes (Behaviour, below). Phase 4 has started: P4.1 adds the `chunk_corruption` chunk attachment, the `remission:nidus` block and its saved index, and the budgeted spread engine with its `spread` config (festering land, below). Phase 6 has started: P6.1 adds the scanner and scan data items (research, below). Everything below marked *planned* is a roadmap item.
 
 ## Repository and products
 
@@ -36,17 +36,18 @@ Phase 0 was scaffold only: deferred registers, configs, payload registrar, datag
 | `Remission` | `@Mod` common entrypoint, `MOD_ID`, logger, `id()` |
 | `client/` | `@Mod(dist = CLIENT)` entrypoint, client config screen, `HostOverlayLayer` and `HostRenderTypes` (host rendering, below); planned: renderers, client payload handling |
 | `server/` | `@Mod(dist = DEDICATED_SERVER)` entrypoint; dedicated-server-only setup |
-| `config/` | `RemissionCommonConfig` (gameplay: `hosts.stageThresholds`), `RemissionClientConfig` (presentation: `hosts.overlayIntensity`) |
-| `registry/` | One `DeferredRegister` holder per kind: blocks, items, data components, attachments (`corruption`, transient `host_goals`), loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
+| `config/` | `RemissionCommonConfig` (gameplay: `hosts.stageThresholds`, the `spread` rates and budgets), `RemissionClientConfig` (presentation: `hosts.overlayIntensity`) |
+| `registry/` | One `DeferredRegister` holder per kind: blocks, items, block entities, data components, attachments (`corruption`, transient `host_goals`, `chunk_corruption`), loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
 | `network/` | `RegisterPayloadHandlersEvent` registrar, `PROTOCOL_VERSION`; no payloads yet (corruption uses attachment sync) |
 | `data/` | `GatherDataEvent` wiring and providers (blockstates, item models, tags, recipes, loot tables, global loot modifiers) |
 | `corruption/` | `CorruptionState` record and codecs, `Corruption` server API (`get`, `set`, `isHost`) |
+| `world/` | Festering land: `ChunkCorruption` (chunk attachment record), `NidusBlock`/`NidusBlockEntity`, `NidusIndex` (saved index), `SpreadEngine`/`SpreadSettings` (spread and catch-up), `FesteringLand` (per-level engines and event wiring), `SpreadHooks` (where P4.4 posts its events) |
 | `commands/` | `RemissionCommands`: the `/remission` command tree, registered on `RegisterCommandsEvent` |
 | `behaviour/` | `MobBehaviour` (the `mob_profile` behaviour enum), `HostBehaviours` (category defaults, goal stripping and injection), `HostBehaviourEvents` (join, attribute patching, host-on-host target veto) |
 | `gametest/` | `@GameTestHolder` classes; `remission:empty` is a 3x3x3 air template, `remission:host_arena` a 7x5x7 stone-floored glass box (5x3x5 inside) for fights |
 | *planned* `api/` | Public events and queries for integrations, addons and KubeJS (P4.4) |
 | `research/` | Scanner item and behaviour (`ScannerItem`, `Scanning`), scan data items (`ScanItem`) and the `scan_data` component (`ScanData`); P6.1 |
-| *planned* `world/`, `purification/`, `tech/`, `cure/`, `quest/`, `integration/` | Feature systems by roadmap phase |
+| *planned* `purification/`, `tech/`, `cure/`, `quest/`, `integration/` | Feature systems by roadmap phase |
 
 Resources: `src/main/resources` (hand-written: lang, textures, structures), `src/generated/resources` (datagen, committed), `src/main/templates/META-INF/neoforge.mods.toml` (expanded from `gradle.properties`).
 
@@ -100,9 +101,16 @@ Internal Java system names and public API types may keep the generic word "corru
 - **Tests:** `HostBehaviourTests` (own batch, `remission:host_arena`): host cow, zombie and Mekanism robit (dev runtime only; skipped without Mekanism) hurt an uninfected pig; a host sheep hurts a survival player; hosts ignore hosts (including retaliation and a forced `setTarget`); a target that becomes a host is dropped; cleanse restores goals in-session; reload re-applies host goals on join and a cleansed save loads normal; category defaults; every living type has the attributes.
 - Planned: brain-based, flying and swimming fallbacks (P3.2). Infection: `LivingDeathEvent` (killer is a host) and time in festering chunks flip state or replace via `convert_to` (P3.3).
 
-### Festering land (phase 4)
+### Festering land (phase 4; levels, nidi and spread built in P4.1)
 
-Chunk attachment `{level, last_update_game_time}`; nidi (`remission:nidus`) are block entities registered in a level-wide saved index. A server tick budgeted spread engine moves corruption between chunks; `ChunkEvent.Load` fast-forwards from the stored time with a bounded amount of work. Each chunk-to-chunk step posts the cancellable spread attempt event (rate multiplier) before applying. Festering stages are applied as block transformations in bounded batches. Biome flip to `remission:fester` (or a per-source-biome fester variant from data) uses a mutable biome container write and chunk resend. Surges are scheduled per level. The same engine runs in reverse for the Counterstrain (phase 9).
+- Chunk attachment `remission:chunk_corruption` (`RemissionAttachments.CHUNK_CORRUPTION`): `ChunkCorruption(level, last_update_game_time)`, level 0–100, saved with the chunk (never at level 0), server only (no sync: nothing on the client reads it yet; P4.2 decides how stages reach clients). Levels only rise in phase 4. Field-level contract and config: remission-data-formats.
+- Nidi: block `remission:nidus` (`NidusBlock`, block entity `NidusBlockEntity`, no drops, pistons cannot move it). `NidusIndex` is a `SavedData` per level (`data/remission_nidi.dat` in the dimension folder) mapping each nidus position to the game time it was indexed. `onPlace` and the block entity's `onLoad` (covers nidi placed by worldgen or structures) add it; `onRemove` removes it, and a pass that finds a loaded index entry without its block drops it. Breaking a nidus stops its spread at once; its land keeps its level.
+- Spread engine (`SpreadEngine`, one per server level, run from `LevelTickEvent.Post` by `FesteringLand`): a pass starts at each multiple of `spread.intervalTicks` of level game time and visits, nidus by nidus in index order, every chunk within the nidus's Manhattan radius, nearest first. The nidus chunk gains `nidusGrowth` per pass up to 100. Another loaded chunk at distance `d` gains `spreadStep` up to `100 - d * falloff` from its parent, the neighbour one step closer to the nidus along the larger offset axis, once the parent has reached `spreadThreshold` (an unloaded parent counts as at its own target). The radius follows from those numbers (7 chunks by default). A pass stops after `chunkBudget` chunk visits and resumes next tick. Nothing depends on iteration order of hash maps or on wall time, so the same state and the same ticks give the same levels (gametest `spreadIsDeterministic`). Overlapping nidi each add their step.
+- Catch-up: `ChunkEvent.Load` only queues the chunk (the chunk is not yet in the level then); each tick up to `catchUpBudget` queued chunks are fast-forwarded in closed form: for each nidus in reach, the passes missed since `max(last_update_game_time, nidus indexed)` times the rate, capped at the target. That converges on the same targets as live spread, so land keeps festering while nobody is near, and a reload costs the same however long it was away. Unloaded chunks are never loaded by the engine.
+- Hooks: `SpreadHooks` holds the three internal points where P4.4 posts the public events: `spreadAttempt` (before each chunk-to-chunk step, live and catch-up; returns the scaled amount, 0 to cancel), `chunkLevelChanged` (after each change; one per chunk for a catch-up) and `nidusDestroyed` (after removal from the index). The player who broke a nidus is not passed yet; P4.4 adds it if the event needs it.
+- Measured cost (foundry, `SpreadBenchmark`, below): default config with 16 nidi over 1,024 loaded chunks adds 0.9 µs per tick on average and at most 0.13 ms in a tick (about 0.34 ms per 400-tick pass); a stress case of 64 nidi with a pass every second spends the full 256-visit budget every tick at 27 µs mean and 0.09 ms max. Catching up 1,024 chunks takes 32 ticks at most 0.18 ms (16 nidi) or 0.29 ms (64 nidi) each.
+
+Planned: festering stages are applied as block transformations in bounded batches. Biome flip to `remission:fester` (or a per-source-biome fester variant from data) uses a mutable biome container write and chunk resend. Surges are scheduled per level. The same engine runs in reverse for the Counterstrain (phase 9).
 
 ### Public API (P4.4, extended by each system item)
 
@@ -128,6 +136,7 @@ The Counterstrain is deployed from a dispersal source: a position, radius and ra
 | Immune mobs | `data/<ns>/tags/entity_type/immune.json` (`#remission:immune`) | remission-data-formats |
 | Per-mob overrides | `data/<ns>/remission/mob_profile/<name>.json` (datapack registry `remission:mob_profile`) | remission-data-formats |
 | Host loot | `data/<ns>/loot_modifiers/*.json` + `data/neoforge/loot_modifiers/global_loot_modifiers.json`, condition `remission:is_corrupted` | remission-data-formats |
+| Festering land | chunk attachment `remission:chunk_corruption`, block `remission:nidus`, config `[spread]` (P4.1, built) | remission-data-formats |
 | Fester variants | per-source-biome fester biome (data map, shape fixed in P4.2) | remission-data-formats, minecraft-world-generation |
 | Machine recipes | recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing` | remission-data-formats, kubejs-scripting |
 | Scan data items | items `remission:host_scan`, `remission:block_scan`, data component `remission:scan_data` (P6.1, built) | remission-data-formats, kubejs-scripting |
@@ -161,4 +170,5 @@ All schemas start as stubs in the remission-data-formats skill and change only w
 - **Content provenance:** player-facing content is tracked in [CONTENT-PROVENANCE](CONTENT-PROVENANCE.md); `tools/check-provenance.sh` (CI: `docs.yml`) fails when an image, sound or model has no row, and when a texture's magenta placeholder marker disagrees with its row's status.
 - **Pack datapack in `pack/kubejs/data/`:** KubeJS loads it as a datapack in every world without another mod.
 - **Scene harness determinism and exit:** scenes freeze the tick (`/tick freeze`) after time and weather (players keep ticking, so the harness pins the local player's `tickCount` while shooting), spawn mobs without `finalizeSpawn` (no random gear or variants), and pin the image-affecting options in memory (GUI hidden, clouds off, render distance 8, FOV 70, fancy graphics). Repeated runs give byte-identical PNGs on foundry. The harness ends the process with libc `_exit` after flushing logs, because under VirtualGL's EGL back end the NVIDIA driver segfaults in `libEGL_nvidia` during libc `exit()`: a normal quit, `System.exit` and `Runtime.halt` all end with exit code 134.
-- **Performance:** spread, catch-up and visual stage changes must be budgeted per tick and measured on foundry (phase 12 includes client FPS under heavy spread).
+- **Performance:** spread, catch-up and visual stage changes must be budgeted per tick and measured on foundry (phase 12 includes client FPS under heavy spread). The spread engine is measured by `SpreadBenchmark`, a gametest generator registered only when `REMISSION_SPREAD_BENCHMARK` is set (`REMISSION_SPREAD_BENCHMARK=1 ./gradlew runGameTestServer`); it writes `run/gametest/spread-benchmark-<case>.txt`.
+- **Spread is chunk to chunk along one parent path:** each chunk takes the Strain from a single neighbour toward each nidus, so a cancelled spread attempt (a firebreak) holds everything behind it, and catch-up can be closed form because the steady state is `100 - distance * falloff`.

@@ -21,5 +21,21 @@
   "item.remission.block_scan.subject": "%s",
   "message.remission.scanner.host": "Host scan recorded: %s, host stage %s",
   "message.remission.scanner.block": "Block scan recorded: %s",
-  "message.remission.scanner.no_strain": "No Strain detected in %s"
+  "message.remission.scanner.no_strain": "No Strain detected in %s",
+  "block.remission.nidus": "Nidus",
+  "remission.configuration.spread": "Spread",
+  "remission.configuration.intervalTicks": "Spread interval",
+  "remission.configuration.intervalTicks.tooltip": "Game ticks between spread passes. Land nobody is near catches up by the passes it missed when it loads.",
+  "remission.configuration.nidusGrowth": "Nidus growth",
+  "remission.configuration.nidusGrowth.tooltip": "Strain level the chunk holding a nidus gains each pass.",
+  "remission.configuration.spreadStep": "Spread step",
+  "remission.configuration.spreadStep.tooltip": "Strain level a chunk near a nidus gains each pass from the festering land beside it.",
+  "remission.configuration.falloff": "Falloff per chunk",
+  "remission.configuration.falloff.tooltip": "How much lower the highest Strain level is for each chunk further from a nidus. Sets how far a nidus reaches.",
+  "remission.configuration.spreadThreshold": "Spread threshold",
+  "remission.configuration.spreadThreshold.tooltip": "Strain level a chunk needs before it passes the Strain to the next chunk outward.",
+  "remission.configuration.chunkBudget": "Chunks per tick",
+  "remission.configuration.chunkBudget.tooltip": "Chunks the spread visits each server tick. Lower values spread work over more ticks.",
+  "remission.configuration.catchUpBudget": "Catch-up chunks per tick",
+  "remission.configuration.catchUpBudget.tooltip": "Chunks brought up to date each server tick after they load."
 }

@@ -194,7 +194,7 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.1: Chunk corruption levels and spread engine
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p4.1-chunk-spread
 - PR:
 - Depends on: P2.1

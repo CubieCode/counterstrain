@@ -15,6 +15,8 @@ public final class RemissionBlockLootProvider extends BlockLootSubProvider {
 
     @Override
     protected void generate() {
+        // A nidus drops nothing: nidus cores (the sample item) come with the research items.
+        add(RemissionBlocks.NIDUS.get(), noDrop());
     }
 
     // Every Remission block must have a loot table; datagen fails if one is missing.
