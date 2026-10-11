@@ -244,8 +244,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.5: Live spread waits for catch-up
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p4.5-catchup-ordering
 - PR:
 - Depends on: P4.1, P4.4
 - Scope: Fix a P4.1 ordering bug found during P4.4: a live pass (`SpreadEngine.visit`) can step a chunk that has just loaded and is still queued for catch-up, which writes `last_update_game_time = now` so the queued catch-up then credits almost none of the time the chunk was away. Live passes must not advance a chunk (or its time) before its pending catch-up has run, for example by skipping queued chunks in `visit` until they are caught up, or by catching them up first within the tick budget. Firebreak and multiplier behaviour (P4.4) and the catch-up budget are unchanged. Update the catch-up rules in docs/ARCHITECTURE.md and remission-data-formats if their wording changes.
