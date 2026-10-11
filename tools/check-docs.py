@@ -33,7 +33,9 @@ def exists(rel):
 
 def ignored(rel):
     """Gitignored runtime output (mod/run/, .local/, build/) is documented but never committed."""
-    return subprocess.run(["git", "-C", ROOT, "check-ignore", "-q", "--no-index", rel]).returncode == 0
+    # Try the directory form too: `mod/run/` only matches directories, which may not exist yet.
+    return any(subprocess.run(["git", "-C", ROOT, "check-ignore", "-q", "--no-index", candidate]).returncode == 0
+               for candidate in (rel, rel.rstrip("/") + "/"))
 
 
 def tracked_files():
