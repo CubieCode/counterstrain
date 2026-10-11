@@ -282,7 +282,7 @@ Goals: quests can observe and drive Remission.
 - Owner:
 - PR:
 - Depends on: P8.1, P4.3
-- Scope: Commands/KubeJS bindings for quests to start surges, seed hearts or advance regions; optional JourneyMap/Xaero overlay of corruption.
+- Scope: Commands/KubeJS bindings for quests to start surges, seed hearts or advance regions; optional JourneyMap overlay of corrupted and cleansed chunks via its polygon overlay API (`integration/journeymap/`, `compileOnly` API, guarded by `ModList`).
 - Acceptance: A quest reward fires an event in a dev run; overlay screenshot reviewed (harness scene `quest/map_overlay`).
 - Skills: neoforge-mod-dev, ftb-quests-authoring, visual-checks
 

@@ -125,6 +125,7 @@ dependencies {
         localRuntime "maven.modrinth:mekanism:${mekanism_version}"
         localRuntime "maven.modrinth:guideme:${guideme_version}"
         localRuntime "maven.modrinth:ae2:${ae2_version}"
+        localRuntime "maven.modrinth:journeymap:${journeymap_version}"
     }
 }
 

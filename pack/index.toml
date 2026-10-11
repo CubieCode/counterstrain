@@ -86,6 +86,11 @@ hash = "cfe4d6a3acdd8af529af7da1c844517925a68c8e23929b4345e14d73935df909"
 metafile = true
 
 [[files]]
+file = "mods/journeymap.pw.toml"
+hash = "783ed30ab6f6f60c604b9bdc2f26ec5b23c7a523179aa17119dbc541f7149022"
+metafile = true
+
+[[files]]
 file = "mods/kubejs.pw.toml"
 hash = "7e0eca275f27b6543f06c36dec433851a956960cbedd2be57d19e159d636bfc1"
 metafile = true
@@ -103,9 +108,4 @@ metafile = true
 [[files]]
 file = "mods/rhino.pw.toml"
 hash = "e55ca32b338a0e0540f4fec5170675d860566255ae0f45692a00cb4ebf2eb535"
-metafile = true
-
-[[files]]
-file = "mods/xaeros-minimap.pw.toml"
-hash = "aba95d9a82a7cedda4c0ce936ead9c764d0ffbc10483f0648d022213df7bb703"
 metafile = true

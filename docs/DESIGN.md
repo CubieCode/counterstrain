@@ -63,7 +63,7 @@ Two products, one repository:
 
 - Advancement triggers and stats: region % cleansed, heart destroyed, variant scanned, surge survived (and more as systems land), usable by FTB Quests or any quest mod.
 - Hooks for quests to fire corruption events (start a surge, seed a heart, advance a region).
-- Optional JourneyMap/Xaero overlay of corruption levels.
+- Optional JourneyMap overlay of corrupted and cleansed land (polygon overlays on the full-screen map and minimap).
 
 ## Counterstrain pack
 
