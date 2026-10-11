@@ -40,6 +40,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `tools/run-client-headless.sh --timeout 180` | Dev client on foundry's GPU; logs in `.local/runs/latest/` |
 | `tools/run-client-headless.sh --scene smoke/mob_lineup` | Dev-only harness scene: fixed world, screenshots in `.local/runs/latest/screenshots/`, then exits |
 | `tools/verify-gpu-render.sh LOG` | Fail unless a client log names the RTX 4070 |
+| `tools/compare-screenshots.sh --scene <id> --actual DIR --out DIR` | Diff a scene run's screenshots against the reviewed references in `tools/visual-references/` (diff images, exit 1 on a difference); `--self-test` runs synthetic cases |
 | `tools/collect-screenshots.sh` | Copy screenshots to `.local/screenshots/latest/` |
 | `python3 -I tools/check-docs.py` | Check docs, roadmap, READMEs and skills against the code (docs-sync skill) |
 | `tools/check-provenance.sh` | Fail if an image, sound or model lacks a [content provenance](docs/CONTENT-PROVENANCE.md) row or a texture's placeholder marker disagrees with its status; `--self-test` runs the fixtures in `tools/tests/provenance/` |
@@ -54,7 +55,7 @@ Dev runs include KubeJS, ProbeJS, FTB Quests, EMI + JEI, Mekanism, AE2 and Journ
 ```text
 mod/                 Remission NeoForge project (Gradle wrapper, gradle.properties)
 pack/                Counterstrain packwiz pack, kubejs/, config/ftbquests/
-tools/               Build, pack, release, headless-client, worktree setup and docs/provenance check scripts (bash, no root)
+tools/               Build, pack, release, headless-client, screenshot comparison, worktree setup and docs/provenance check scripts (bash, no root); visual-references/ holds reviewed scene screenshots
 orca.yaml            Orca setup hook (runs tools/worktree-setup.sh per worktree)
 docs/                Design, architecture, lore, content provenance and development environment
 ROADMAP.md           Phases, items, status

@@ -26,6 +26,8 @@ Outputs go to `.local/runs/client-<UTC>/`, with `.local/runs/latest` pointing to
 - `renderer.txt`: renderer verdict.
 - `result.txt`: reason, exit code, leftover processes and status.
 
+No motion capture: foundry has no user-level ffmpeg with `x11grab` (Playwright's bundled build in `~/.cache/ms-playwright/` cannot grab X11), so runs produce stills only; compare them with `tools/compare-screenshots.sh` (visual-checks).
+
 A healthy run reaches the title screen about 10 s after the `GL info` line. Look at `framebuffer.png` to see where it stopped (loading warnings, crash screen, title).
 
 Rules:
