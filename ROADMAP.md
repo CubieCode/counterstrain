@@ -4,7 +4,7 @@ Counterstrain (pack) and Remission (mod) are built in phases. Phase 0 is complet
 
 Statuses: `todo` → `in-progress` → `review` → `done`, or `blocked` with reason. Done means accepted and merged on main. Workers own only their item's Status/Owner/PR fields; the coordinator marks done after merge. One item, one Orca worktree (lane), one branch `feat/<id-lower>-<slug>`, one PR `<ID>: <title>`. Each item uses the [roadmap-workflow](.agents/skills/roadmap-workflow/SKILL.md) skill; coordinating parallel lanes and reviews uses [roadmap-orchestrate](.agents/skills/roadmap-orchestrate/SKILL.md). Run only when dependencies are done on main. Waves below are candidates, subject to real file overlap and the serialization gates in roadmap-orchestrate.
 
-Each phase lists goals, deliverables (items) and exit criteria. Phases with visual output name the **harness scenes** and screenshots that prove them; those images come from a GPU run on foundry (renderer verified, never llvmpipe) and are reviewed per the visual-checks skill. Until P1.1 lands, a scene means a manual setup documented in the PR plus collected screenshots.
+Each phase lists goals, deliverables (items) and exit criteria. Phases with visual output name the **harness scenes** and screenshots that prove them; those images come from a GPU run on foundry (renderer verified, never llvmpipe) and are reviewed per the visual-checks skill. Scenes live in `mod/src/harness/resources/harness/scenes/` and run with `tools/run-client-headless.sh --scene <id>` (visual-checks).
 
 Rules for every item after P4.4:
 - **API events:** a system item emits the public API events and queries for the state it owns (`com.cubiecode.remission.api`, DESIGN "Public API and events") and documents them in remission-data-formats in the same PR.
@@ -52,7 +52,7 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.1: Dev-only scene harness
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p1.1-scene-harness
 - PR: https://github.com/CubieCode/counterstrain/pull/7
 - Depends on: P0.1

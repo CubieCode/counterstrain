@@ -4,7 +4,7 @@ Counterstrain is a quest-driven, tech-focused Minecraft 1.21.1 (NeoForge) modpac
 
 Inspired by Blightfall.
 
-Status: phase 0 (scaffold) is complete; phases 1 (visual test harness) and 2 (corruption state) are in progress. The entity corruption attachment and the provenance check are built; no player-visible gameplay yet. See the [roadmap](ROADMAP.md), [design](docs/DESIGN.md) and [architecture](docs/ARCHITECTURE.md). Player-facing content and its origin (AI, procedural, human, licensed) is tracked in [content provenance](docs/CONTENT-PROVENANCE.md).
+Status: phase 0 (scaffold) is complete; phases 1 (visual test harness) and 2 (corruption state) are in progress. The dev-only scene harness, the entity corruption attachment and the provenance check are built; no player-visible gameplay yet. See the [roadmap](ROADMAP.md), [design](docs/DESIGN.md) and [architecture](docs/ARCHITECTURE.md). Player-facing content and its origin (AI, procedural, human, licensed) is tracked in [content provenance](docs/CONTENT-PROVENANCE.md).
 
 ## Stack and decisions
 

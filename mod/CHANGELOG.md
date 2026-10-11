@@ -4,4 +4,5 @@ Versions follow `mod_version` in `gradle.properties`; tags are `mod-v<version>`.
 
 ## Unreleased
 
-- Project scaffold (P0.1). No gameplay yet.
+- Project scaffold (P0.1).
+- Entity corruption state: the `remission:corruption` attachment (Strain level 0–100 and host stage), saved with the entity and synced to tracking clients, plus the common config `hosts.stageThresholds` (P2.1). Nothing sets it in play yet.
