@@ -132,6 +132,11 @@ final class SceneRunner {
             }
             case SHOOTING -> {
                 mc.getToasts().clear();
+                // Players keep ticking under /tick freeze; pin the local player's age so its idle
+                // animation (arm bob) is the same in every run when a shot shows it.
+                if (mc.player != null) {
+                    mc.player.tickCount = 0;
+                }
                 if (captureRequested) {
                     return;
                 }
