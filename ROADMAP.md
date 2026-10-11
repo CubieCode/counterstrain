@@ -65,7 +65,7 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 - Status: `review`
 - Owner: feat/p1.2-motion-capture
-- PR: https://github.com/CubieCode/counterstrain/pull/10
+- PR: https://github.com/CubieCode/counterstrain/pull/10, https://github.com/CubieCode/counterstrain/pull/13
 - Depends on: P1.1
 - Scope: Decide where reviewed reference images live (a small committed set, or workflow artifacts plus `.local/`) and keep the repository small. Add a tolerant comparison script (per-pixel diff threshold, diff image output) using no root-only tools. Optional ffmpeg clip capture of the Xvfb display for motion checks, only if ffmpeg is available as a user-level install; report if not.
 - Acceptance: Changing the scene produces a reported diff with a diff image; an unchanged run passes. Motion capture works, or is documented as unavailable with the reason.
