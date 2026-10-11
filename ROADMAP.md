@@ -267,8 +267,8 @@ Goals: knowledge is gathered from the world and recorded.
 
 ### P6.1: Scanner and data items
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: `feat/p6.1-scanner`
 - PR:
 - Depends on: P2.1
 - Scope: Scanner item scanning hosts and blocks into data items (data components).
