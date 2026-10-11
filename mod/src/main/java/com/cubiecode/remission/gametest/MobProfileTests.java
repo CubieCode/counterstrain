@@ -33,10 +33,12 @@ public final class MobProfileTests {
     }
 
     @GameTest(template = "empty")
-    public static void registryLoadsEmpty(GameTestHelper helper) {
+    public static void registryLoadsDefaults(GameTestHelper helper) {
         helper.assertTrue(helper.getLevel().registryAccess().registry(MobProfiles.KEY).isPresent(), "no mob_profile registry");
         helper.assertTrue(MobProfiles.find(helper.spawnWithNoFreeWill(EntityType.PIG, 1, 1, 1)).isEmpty(),
-                "Remission ships a default profile");
+                "a pig has a default profile");
+        helper.assertTrue(MobProfiles.find(helper.spawnWithNoFreeWill(EntityType.VILLAGER, 3, 1, 1)).isPresent(),
+                "Remission's default profile does not cover villagers");
         helper.succeed();
     }
 

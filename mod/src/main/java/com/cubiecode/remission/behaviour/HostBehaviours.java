@@ -36,18 +36,21 @@ import net.minecraft.world.entity.ai.goal.TradeWithPlayerGoal;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.entity.ambient.AmbientCreature;
 import net.minecraft.world.entity.animal.FlyingAnimal;
 import net.minecraft.world.entity.animal.WaterAnimal;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * Goal-based host behaviour. A host {@link Mob} whose behaviour is {@code melee}, {@code ranged} or
- * {@code passive_hostile} loses its passive goals and its whole target selector and gains Remission's target goals
- * (never other hosts) and, if it has none, an attack goal. Cleansing puts the original goals back.
+ * Host behaviour. A host {@link Mob} whose behaviour is anything but {@code none} loses its passive goals and its whole
+ * target selector. A goal-based mob then gains Remission's target goals (never other hosts) and an attack goal for its
+ * behaviour; a brain-based mob gains {@link BrainHostTargetGoal}, which feeds its brain's fight activity. Cleansing puts
+ * the original goals back.
  *
  * <p>Applied only when host state can change: on {@code EntityJoinLevelEvent} and from {@link Corruption#set}; never
  * per tick. Goals are not saved, so a reloaded mob rebuilds its own goals and is re-applied on join if still a host.
@@ -57,6 +60,7 @@ public final class HostBehaviours {
     private static final int HURT_BY_PRIORITY = 1;
     private static final int PLAYER_TARGET_PRIORITY = 2;
     private static final int PREY_TARGET_PRIORITY = 3;
+    private static final int BRAIN_TARGET_PRIORITY = 2;
     private static final double MELEE_SPEED = 1.2;
     private static final double RANGED_SPEED = 1.0;
     private static final int RANGED_INTERVAL = 40;
@@ -81,7 +85,10 @@ public final class HostBehaviours {
     /**
      * The behaviour of a mob with no profile behaviour, checked in this order:
      * <ol>
-     * <li>{@code none}: brain-based mobs (any memory in their {@code Brain}: villagers, piglins, axolotls, goats...).</li>
+     * <li>Brain-based mobs (any memory in their {@code Brain}): {@code melee} when the brain has an
+     * {@code attack_target} memory, which its fight activity acts on (piglins, hoglins, axolotls, zoglins, breezes,
+     * wardens; frogs too, but their default profile marks them {@code none}), else {@code none} (villagers, allays,
+     * goats...).</li>
      * <li>{@code flying}: {@link FlyingMob}, {@link FlyingAnimal}, {@link AmbientCreature}, category {@code ambient}
      * or flying navigation.</li>
      * <li>{@code swimming}: {@link WaterAnimal}, the water categories or water-bound navigation.</li>
@@ -89,10 +96,9 @@ public final class HostBehaviours {
      * <li>{@code melee}: everything else.</li>
      * </ol>
      */
-    @SuppressWarnings("deprecation") // Brain#getMemories is marked debug-only; it is the only way to see registered memories
     public static MobBehaviour categoryDefault(Mob mob) {
-        if (!mob.getBrain().getMemories().isEmpty()) {
-            return MobBehaviour.NONE;
+        if (isBrainBased(mob)) {
+            return BrainHostTargetGoal.canFight(mob) ? MobBehaviour.MELEE : MobBehaviour.NONE;
         }
         MobCategory category = mob.getType().getCategory();
         if (mob instanceof FlyingMob || mob instanceof FlyingAnimal || mob instanceof AmbientCreature
@@ -140,16 +146,22 @@ public final class HostBehaviours {
         return mob.hasData(RemissionAttachments.HOST_GOALS);
     }
 
+    /** Whether {@code mob} runs its AI through a {@code Brain} (any registered memory) rather than goals alone. */
+    @SuppressWarnings("deprecation") // Brain#getMemories is marked debug-only; it is the only way to see registered memories
+    public static boolean isBrainBased(Mob mob) {
+        return !mob.getBrain().getMemories().isEmpty();
+    }
+
     /** Whether a host may pick {@code target}: anything attackable that is not itself a host. */
     public static boolean isPrey(LivingEntity target) {
         return target.attackable() && !Corruption.isHost(target);
     }
 
     private static void apply(Mob mob, MobBehaviour behaviour) {
-        if (behaviour != MobBehaviour.MELEE && behaviour != MobBehaviour.RANGED
-                && behaviour != MobBehaviour.PASSIVE_HOSTILE) {
-            // flying and swimming wait for P3.2; none keeps the mob's own AI. Host-on-host targeting is still
-            // blocked for every host by HostBehaviourEvents.
+        boolean brain = isBrainBased(mob);
+        if (behaviour == MobBehaviour.NONE || (brain && behaviour == MobBehaviour.PASSIVE_HOSTILE)) {
+            // none keeps the mob's own AI; a brain mob already retaliates through its brain. Host-on-host targeting is
+            // still blocked for every host by HostBehaviourEvents.
             return;
         }
         List<Slot> strippedGoals = strip(mob.goalSelector, HostBehaviours::isPassive);
@@ -157,18 +169,23 @@ public final class HostBehaviours {
         List<Slot> addedGoals = new ArrayList<>();
         List<Slot> addedTargets = new ArrayList<>();
 
-        if (mob instanceof PathfinderMob pathfinder) {
-            addedTargets.add(new Slot(HURT_BY_PRIORITY, new HurtByTargetGoal(pathfinder)));
-        }
-        if (behaviour != MobBehaviour.PASSIVE_HOSTILE) {
-            addedTargets.add(new Slot(PLAYER_TARGET_PRIORITY,
-                    new NearestAttackableTargetGoal<>(mob, Player.class, true, HostBehaviours::isPrey)));
-            addedTargets.add(new Slot(PREY_TARGET_PRIORITY,
-                    new NearestAttackableTargetGoal<>(mob, LivingEntity.class, true, HostBehaviours::isPrey)));
-        }
-        Goal attack = hasAttackGoal(mob) ? null : attackGoal(mob, behaviour);
-        if (attack != null) {
-            addedGoals.add(new Slot(ATTACK_PRIORITY, attack));
+        if (brain) {
+            // Every attacking behaviour means the same to a brain mob: its brain moves and attacks, Remission picks prey.
+            addedTargets.add(new Slot(BRAIN_TARGET_PRIORITY, new BrainHostTargetGoal(mob)));
+        } else {
+            if (mob instanceof PathfinderMob pathfinder) {
+                addedTargets.add(new Slot(HURT_BY_PRIORITY, new HurtByTargetGoal(pathfinder)));
+            }
+            if (behaviour != MobBehaviour.PASSIVE_HOSTILE) {
+                addedTargets.add(new Slot(PLAYER_TARGET_PRIORITY,
+                        new NearestAttackableTargetGoal<>(mob, Player.class, true, HostBehaviours::isPrey)));
+                addedTargets.add(new Slot(PREY_TARGET_PRIORITY,
+                        new NearestAttackableTargetGoal<>(mob, LivingEntity.class, true, HostBehaviours::isPrey)));
+            }
+            Goal attack = attackGoal(mob, behaviour);
+            if (attack != null) {
+                addedGoals.add(new Slot(ATTACK_PRIORITY, attack));
+            }
         }
 
         addedGoals.forEach(slot -> mob.goalSelector.addGoal(slot.priority(), slot.goal()));
@@ -184,10 +201,23 @@ public final class HostBehaviours {
         applied.strippedGoals().forEach(slot -> mob.goalSelector.addGoal(slot.priority(), slot.goal()));
         applied.strippedTargets().forEach(slot -> mob.targetSelector.addGoal(slot.priority(), slot.goal()));
         mob.setTarget(null);
+        mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+        mob.getBrain().eraseMemory(MemoryModuleType.ANGRY_AT);
     }
 
-    /** The attack goal for a mob that has none: ranged for ranged mobs, melee for pathfinders, else nothing. */
+    /**
+     * The attack goal a goal-based host gains, or null. Flying and swimming hosts get {@link HostPursuitGoal}, except
+     * monsters ({@link Enemy}: ghasts, phantoms, guardians), which fight their target with their own goals. Otherwise a
+     * mob that has no attack goal gets a ranged one if it is a ranged mob and its behaviour is ranged, else melee if it
+     * is a pathfinder.
+     */
     private static Goal attackGoal(Mob mob, MobBehaviour behaviour) {
+        if (behaviour == MobBehaviour.FLYING || behaviour == MobBehaviour.SWIMMING) {
+            return mob instanceof Enemy ? null : new HostPursuitGoal(mob, behaviour == MobBehaviour.SWIMMING);
+        }
+        if (hasAttackGoal(mob)) {
+            return null;
+        }
         if (behaviour == MobBehaviour.RANGED && mob instanceof RangedAttackMob ranged) {
             return new RangedAttackGoal(ranged, RANGED_SPEED, RANGED_INTERVAL, RANGED_RADIUS);
         }

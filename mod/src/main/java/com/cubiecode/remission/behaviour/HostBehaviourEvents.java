@@ -45,9 +45,9 @@ public final class HostBehaviourEvents {
     }
 
     /**
-     * Hosts never target hosts, whatever goal or behaviour picked the target (this also covers mobs Remission does not
-     * change, such as brain-based hosts, and targets that become hosts mid-fight, since target goals re-set their target
-     * every tick they continue).
+     * Hosts never target hosts, whatever goal or behaviour picked the target (this also covers hosts with behaviour
+     * {@code none}, brains choosing their own targets, and targets that become hosts mid-fight, since target goals re-set
+     * their target every tick they continue).
      */
     @SubscribeEvent
     static void onChangeTarget(LivingChangeTargetEvent event) {

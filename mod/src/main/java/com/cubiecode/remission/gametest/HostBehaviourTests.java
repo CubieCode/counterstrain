@@ -229,8 +229,22 @@ public final class HostBehaviourTests {
                 Map.entry(EntityType.SKELETON, MobBehaviour.RANGED),
                 Map.entry(EntityType.SNOW_GOLEM, MobBehaviour.RANGED),
                 Map.entry(EntityType.VILLAGER, MobBehaviour.NONE),
-                Map.entry(EntityType.PIGLIN, MobBehaviour.NONE),
-                Map.entry(EntityType.AXOLOTL, MobBehaviour.NONE),
+                Map.entry(EntityType.ALLAY, MobBehaviour.NONE),
+                Map.entry(EntityType.GOAT, MobBehaviour.NONE),
+                Map.entry(EntityType.PIGLIN, MobBehaviour.MELEE),
+                Map.entry(EntityType.HOGLIN, MobBehaviour.MELEE),
+                Map.entry(EntityType.AXOLOTL, MobBehaviour.MELEE),
+                Map.entry(EntityType.FROG, MobBehaviour.MELEE),
+                Map.entry(EntityType.PIGLIN_BRUTE, MobBehaviour.MELEE),
+                Map.entry(EntityType.ZOGLIN, MobBehaviour.MELEE),
+                Map.entry(EntityType.BREEZE, MobBehaviour.MELEE),
+                Map.entry(EntityType.WARDEN, MobBehaviour.MELEE),
+                Map.entry(EntityType.CAMEL, MobBehaviour.NONE),
+                Map.entry(EntityType.SNIFFER, MobBehaviour.NONE),
+                Map.entry(EntityType.BEE, MobBehaviour.FLYING),
+                Map.entry(EntityType.PHANTOM, MobBehaviour.FLYING),
+                Map.entry(EntityType.DOLPHIN, MobBehaviour.SWIMMING),
+                Map.entry(EntityType.TROPICAL_FISH, MobBehaviour.SWIMMING),
                 Map.entry(EntityType.BAT, MobBehaviour.FLYING),
                 Map.entry(EntityType.PARROT, MobBehaviour.FLYING),
                 Map.entry(EntityType.GHAST, MobBehaviour.FLYING),
@@ -240,13 +254,9 @@ public final class HostBehaviourTests {
         expected.forEach((type, behaviour) -> {
             Mob mob = type.create(helper.getLevel());
             helper.assertTrue(mob != null, "could not create " + type);
-            helper.assertValueEqual(HostBehaviours.behaviourFor(mob), behaviour, "behaviour of " + type);
+            // Category defaults alone, without Remission's default profiles (which mark frogs unsupported).
+            helper.assertValueEqual(HostBehaviours.categoryDefault(mob), behaviour, "category default of " + type);
         });
-
-        // Behaviours P3.1 does not drive leave the mob's own goals alone.
-        Mob bat = helper.spawnWithNoFreeWill(EntityType.BAT, 1, 1, 1);
-        Corruption.set(bat, HOST_LEVEL);
-        helper.assertFalse(HostBehaviours.hasHostGoals(bat), "flying host got goal changes before P3.2");
         helper.succeed();
     }
 
