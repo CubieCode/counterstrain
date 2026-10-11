@@ -37,7 +37,7 @@ Phase 0 was scaffold only: deferred registers, configs, payload registrar, datag
 | `client/` | `@Mod(dist = CLIENT)` entrypoint, client config screen, `HostOverlayLayer`, `HostLayerOverlay` and `HostRenderTypes` (host rendering, below); planned: renderers, client payload handling |
 | `server/` | `@Mod(dist = DEDICATED_SERVER)` entrypoint; dedicated-server-only setup |
 | `config/` | `RemissionCommonConfig` (gameplay: `hosts.stageThresholds`, the `spread` rates and budgets, `festering.stageThresholds`), `RemissionClientConfig` (presentation: `hosts.overlayIntensity`) |
-| `registry/` | One `DeferredRegister` holder per kind: blocks, items (scanner, scans, `host_tissue`), block entities, data components, attachments (`corruption`, transient `host_goals`, `chunk_corruption`, `bestiary`), loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
+| `registry/` | One `DeferredRegister` holder per kind: blocks, items (scanner, scans, `host_tissue`), block entities, data components, attachments (`corruption`, transient `host_goals`, `chunk_corruption`, `bestiary`), loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers, custom stats; `RemissionRegistries.register(modBus)` wires them |
 | `network/` | `RegisterPayloadHandlersEvent` registrar, `PROTOCOL_VERSION`; no payloads yet (corruption uses attachment sync) |
 | `data/` | `GatherDataEvent` wiring and providers (blockstates, item models, tags, recipes, loot tables, global loot modifiers) |
 | `corruption/` | `CorruptionState` record and codecs, `Corruption` internal API (`get`, `set`, `isHost`, `isImmune`, tag key `IMMUNE`; posts the host events) |
@@ -49,7 +49,8 @@ Phase 0 was scaffold only: deferred registers, configs, payload registrar, datag
 | `gametest/` | `@GameTestHolder` classes; `remission:empty` is a 3x3x3 air template, `remission:host_arena` a 7x5x7 stone-floored glass box (5x3x5 inside) for fights |
 | `api/` | The public API (P4.4): `HostEvent`/`FesteringLandEvent` bases and their events, `CorruptionCause`, `CorruptionQueries`; the only package other mods may rely on |
 | `research/` | Scanner item and behaviour (`ScannerItem`, `Scanning`), scan data items (`ScanItem`) and the `scan_data` component (`ScanData`); P6.1. Host type rule and per-player progress (`Bestiary`, `BestiaryProgress`); P6.2, hidden types P6.3 |
-| *planned* `purification/`, `tech/`, `cure/`, `quest/`, `integration/` | Feature systems by roadmap phase |
+| `quest/` | Advancement triggers (`LocationTrigger` for `nidus_destroyed` and `block_scanned`, `HostScannedTrigger`) and `QuestProgress`, where gameplay awards stats and fires triggers; P8.1 |
+| *planned* `purification/`, `tech/`, `cure/`, `integration/` | Feature systems by roadmap phase |
 
 Resources: `src/main/resources` (hand-written: lang, textures, structures), `src/generated/resources` (datagen, committed), `src/main/templates/META-INF/neoforge.mods.toml` (expanded from `gradle.properties`).
 
@@ -86,7 +87,7 @@ Internal Java system names and public API types may keep the generic word "corru
 - The server decides and writes; the client only claims the interaction (arm swing). Entity scans run from `PlayerInteractEvent.EntityInteract` / `EntityInteractSpecific` so they come before the target's own interaction (villager trading, mounting); block scans run from `onItemUseFirst`, before the block's use. A 20-tick item cooldown follows every attempt and also stops a double scan when both entity events fire.
 - Feedback is a vanilla action-bar message; no payloads. The scan reads host state through `Corruption.get` and never changes it.
 - No timestamp or player is stored, so identical scans stack and recipe ingredients can match the full component value (NeoForge components ingredient).
-- Later: `host_scanned` trigger and `hosts_scanned` stat (P8.1), machines that consume scans (P7.2). The scanner sits in the vanilla Tools and Utilities tab until Remission has its own creative tab.
+- Each host scan fires `remission:host_scanned` and counts `remission:hosts_scanned`; each block scan fires `remission:block_scanned` and counts `remission:blocks_scanned` (P8.1). Later: machines that consume scans (P7.2). The scanner sits in the vanilla Tools and Utilities tab until Remission has its own creative tab.
 - Harness scene `research/scanner` (visual-checks): the three items in item frames, and an armour stand pointing the scanner at a stage 2 host cow.
 
 ### Research: bestiary (built in P6.2)
@@ -168,7 +169,7 @@ The Counterstrain is deployed from a dispersal source: a position, radius and ra
 | Fester variants | per-source-biome fester biome (data map, shape fixed in P4.2) | remission-data-formats, minecraft-world-generation |
 | Machine recipes | recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing` | remission-data-formats, kubejs-scripting |
 | Scan data items | items `remission:host_scan`, `remission:block_scan`, data component `remission:scan_data` (P6.1, built) | remission-data-formats, kubejs-scripting |
-| Quest gates | advancement triggers `remission:*` (`nidus_destroyed`, `host_scanned`, ...), custom stats (`remission:nidi_destroyed`, ...) | remission-data-formats, ftb-quests-authoring |
+| Quest gates | advancement triggers `remission:nidus_destroyed`, `remission:host_scanned`, `remission:block_scanned`; custom stats `remission:nidi_destroyed`, `remission:hosts_scanned`, `remission:blocks_scanned` (P8.1, built; later systems append theirs) | remission-data-formats, ftb-quests-authoring |
 | Debug commands | `/remission infect <targets> <level>`, `/remission cleanse <targets>`, `/remission inspect <target>` (permission 2; P2.3, built) | remission-data-formats |
 | Quest-fired events | commands (`/remission surge start`, `/remission nidus seed`, `/remission region advance`; P8.2) | ftb-quests-authoring |
 | API events and queries | `com.cubiecode.remission.api`: `HostCorruptedEvent`, `HostCleansedEvent`, `ChunkStageChangedEvent`, `NidusDestroyedEvent`, `StrainSpreadAttemptEvent` (cancellable), `CorruptionCause`, `CorruptionQueries` (P4.4, built; later items append their events) | remission-data-formats |

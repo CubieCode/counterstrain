@@ -3,11 +3,13 @@ package com.cubiecode.remission.research;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.quest.QuestProgress;
 import com.cubiecode.remission.registry.RemissionDataComponents;
 import com.cubiecode.remission.registry.RemissionItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -80,6 +82,9 @@ public final class Scanning {
         ScanData data = ScanData.host(BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()), state.stage());
         give(player, RemissionItems.HOST_SCAN.get().getDefaultInstance(), data);
         Bestiary.recordScan(player, data.id(), data.stage());
+        if (player instanceof ServerPlayer serverPlayer) {
+            QuestProgress.hostScanned(serverPlayer, target, data.stage());
+        }
         player.displayClientMessage(Component.translatable("message.remission.scanner.host", data.subjectName(), data.stage()), true);
         return InteractionResult.CONSUME;
     }
@@ -96,6 +101,9 @@ public final class Scanning {
         player.getCooldowns().addCooldown(scanner.getItem(), COOLDOWN_TICKS);
         ScanData data = ScanData.block(BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()));
         give(player, RemissionItems.BLOCK_SCAN.get().getDefaultInstance(), data);
+        if (player instanceof ServerPlayer serverPlayer) {
+            QuestProgress.blockScanned(serverPlayer, pos);
+        }
         player.displayClientMessage(Component.translatable("message.remission.scanner.block", data.subjectName()), true);
         return InteractionResult.CONSUME;
     }

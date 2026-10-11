@@ -362,13 +362,14 @@ Goals: quests and scripts can observe and drive Remission.
 
 ### P8.1: Advancement triggers and stats
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p8.1-triggers-stats
 - PR:
 - Depends on: P4.1, P6.1
 - Scope: Triggers and stats for region % cleansed, nidus destroyed (`remission:nidus_destroyed`, stat `remission:nidi_destroyed`), host scanned, surge survived, and others the pack needs.
 - Acceptance: Schemas in remission-data-formats; FTB Quests tasks gate on them in a dev run.
 - Skills: neoforge-mod-dev, remission-data-formats, ftb-quests-authoring
+- Built: triggers `remission:nidus_destroyed`, `remission:host_scanned`, `remission:block_scanned` and stats `remission:nidi_destroyed`, `remission:hosts_scanned`, `remission:blocks_scanned`. Deferred to the systems they observe, which are not on main (coordinator decision): region % cleansed (`region_cleansed`, stat `chunks_cleansed`) to P5.2, surge survived to P4.3, viral load to P5.1.
 
 ### P8.2: Quest-fired events and map overlay
 
