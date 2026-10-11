@@ -1,6 +1,6 @@
 ---
 name: remission-data-formats
-description: Define, change or consume Remission's pack-facing contracts (entity tags, per-mob override JSON, loot condition, recipe types, KubeJS schemas, advancement triggers, stats, commands, public API events and their KubeJS bindings). Keep these schemas current with the code.
+description: Define, change or consume Remission's pack-facing contracts (entity tags, per-mob override JSON, data maps, loot condition, recipe types, KubeJS schemas, advancement triggers, stats, commands, public API events and their KubeJS bindings). Keep these schemas current with the code.
 ---
 
 # Remission data formats
@@ -239,7 +239,7 @@ Chunk attachment `remission:chunk_corruption` (`ChunkCorruption` in `com.cubieco
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `level` | int 0–100 | Strain level of the land. Only rises in phase 4; festering stages (P4.2) are derived from it. |
+| `level` | int 0–100 | Strain level of the land. Only rises in phase 4; festering stages are derived from it (Festering stages, below). |
 | `last_update_game_time` | long | Level game time of the last change; catch-up credits the passes missed since then (or since the nidus was indexed, if later). |
 
 Block `remission:nidus` with block entity `remission:nidus` (no saved fields yet) and block item `remission:nidus`. Drops nothing (loot table `remission:blocks/nidus`), mineable with a hoe (`#minecraft:mineable/hoe`), cannot be pushed. Placing it (or loading a chunk that has one) indexes it; removing it in any way stops its spread and leaves its land as it is. Index: `data/remission_nidi.dat` in the dimension folder, `{ "nidi": [ { "pos": <BlockPos.asLong>, "since": <game time> }, ... ] }`. Packs place nidi as ordinary blocks (structures, `/setblock`, features); `/remission nidus seed` is P8.2.
@@ -260,9 +260,62 @@ Rules: spread runs chunk to chunk from the parent neighbour (one step toward the
 
 Events: the spread engine posts `ChunkStageChangedEvent`, `NidusDestroyedEvent` and the cancellable `StrainSpreadAttemptEvent` (Public API, below).
 
-## Fester variants (planned, P4.2)
+## Festering stages, blocks and the fester biome (built, P4.2)
 
-Per-source-biome fester target so modded biomes fester into their own variant, falling back to `remission:fester`. Shape (data map on `minecraft:worldgen/biome` or a datapack registry) is fixed in P4.2; the pack uses it for Biomes O' Plenty and Terralith (P10.7).
+A chunk's festering stage (`[festering] stageThresholds`, Public API below) turns its land, in `world/FesteringStages`, server side:
+
+- **Blocks:** when a chunk's stage rises, every block in it with a `remission:festers_into` entry (below) whose `stage` is at or below the chunk's stage is replaced by the entry's block. Stages are cumulative: a chunk that jumps from 0 to 3 gets every entry up to 3 at once. Only the surface is scanned: each column from its highest block (`WORLD_SURFACE` heightmap) down through trees, plants and water to 5 blocks into the ground, counting the first block that blocks motion and is not in `#minecraft:logs` or `#minecraft:leaves` as the first ground block. Deeper stone, cave walls and the lower part of tall cliff faces stay as they are. Block states keep every property both blocks share (log `axis`, leaf `distance`, `persistent` and `waterlogged`, grass `snowy`). Blocks with block entities are never replaced. Replacement uses block update flags 2 and 16 (sent to clients, no neighbour updates), so plants on festering grass stay and nothing drops.
+- **Biome flip:** at the last stage (the number of `stageThresholds`; 4 by default), after its blocks, every biome cell of the chunk (all heights) flips to its fester biome: the source biome's `remission:fester_variant` entry (below), else `remission:fester`. `remission:fester` and every biome a `fester_variant` entry names never flip again. Players who have the chunk get vanilla's `ClientboundChunksBiomesPacket` (as `/fillbiome` sends), so grass, foliage and water colours, fog and sky change without a relog; no Remission payload.
+- **Budget and timing:** a stage rise (`ChunkStageChangedEvent`, live or catch-up) or a chunk load queues the chunk; up to 64 columns (or queued chunks skipped) are done per tick and level, so a chunk takes 4 ticks. Chunk attachment `remission:festered_stage` (int, saved with the chunk, never at 0, server only) records the stage a chunk was last brought up to: a queued chunk at or below it is skipped, and a chunk that unloaded or a server that stopped mid-way finishes when the chunk loads again. Blocks placed later in a festered chunk stay until its stage next rises. Stages never fall in phase 4; nothing reverts (purification is P5.2).
+- **Events:** `BlockFesteredEvent` once per replaced block (Public API, below). The biome flip posts no event; `ChunkStageChangedEvent` already marks the stage.
+
+Blocks (block items too, no creative tab yet), `data/remission/loot_table/blocks/<id>.json`:
+
+| Block | Replaces by default (stage) | Behaviour | Drops | Tool tag |
+| --- | --- | --- | --- | --- |
+| `remission:festering_grass` | `minecraft:grass_block` (1) | snowy state like grass; never spreads or decays; in `#minecraft:dirt`, so plants stay on it | dirt, itself with silk touch | `mineable/shovel` |
+| `remission:festering_log` | `#minecraft:logs` (2) | pillar with `axis`; in `#minecraft:logs`, so leaves around it do not decay | itself | `mineable/axe` |
+| `remission:festering_leaves` | `#minecraft:leaves` (2) | vanilla leaves (decay, `distance`, `persistent`); in `#minecraft:leaves` | sticks (vanilla leaf chances), itself with shears or silk touch | `mineable/hoe` |
+| `remission:festered_stone` | `#minecraft:base_stone_overworld` (3) | plain stone-like block | itself | `mineable/pickaxe` |
+
+**Data map `remission:festers_into`** (on `minecraft:block`), `data/<ns>/data_maps/block/festers_into.json`, NeoForge data map file format (keys are block ids or `#tags`; `replace`, `remove` and conditions work as for any data map). Server side only, not synced, reloaded with `/reload` (already festered chunks are not rescanned; the next stage rise uses the new map). Remission's default (datagen `RemissionDataMapProvider`):
+
+```json
+{
+  "values": {
+    "minecraft:grass_block": { "block": "remission:festering_grass" },
+    "#minecraft:logs": { "block": "remission:festering_log", "stage": 2 },
+    "#minecraft:leaves": { "block": "remission:festering_leaves", "stage": 2 },
+    "#minecraft:base_stone_overworld": { "block": "remission:festered_stone", "stage": 3 }
+  }
+}
+```
+
+| Field | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `block` | block id | required | What the block turns into. A block that maps to itself (festering logs and leaves are in the tags they replace) is left alone. |
+| `stage` | int ≥ 1 | 1 | Lowest chunk festering stage at which it turns. Entries above the configured number of stages never apply. |
+
+A pack adds modded blocks (`"biomesoplenty:origin_grass_block": {"block": "remission:festering_grass"}`), points a block at its own festering block, or removes an entry (`"remove": ["#minecraft:base_stone_overworld"]`). Where several entries cover a block, the one in the file loaded last (datapack order) wins, whether it names the block or a tag; within one file, list a block only once (directly or through one tag), because the order of a file's values is not defined.
+
+**Biome `remission:fester`** (`data/remission/worldgen/biome/fester.json`, datagen `RemissionBiomeProvider`; lang `biome.remission.fester`): land only flips to it after generating, so it has no features or carvers. Rain, temperature 0.8, grass colour `#B0A07E`, foliage `#A08898`, water `#5E4A6E` (fog `#2B1F36`), sky `#8F84A3`, fog `#A597B0`, cave mood sound; spawns as plains (farm animals and the common monsters). Packs may override the file (same id), but must keep the id: it is the fallback.
+
+**Data map `remission:fester_variant`** (on `minecraft:worldgen/biome`), `data/<ns>/data_maps/worldgen/biome/fester_variant.json`: the fester biome a source biome flips to. Remission ships no entries (every biome flips to `remission:fester`); the pack uses it for Biomes O' Plenty and Terralith (P10.7). Same reload rules as `festers_into` (chunks already flipped keep their biome).
+
+```json
+{
+  "values": {
+    "#minecraft:is_badlands": { "biome": "counterstrain:fester_badlands" },
+    "biomesoplenty:lavender_field": { "biome": "counterstrain:fester_lavender" }
+  }
+}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `biome` | biome id | The fester biome for this source biome. It need not exist when the data loads; a flip into a biome that is not registered logs one warning and uses `remission:fester`. Every biome named here counts as a fester biome and never flips again. |
+
+Fester biomes are ordinary datapack biomes (`data/<ns>/worldgen/biome/<id>.json`). A biome a chunk flips into only changes colours, sky, fog, music, spawns and precipitation; its features and carvers never run on flipped land.
 
 ## Item contamination (planned, P10.6)
 
@@ -290,6 +343,7 @@ Conventions, for every event here and every event later items add:
 | `HostCleansedEvent extends HostEvent` | as above; `isFullyCleansed()` (new level 0) | After `Corruption.set` lowers an entity's level (or stage), including partial cleansing. | no |
 | `ChunkStageChangedEvent extends FesteringLandEvent` | `getLevel()`, `getChunk()` (`ChunkPos`), `getOldLevel()`, `getNewLevel()`, `getOldStage()`, `getNewStage()` | After the spread engine stores a chunk level whose festering stage differs from the old one: live passes and catch-up. A catch-up posts once per chunk, so stages can jump by more than one; changes within a stage post nothing. | no |
 | `NidusDestroyedEvent extends FesteringLandEvent` | `getLevel()`, `getPos()` (the nidus block) | After a nidus leaves the level's index: its block was broken, replaced or removed, or a spread pass found an index entry without its block. Its land keeps its level. No player is passed; quests use the `nidus_destroyed` trigger (planned, P8.1). To protect a nidus, cancel the block break. When the block was removed, it is posted from the block's `onRemove` inside `setBlockState`: listeners must not set the block at `getPos()` in the listener (defer it). | no |
+| `BlockFesteredEvent extends FesteringLandEvent` (P4.2) | `getLevel()`, `getPos()`, `getOldState()`, `getNewState()` | After a block in a festering chunk is replaced through `remission:festers_into` (Festering stages, above), once per block: it is block-scoped, so a chunk's stage batch posts one per replaced block, spread over the ticks the batch takes. The biome flip posts nothing. Listeners must not set the block at `getPos()` in the listener. | no |
 | `StrainSpreadAttemptEvent extends FesteringLandEvent` | `getLevel()`, `getFrom()`, `getTo()` (`ChunkPos`), `getAmount()` (level gain at multiplier 1, capped at the target), `isCatchUp()`, `getRateMultiplier()`/`setRateMultiplier(double)` (default 1; negative or NaN become 0) | Before every chunk-to-chunk step: each live step into a loaded chunk below its target whose parent passed the threshold, and once per nidus in reach when a reloaded chunk catches up (`isCatchUp()`, `getAmount()` covers every missed pass, `getFrom()` may be unloaded). The growth of a nidus's own chunk is not a spread attempt, and a step from a loaded parent below the threshold is held without an event (live and catch-up). | yes: cancelling (or multiplier 0) stops this step; chunks reached through it stay clean while the cancelled chunk is loaded. A step from an unloaded parent is not held (the parent counts as at its target), so keep a firebreak chunk loaded or cancel the steps behind it too |
 
 Spread rate: the gain is `amount * multiplier`, capped at the chunk's target. A fractional part is added as one more level with that probability, drawn from a hash of the two chunks and the game time, so slowed spread still advances on average and the same state and ticks give the same levels. Listeners compose by multiplying (`event.setRateMultiplier(event.getRateMultiplier() * 0.5)`). `last_update_game_time` moves to now only when a catch-up changed the chunk's level: passes shortened by a multiplier below 1 are then not credited again (the chunk ends below where full-rate spread would have taken it and continues from there), while a catch-up whose steps were all cancelled, scaled to 0 or held keeps the old time, so a later reload credits that history again, still capped at the target. A parent caught up first (see the rules above) contributes its level after its own catch-up, which converges on the same targets as live spread rather than replaying exact history.
@@ -308,13 +362,12 @@ Queries, `CorruptionQueries` (static):
 | `chunkStage(ServerLevel, ChunkPos)`, `stageAt(ServerLevel, BlockPos)` | festering stage of that level (every block in a chunk shares its chunk's stage) | server |
 | `chunkStageFor(int level)`, `maxChunkStage()` | stage of a chunk level under the current config; the number of chunk stages | server config |
 
-Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; P4.2 maps them to festering grass, trees and foliage, festered stone and the biome flip). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
+Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; the default `festers_into` map turns grass at 1, trees and foliage at 2 and stone at 3, and the last stage flips the biome; Festering stages, above). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
 
-Planned by later items, added here when built: block festered (P4.2), surge started / ended (P4.3), viral load changed and a player's viral load query (P5.1), block purified and chunk entered remission (P5.2).
+Planned by later items, added here when built: surge started / ended (P4.3), viral load changed and a player's viral load query (P5.1), block purified and chunk entered remission (P5.2).
 
 | Event | Fired by | Payload (planned) | Cancellable |
 | --- | --- | --- | --- |
-| block festered | P4.2 | level, pos, old and new block state | no |
 | surge started / ended | P4.3 | level, origin, intensity | no |
 | viral load changed | P5.1 | player, old and new value, cause | no |
 | block purified | P5.2 | level, pos, old and new block state, cause | no |

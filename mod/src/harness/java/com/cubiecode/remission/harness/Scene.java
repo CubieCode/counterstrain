@@ -82,9 +82,11 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
      * {@code first_person} (default), {@code third_person_back} or {@code third_person_front}.
      * {@code press} names a key mapping (e.g. {@code key.remission.bestiary}) clicked once the
      * camera is in place; the shot then waits for the screen it opens, which closes before the
-     * next shot.
+     * next shot. {@code commands} are server commands (no leading slash) run right after the
+     * camera move, before the shot settles: changes to chunks an earlier shot already loaded
+     * on the client.
      */
-    record Shot(String name, Camera camera, CameraType view, Optional<String> press) {
+    record Shot(String name, Camera camera, CameraType view, Optional<String> press, List<String> commands) {
         private static final Codec<CameraType> VIEW_CODEC = Codec.STRING.comapFlatMap(
                 v -> Arrays.stream(CameraType.values()).filter(t -> t.name().toLowerCase(Locale.ROOT).equals(v))
                         .findFirst().map(DataResult::success)
@@ -98,7 +100,8 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
                         .fieldOf("name").forGetter(Shot::name),
                 Camera.CODEC.fieldOf("camera").forGetter(Shot::camera),
                 VIEW_CODEC.optionalFieldOf("view", CameraType.FIRST_PERSON).forGetter(Shot::view),
-                Codec.STRING.optionalFieldOf("press").forGetter(Shot::press)
+                Codec.STRING.optionalFieldOf("press").forGetter(Shot::press),
+                Codec.STRING.listOf().optionalFieldOf("commands", List.of()).forGetter(Shot::commands)
         ).apply(i, Shot::new));
     }
 

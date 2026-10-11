@@ -53,5 +53,10 @@
   "item.remission.miasma_bucket": "Miasma Bucket",
   "item.remission.nidus_core": "Nidus Core",
   "item.remission.festered_soil": "Festered Soil",
-  "chemical.remission.miasma": "Miasma"
+  "chemical.remission.miasma": "Miasma",
+  "block.remission.festering_grass": "Festering Grass",
+  "block.remission.festering_log": "Festering Log",
+  "block.remission.festering_leaves": "Festering Leaves",
+  "block.remission.festered_stone": "Festered Stone",
+  "biome.remission.fester": "Fester"
 }

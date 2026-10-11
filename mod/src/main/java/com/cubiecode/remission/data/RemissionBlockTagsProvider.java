@@ -17,7 +17,15 @@ public final class RemissionBlockTagsProvider extends BlockTagsProvider {
 
     @Override
     protected void addTags(HolderLookup.Provider provider) {
-        tag(BlockTags.MINEABLE_WITH_HOE).add(RemissionBlocks.NIDUS.get());
+        tag(BlockTags.MINEABLE_WITH_HOE).add(RemissionBlocks.NIDUS.get(), RemissionBlocks.FESTERING_LEAVES.get());
         tag(IsFesteringCondition.FESTERED_SOIL_SOURCES).addTag(BlockTags.DIRT);
+        // Festering stages (P4.2) behave like the blocks they replaced: plants stay on festering grass, leaves around a
+        // festering log do not decay.
+        tag(BlockTags.MINEABLE_WITH_SHOVEL).add(RemissionBlocks.FESTERING_GRASS.get());
+        tag(BlockTags.MINEABLE_WITH_AXE).add(RemissionBlocks.FESTERING_LOG.get());
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(RemissionBlocks.FESTERED_STONE.get());
+        tag(BlockTags.DIRT).add(RemissionBlocks.FESTERING_GRASS.get());
+        tag(BlockTags.LOGS).add(RemissionBlocks.FESTERING_LOG.get());
+        tag(BlockTags.LEAVES).add(RemissionBlocks.FESTERING_LEAVES.get());
     }
 }

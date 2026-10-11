@@ -32,6 +32,12 @@ Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in t
 | `mod/src/main/resources/assets/remission/textures/item/miasma_bucket.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Miasma bucket (P7.1): a vanilla-style iron bucket brimming with violet miasma and green flecks. Should read as a bucket of the miasma fluid at inventory size. |
 | `mod/src/main/resources/assets/remission/textures/item/nidus_core.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Nidus core sample (P7.1): a dark violet shell around a glowing sickly-green heart. The rarest sample; should read as the living centre of a nidus, matching the nidus block. |
 | `mod/src/main/resources/assets/remission/textures/item/festered_soil.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Festered soil sample (P7.1): a clump of dirt shot through with violet veins. Third of the sample family with host tissue and nidus cores. |
+| `mod/src/main/resources/assets/remission/textures/block/festering_grass_top.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festering grass top (P4.2): mottled bruise-mauve with dark violet blotches and a few sickly green vein pixels. Untinted (no biome colour); the art pass should keep it reading as diseased turf at a distance and tile without seams. |
+| `mod/src/main/resources/assets/remission/textures/block/festering_grass_side.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festering grass side (P4.2): a ragged mauve fringe over brown earth; the bottom face uses vanilla `block/dirt`. The art pass should match the top's palette and vanilla's grass-side silhouette. |
+| `mod/src/main/resources/assets/remission/textures/block/festering_log.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festering log bark (P4.2): grey-violet vertical bark with dark seams and green vein flecks. Used for every festered log and wood, so it should read as a generic diseased trunk, not one wood type. |
+| `mod/src/main/resources/assets/remission/textures/block/festering_log_top.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festering log end grain (P4.2): violet rings with a dark rim and green flecks. |
+| `mod/src/main/resources/assets/remission/textures/block/festering_leaves.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festering leaves (P4.2): dark mauve foliage with transparent gaps (cutout, untinted). The art pass should keep the hole density close to vanilla leaves so canopies read the same with fancy and fast graphics. |
+| `mod/src/main/resources/assets/remission/textures/block/festered_stone.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festered stone (P4.2): vanilla-grey stone with violet cracks and green flecks; currently reads as stripes when tiled. The art pass should make the cracks irregular across tiles. |
 
 ## Models
 
@@ -49,6 +55,15 @@ Datagen block and item models are `procedural (datagen)` and follow their textur
 | `mod/src/generated/resources/assets/remission/models/item/miasma_bucket.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:miasma_bucket` (P7.1). |
 | `mod/src/generated/resources/assets/remission/models/item/nidus_core.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:nidus_core` (P7.1). |
 | `mod/src/generated/resources/assets/remission/models/item/festered_soil.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:festered_soil` (P7.1). |
+| `mod/src/generated/resources/assets/remission/models/block/festering_grass.json` | model | procedural (datagen) | draft | `cube_bottom_top` for `remission:festering_grass` (`RemissionBlockStateProvider`, P4.2): festering grass top and side, vanilla dirt bottom. |
+| `mod/src/generated/resources/assets/remission/models/block/festering_log.json` | model | procedural (datagen) | draft | `cube_column` for `remission:festering_log` (`logBlock`, P4.2). |
+| `mod/src/generated/resources/assets/remission/models/block/festering_log_horizontal.json` | model | procedural (datagen) | draft | `cube_column_horizontal` for `remission:festering_log` on the x and z axes (`logBlock`, P4.2). |
+| `mod/src/generated/resources/assets/remission/models/block/festering_leaves.json` | model | procedural (datagen) | draft | `cube_all` for `remission:festering_leaves`, render type `cutout_mipped` (P4.2). |
+| `mod/src/generated/resources/assets/remission/models/block/festered_stone.json` | model | procedural (datagen) | draft | `cube_all` for `remission:festered_stone` (P4.2). |
+| `mod/src/generated/resources/assets/remission/models/item/festering_grass.json` | model | procedural (datagen) | draft | Festering grass block item model, inherits the block model. |
+| `mod/src/generated/resources/assets/remission/models/item/festering_log.json` | model | procedural (datagen) | draft | Festering log block item model, inherits the block model. |
+| `mod/src/generated/resources/assets/remission/models/item/festering_leaves.json` | model | procedural (datagen) | draft | Festering leaves block item model, inherits the block model. |
+| `mod/src/generated/resources/assets/remission/models/item/festered_stone.json` | model | procedural (datagen) | draft | Festered stone block item model, inherits the block model. |
 
 ## GUI art, icons and logos
 
@@ -112,6 +127,11 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:key.remission.bestiary` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Key mapping name for opening the bestiary (P6.2). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:gui.remission.bestiary*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Bestiary screen title, progress line (scanned of total host types) and per-row status (highest host stage scanned, not scanned) (P6.2). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:stat.remission.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Statistics screen names for the custom stats `nidi_destroyed`, `hosts_scanned` and `blocks_scanned` (P8.1). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.festering_grass` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festering grass block and item name (P4.2); glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.festering_log` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festering log block and item name (P4.2); glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.festering_leaves` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festering leaves block and item name (P4.2); glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.festered_stone` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festered stone block and item name (P4.2); glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:biome.remission.fester` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Name of the `remission:fester` biome (P4.2), shown in F3 and by biome-aware mods; glossary term. |
 
 ## Mod and pack metadata
 

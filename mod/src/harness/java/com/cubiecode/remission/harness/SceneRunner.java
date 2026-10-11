@@ -333,13 +333,15 @@ final class SceneRunner {
             mc.setScreen(null);
         }
         pressed = false;
-        Scene.Camera camera = scene.shots().get(index).camera();
-        mc.options.setCameraType(scene.shots().get(index).view());
+        Scene.Shot shot = scene.shots().get(index);
+        Scene.Camera camera = shot.camera();
+        mc.options.setCameraType(shot.view());
         MinecraftServer server = mc.getSingleplayerServer();
         pending = CompletableFuture.runAsync(() -> {
             ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
             player.teleportTo(server.overworld(), camera.pos().x, camera.pos().y, camera.pos().z,
                     camera.yaw(), camera.pitch());
+            shot.commands().forEach(command -> runCommand(server, command));
         }, server);
         phase = Phase.SHOOTING;
     }

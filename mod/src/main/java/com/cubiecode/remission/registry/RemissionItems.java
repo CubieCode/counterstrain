@@ -34,6 +34,12 @@ public final class RemissionItems {
     /** Sample dropped by festering ground ({@code remission:festered_soil_samples} loot modifier). */
     public static final DeferredItem<Item> FESTERED_SOIL = ITEMS.registerSimpleItem("festered_soil");
 
+    // Festering stages (P4.2)
+    public static final DeferredItem<BlockItem> FESTERING_GRASS = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_GRASS);
+    public static final DeferredItem<BlockItem> FESTERING_LOG = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_LOG);
+    public static final DeferredItem<BlockItem> FESTERING_LEAVES = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_LEAVES);
+    public static final DeferredItem<BlockItem> FESTERED_STONE = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERED_STONE);
+
     private RemissionItems() {
     }
 }
