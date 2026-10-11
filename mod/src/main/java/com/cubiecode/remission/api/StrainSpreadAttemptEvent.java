@@ -18,9 +18,11 @@ import net.neoforged.bus.api.ICancellableEvent;
  *
  * <p>Or set {@link #setRateMultiplier rate multiplier} to scale it: the level gained is {@code amount * multiplier},
  * its fraction resolved deterministically per chunk and game time, capped at the chunk's target. Listeners compose by
- * multiplying ({@code event.setRateMultiplier(event.getRateMultiplier() * 0.5)}). A catch-up step scaled below 1 (or
- * cancelled) still moves the chunk's last change to now, so the passes it shortened are not credited again: the chunk
- * ends below where full-rate spread would have taken it and continues from there.
+ * multiplying ({@code event.setRateMultiplier(event.getRateMultiplier() * 0.5)}). When a catch-up changes the chunk's
+ * level, its last change moves to now, so passes shortened by a multiplier below 1 are not credited again: the chunk
+ * ends below where full-rate spread would have taken it and continues from there. When every step of a catch-up is
+ * cancelled (or scaled to 0, or held), the chunk keeps its old last change, so a later catch-up credits that time again,
+ * capped at the target.
  */
 public class StrainSpreadAttemptEvent extends FesteringLandEvent implements ICancellableEvent {
     private final ChunkPos from;

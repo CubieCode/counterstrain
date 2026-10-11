@@ -213,8 +213,10 @@ public final class SpreadEngine {
     /**
      * Fast-forwards one loaded chunk to {@code now}; normally run from the catch-up queue. A step from a loaded parent
      * below the spread threshold is held without a spread attempt, as in a live pass; an unloaded parent is assumed to
-     * be at its target. Scaled or cancelled steps still move the chunk's last change to {@code now}, so the passes they
-     * skipped are not credited again.
+     * be at its target. The chunk's last change moves to {@code now} only when its level changed: passes shortened by a
+     * scaled step are then not credited again, but a catch-up whose steps were all held or cancelled keeps the old time,
+     * so a later catch-up credits that history again (still capped at the target). A parent caught up first contributes
+     * its level after that catch-up, which converges on the same targets as live spread rather than replaying history.
      */
     public void catchUp(long chunk, long now, SpreadSettings current) {
         ChunkCorruption state = land.get(chunk);
