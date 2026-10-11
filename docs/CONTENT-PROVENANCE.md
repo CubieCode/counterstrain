@@ -94,6 +94,9 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.catchUpBudget*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: catch-up chunks per tick. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.failed.immune` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Command error: every target of `/remission infect` is immune (P3.3). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.host_tissue` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Item name for the host tissue sample (P3.3). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:key.categories.remission` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Controls screen category for Remission key mappings (P6.2). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:key.remission.bestiary` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Key mapping name for opening the bestiary (P6.2). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:gui.remission.bestiary*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Bestiary screen title, progress line (scanned of total host types) and per-row status (highest host stage scanned, not scanned) (P6.2). |
 
 ## Mod and pack metadata
 

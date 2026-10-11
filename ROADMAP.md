@@ -282,7 +282,7 @@ Goals: knowledge is gathered from the world and recorded.
 
 ### P6.2: Bestiary
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: `feat/p6.2-bestiary`
 - PR:
 - Depends on: P6.1

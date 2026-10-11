@@ -59,7 +59,24 @@ Ids are stored as plain ids, not registry holders, so a scan of a since-removed 
 
 Matching scans in pack recipes (1.21.1 ingredients): any scan of a kind with `{"item": "remission:host_scan"}`; a specific scan with NeoForge's components ingredient, e.g. `{"type": "neoforge:components", "items": "remission:host_scan", "components": {"remission:scan_data": {"entity": "minecraft:cow", "stage": 2}}}` (stage is part of the value, so list one ingredient per stage that should count). A data item without the component (from `/give`) is valid but blank: no tooltip line, and it matches only plain item ingredients.
 
-Not part of this contract yet: the `remission:host_scanned` trigger and `remission:hosts_scanned` stat (P8.1), per-player scan progress for the bestiary (P6.2) and scanning samples (unassigned).
+Not part of this contract yet: the `remission:host_scanned` trigger and `remission:hosts_scanned` stat (P8.1) and scanning samples (unassigned). Per-player scan progress: Bestiary, below.
+
+## Bestiary (P6.2)
+
+Host types are derived, not listed: every registered entity type that has default attributes (that is, is living), is not `minecraft:player` and is not in `#remission:immune` (`Bestiary.isHostType`, `Bestiary.hostTypes()`). Each installed mod's living mobs count without data; to drop a type from the bestiary (and from infection), tag it immune. Players can still carry the Strain and be scanned as hosts, but are never a bestiary entry.
+
+Player attachment `remission:bestiary` (`BestiaryProgress`): the highest host stage each host type has been scanned at by this player. Written only on the server, when the scanner gives a host scan (`Bestiary.recordScan`, keeps the maximum); block scans, non-host scans and `/give`n scans record nothing. Saved in the player's `neoforge:attachments` NBT only when non-empty, copied on death, and synced through NeoForge attachment sync to the owning player only. Shape:
+
+```json
+{ "minecraft:cow": 2, "mekanism:robit": 1 }
+```
+
+| Key / value | Type | Meaning |
+| --- | --- | --- |
+| key | resource location | Scanned host's entity type. Kept even if the type is no longer registered (not listed while missing). |
+| value | int ≥ 1 | Highest host stage scanned for that type. |
+
+Wire format (`BestiaryProgress.STREAM_CODEC`): var-int entry count, then per entry a resource location and a var-int stage. The client opens the bestiary with the key mapping `key.remission.bestiary` (category `key.categories.remission`, default M). Not part of this contract: the `remission:host_scanned` trigger and `remission:hosts_scanned` stat (P8.1).
 
 ## Infection (built, P3.3)
 
