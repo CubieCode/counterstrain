@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option; P2.3 adds the `/remission` debug commands (below). Phase 6 has started: P6.1 adds the scanner and scan data items (research, below). Everything below marked *planned* is a roadmap item.
+Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option; P2.3 adds the `/remission` debug commands (below). Phase 3 has started: P3.1 adds host goals and attack attributes (Behaviour, below). Phase 6 has started: P6.1 adds the scanner and scan data items (research, below). Everything below marked *planned* is a roadmap item.
 
 ## Repository and products
 
@@ -37,12 +37,13 @@ Phase 0 was scaffold only: deferred registers, configs, payload registrar, datag
 | `client/` | `@Mod(dist = CLIENT)` entrypoint, client config screen, `HostOverlayLayer` and `HostRenderTypes` (host rendering, below); planned: renderers, client payload handling |
 | `server/` | `@Mod(dist = DEDICATED_SERVER)` entrypoint; dedicated-server-only setup |
 | `config/` | `RemissionCommonConfig` (gameplay: `hosts.stageThresholds`), `RemissionClientConfig` (presentation: `hosts.overlayIntensity`) |
-| `registry/` | One `DeferredRegister` holder per kind: blocks, items, data components, attachments, loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
+| `registry/` | One `DeferredRegister` holder per kind: blocks, items, data components, attachments (`corruption`, transient `host_goals`), loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
 | `network/` | `RegisterPayloadHandlersEvent` registrar, `PROTOCOL_VERSION`; no payloads yet (corruption uses attachment sync) |
 | `data/` | `GatherDataEvent` wiring and providers (blockstates, item models, tags, recipes, loot tables, global loot modifiers) |
 | `corruption/` | `CorruptionState` record and codecs, `Corruption` server API (`get`, `set`, `isHost`) |
 | `commands/` | `RemissionCommands`: the `/remission` command tree, registered on `RegisterCommandsEvent` |
-| `gametest/` | `@GameTestHolder` classes; `remission:empty` is a 3x3x3 air template |
+| `behaviour/` | `MobBehaviour` (the `mob_profile` behaviour enum), `HostBehaviours` (category defaults, goal stripping and injection), `HostBehaviourEvents` (join, attribute patching, host-on-host target veto) |
+| `gametest/` | `@GameTestHolder` classes; `remission:empty` is a 3x3x3 air template, `remission:host_arena` a 7x5x7 stone-floored glass box (5x3x5 inside) for fights |
 | *planned* `api/` | Public events and queries for integrations, addons and KubeJS (P4.4) |
 | `research/` | Scanner item and behaviour (`ScannerItem`, `Scanning`), scan data items (`ScanItem`) and the `scan_data` component (`ScanData`); P6.1 |
 | *planned* `world/`, `purification/`, `tech/`, `cure/`, `quest/`, `integration/` | Feature systems by roadmap phase |
@@ -83,9 +84,21 @@ Internal Java system names and public API types may keep the generic word "corru
 - Later: `host_scanned` trigger and `hosts_scanned` stat (P8.1), per-player scan progress and the bestiary (P6.2), machines that consume scans (P7.2). The scanner sits in the vanilla Tools and Utilities tab until Remission has its own creative tab.
 - Harness scene `research/scanner` (visual-checks): the three items in item frames, and an armour stand pointing the scanner at a stage 2 host cow.
 
-### Behaviour (phase 3)
+### Behaviour (phase 3, goals and attributes built in P3.1)
 
-`EntityJoinLevelEvent` (server) → if a host and `Mob`: profile lookup (per-mob JSON, else defaults by mob category) → strip passive goals, inject target/attack goals. Brain-based mobs get a brain-memory or wrapper fallback; flying and swimming mobs get movement-appropriate attack goals. `EntityAttributeModificationEvent` adds `ATTACK_DAMAGE` (and others as needed) to all entity types missing them. Infection: `LivingDeathEvent` (killer is a host) and time in festering chunks flip state or replace via `convert_to`.
+- **When:** `HostBehaviours.update(mob)` brings a `Mob`'s goals in line with its host state. It runs on `EntityJoinLevelEvent` (server, low priority so other mods' goals are in first) and from `Corruption.set`, so `/remission infect`, `cleanse` and any later infection source act on loaded mobs at once. Nothing runs per tick. It is idempotent: a host that already has host goals, or a non-host without them, is left alone. P4.4 may move the `Corruption.set` call behind its host corrupted / cleansed events.
+- **State:** what was removed and added (goal, priority) lives in the transient attachment `remission:host_goals` (`AppliedHostGoals`): never saved, synced or copied. Goals are not saved either, so a mob loaded from disk rebuilds its own goals and gets host goals again on join if it is still a host; a mob cleansed before saving loads as a normal mob. Cleansing a loaded mob restores its stripped goals at their old priorities and removes the added ones in-session, and clears its target.
+- **Behaviour seam:** `HostBehaviours.behaviourFor(mob)` returns the mob's `MobBehaviour` and is the only place goal application asks. P3.1 returns the category default; P3.3 puts the `remission:mob_profile` lookup in front of it. Defaults, first match wins: `none` for brain-based mobs (any registered memory: villagers, piglins, axolotls, goats, frogs, allays...); `flying` for `FlyingMob`, `FlyingAnimal`, `AmbientCreature`, category `ambient` or flying navigation (bats, parrots, bees, ghasts, phantoms); `swimming` for `WaterAnimal`, the water categories or water-bound navigation (fish, squid, dolphins, guardians); `ranged` for `RangedAttackMob` (skeletons, snow golems, llamas, witches); `melee` for everything else (cows, sheep, pigs, zombies, spiders, slimes, modded goal-based mobs).
+- **What each value does** to a goal-based host:
+  - `melee`: strips passive goals (breed, tempt, avoid/flee, panic, follow parent/owner/mob/boat/caravan, sit, beg, shoulder, run around, trading) and the whole target selector, then adds `HurtByTargetGoal` (priority 1, pathfinders only, no alerting), `NearestAttackableTargetGoal<Player>` (2) and `NearestAttackableTargetGoal<LivingEntity>` (3), both line-of-sight and limited to attackable non-hosts. If the mob has no attack goal (`MeleeAttackGoal`, `RangedAttackGoal`, bow or crossbow goal) it gets `MeleeAttackGoal` (priority 1, speed 1.2) when it is a `PathfinderMob`; other mobs (slimes) keep attacking through their own goals.
+  - `ranged`: as `melee`, but a mob without an attack goal gets `RangedAttackGoal` (speed 1.0, 40 ticks, radius 12) when it is a `RangedAttackMob`.
+  - `passive_hostile`: strips the same goals, adds only `HurtByTargetGoal` and an attack goal: it never picks fights but fights back against anything except hosts.
+  - `flying`, `swimming`: no goal changes until P3.2 adds movement-appropriate fallbacks; the mob keeps its own AI.
+  - `none`: no goal changes (brain-based mobs until P3.2, and an explicit opt-out for profiles).
+- **Hosts never target hosts:** a `LivingChangeTargetEvent` listener clears any target a host would set on another host, for every host whatever its behaviour (brain `StartAttacking` included). Target goals re-set their target each tick they continue, so a target that becomes a host mid-fight is dropped on the next tick.
+- **Attributes:** `EntityAttributeModificationEvent` adds `attack_damage` (default 2) and `follow_range` (default 32) to every entity type with attributes that lacks them, so attack and target goals work on any mob. Profile attribute modifiers are P3.3.
+- **Tests:** `HostBehaviourTests` (own batch, `remission:host_arena`): host cow, zombie and Mekanism robit (dev runtime only; skipped without Mekanism) hurt an uninfected pig; a host sheep hurts a survival player; hosts ignore hosts (including retaliation and a forced `setTarget`); a target that becomes a host is dropped; cleanse restores goals in-session; reload re-applies host goals on join and a cleansed save loads normal; category defaults; every living type has the attributes.
+- Planned: brain-based, flying and swimming fallbacks (P3.2). Infection: `LivingDeathEvent` (killer is a host) and time in festering chunks flip state or replace via `convert_to` (P3.3).
 
 ### Festering land (phase 4)
 

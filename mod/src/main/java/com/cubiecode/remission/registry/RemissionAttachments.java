@@ -1,6 +1,7 @@
 package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.behaviour.AppliedHostGoals;
 import com.cubiecode.remission.corruption.CorruptionState;
 import java.util.function.Supplier;
 import net.neoforged.neoforge.attachment.AttachmentType;
@@ -21,6 +22,13 @@ public final class RemissionAttachments {
                     .serialize(CorruptionState.CODEC, state -> state.level() > 0)
                     .sync(CorruptionState.STREAM_CODEC)
                     .build());
+
+    /**
+     * The goals a host mob lost and gained (P3.1), so cleansing can restore them in-session. Never saved, synced or
+     * copied: goals are rebuilt when a mob loads and host goals are re-applied on join.
+     */
+    public static final Supplier<AttachmentType<AppliedHostGoals>> HOST_GOALS = ATTACHMENT_TYPES.register("host_goals",
+            () -> AttachmentType.builder(() -> AppliedHostGoals.EMPTY).build());
 
     private RemissionAttachments() {
     }
