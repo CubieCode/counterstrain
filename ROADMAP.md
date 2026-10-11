@@ -159,7 +159,7 @@ Goals: hosts of any kind behave as hostile Strain-infected creatures, infect oth
 
 - Status: `review`
 - Owner: feat/p3.1-host-goals
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/21
 - Depends on: P2.1
 - Scope: `EntityJoinLevelEvent` stripping of passive goals and injection of target/attack goals; `EntityAttributeModificationEvent` adding attack damage to all types; default profiles by mob category.
 - Acceptance: Host cows, sheep, zombies and modded goal-based mobs attack players and uninfected mobs; cleansing restores normal behaviour after reload. Gametests.
