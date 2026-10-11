@@ -1,0 +1,9 @@
+{
+  "behaviour": "none",
+  "entities": [
+    "minecraft:villager",
+    "minecraft:allay",
+    "minecraft:frog"
+  ],
+  "priority": -1000
+}
