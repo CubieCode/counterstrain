@@ -70,4 +70,4 @@ The mod and the pack are versioned independently. Tags `mod-v<version>` and `pac
 
 ## License
 
-Not yet chosen. `mod_license` in `mod/gradle.properties` is a placeholder (`All Rights Reserved`) until the owner decides. Vendored skills keep their upstream MIT license (`.agents/skills/LICENSE.minecraft-codex-skills`).
+[MIT](LICENSE), covering Remission, the Counterstrain pack content in this repository (scripts, quests, configs, datapacks) and the tooling. Third-party mods referenced by the pack keep their own licenses and are downloaded from their authors' pages, not redistributed here. Vendored skills keep their upstream MIT license (`.agents/skills/LICENSE.minecraft-codex-skills`).

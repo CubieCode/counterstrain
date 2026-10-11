@@ -175,6 +175,14 @@ publishing {
     }
 }
 
+// Ship the repository's MIT license inside the jar.
+def licenseName = "LICENSE_${mod_id}"
+tasks.named('jar', Jar).configure {
+    from(rootProject.file('../LICENSE')) {
+        rename { licenseName }
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }

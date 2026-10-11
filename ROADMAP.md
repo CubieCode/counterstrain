@@ -369,7 +369,7 @@ Goals: performant, compatible, published.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P11.1, license decision
+- Depends on: P11.1
 - Scope: Modrinth/CurseForge projects, publishing steps in release workflows, Remission added to the pack via packwiz.
 - Acceptance: Tagged releases publish; pack references the released mod.
 - Skills: release, minecraft-ci-release
