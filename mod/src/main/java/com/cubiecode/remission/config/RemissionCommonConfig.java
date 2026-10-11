@@ -17,6 +17,9 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.IntValue SPREAD_CHUNK_BUDGET;
     public static final ModConfigSpec.IntValue SPREAD_CATCH_UP_BUDGET;
     public static final ModConfigSpec.ConfigValue<List<? extends Integer>> FESTERING_STAGE_THRESHOLDS;
+    public static final ModConfigSpec.BooleanValue INFECTION_FESTERING_LAND;
+    public static final ModConfigSpec.IntValue INFECTION_FESTERING_LAND_MIN_STAGE;
+    public static final ModConfigSpec.IntValue INFECTION_FESTERING_LAND_EXPOSURE_TICKS;
 
     static {
         BUILDER.push("hosts");
@@ -62,6 +65,20 @@ public final class RemissionCommonConfig {
                 .defineList(List.of("stageThresholds"), () -> List.of(1, 25, 50, 75), () -> CorruptionState.MAX_LEVEL,
                         value -> value instanceof Integer i && i >= 1 && i <= CorruptionState.MAX_LEVEL,
                         ModConfigSpec.Range.of(1, 8));
+        BUILDER.pop();
+
+        BUILDER.push("infection");
+        INFECTION_FESTERING_LAND = BUILDER
+                .comment("Whether mobs that stay in festering land become hosts. Exposure is frozen while this is off.")
+                .define("festeringLand", true);
+        INFECTION_FESTERING_LAND_MIN_STAGE = BUILDER
+                .comment("Lowest festering stage of a chunk that builds up exposure in the mobs inside it, at any height.",
+                        "Above the number of festering stage thresholds, no land infects.")
+                .defineInRange("festeringLandMinStage", 2, 1, 8);
+        INFECTION_FESTERING_LAND_EXPOSURE_TICKS = BUILDER
+                .comment("Game ticks of exposure after which a mob becomes a host. Exposure falls by the same amount",
+                        "per tick outside such land, and is checked once a second in budgeted batches.")
+                .defineInRange("festeringLandExposureTicks", 6000, 20, 1728000);
         BUILDER.pop();
     }
 
