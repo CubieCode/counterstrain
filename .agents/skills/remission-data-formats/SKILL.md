@@ -25,7 +25,7 @@ Names follow the glossary and naming rule in docs/DESIGN.md: content IDs, trigge
 
 Config `config/remission-common.toml`, `[hosts] stageThresholds = [1, 34, 67]`: 1–8 ints in 1–100, order-independent. Changes apply the next time a level is set.
 
-Sync: NeoForge attachment sync, wire format `CorruptionState.STREAM_CODEC` (var-int `level`, var-int `stage`), to players tracking the entity and to the entity itself if it is a player, on change, on start-tracking and on the player's login, respawn and dimension change. Clients read it with `Corruption.get`. Not copied on death or conversion. P4.4 adds the host corrupted / cleansed events, fired from `set`; the debug commands that drive it are P2.3.
+Sync: NeoForge attachment sync, wire format `CorruptionState.STREAM_CODEC` (var-int `level`, var-int `stage`), to players tracking the entity and to the entity itself if it is a player, on change, on start-tracking and on the player's login, respawn and dimension change. Clients read it with `Corruption.get`. Not copied on death or conversion. P4.4 adds the host corrupted / cleansed events, fired from `set`; the debug commands below drive it.
 
 ## Entity tag `#remission:immune` (planned, P3.3)
 
@@ -82,9 +82,21 @@ Example: `{"criteria": {"nidus": {"trigger": "remission:nidus_destroyed", "condi
 
 Custom stats under `minecraft:custom`: `remission:nidi_destroyed`, `remission:chunks_cleansed`, `remission:hosts_scanned`, `remission:surges_survived`. FTB Quests stat tasks read them.
 
+## Debug commands `/remission` (built, P2.3)
+
+Registered in `commands/RemissionCommands` on `RegisterCommandsEvent`. Every `/remission` subcommand needs permission level 2 (command blocks, functions, server console, ops). Hosts change only through `Corruption.set`, so staging, sync and (from P4.4) API events behave exactly as for gameplay writes.
+
+| Syntax | Effect | Result (`execute store result`) | Feedback |
+| --- | --- | --- | --- |
+| `/remission infect <targets> <level>` | `targets`: entity selector, any number; `level`: int 1–100. Sets every living target to `level` (may lower it) and restages it from `hosts.stageThresholds`. Non-living targets are skipped. | Living targets set | `commands.remission.infect.success.single` (name, level, stage) / `.multiple` (count, level); broadcast to ops |
+| `/remission cleanse <targets>` | Sets every living target to level 0 (removes the attachment). Already clean targets count. | Living targets cleansed | `commands.remission.cleanse.success.single` (name) / `.multiple` (count); broadcast to ops |
+| `/remission inspect <target>` | One entity. Reports its stored level and stage; changes nothing. | Strain level (0 if clean) | `commands.remission.inspect.success` (name, level, stage) or `commands.remission.inspect.clean` (name) |
+
+Errors: `commands.remission.failed.no_living_targets` when `infect` or `cleanse` selects no living entity; `commands.remission.failed.not_living` (name) when `inspect` targets a non-living entity. Vanilla parse errors cover an out-of-range level and a multi-entity `inspect` selector. Example: `/execute store result score @s strain run remission inspect @e[type=minecraft:cow,limit=1,sort=nearest]`.
+
 ## Quest-fired events (planned, P8.2)
 
-Commands (`/remission surge start <pos> [intensity]`, `/remission nidus seed <pos>`, `/remission region advance <id>`) usable from FTB Quests command rewards and KubeJS. Debug commands (P2.3): `/remission infect <targets> <level>`, `/remission cleanse <targets>`, `/remission inspect <target>`. Document exact syntax here when built.
+Commands (`/remission surge start <pos> [intensity]`, `/remission nidus seed <pos>`, `/remission region advance <id>`) under the same `/remission` root, usable from FTB Quests command rewards and KubeJS. Document exact syntax here when built.
 
 ## Fester variants (planned, P4.2)
 

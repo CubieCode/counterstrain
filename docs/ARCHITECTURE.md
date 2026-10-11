@@ -41,6 +41,7 @@ Phase 0 was scaffold only: deferred registers, configs, payload registrar, datag
 | `network/` | `RegisterPayloadHandlersEvent` registrar, `PROTOCOL_VERSION`; no payloads yet (corruption uses attachment sync) |
 | `data/` | `GatherDataEvent` wiring and providers (blockstates, item models, tags, recipes, loot tables, global loot modifiers) |
 | `corruption/` | `CorruptionState` record and codecs, `Corruption` server API (`get`, `set`, `isHost`) |
+| `commands/` | `RemissionCommands`: the `/remission` command tree, registered on `RegisterCommandsEvent` |
 | `gametest/` | `@GameTestHolder` classes; `remission:empty` is a 3x3x3 air template |
 | *planned* `api/` | Public events and queries for integrations, addons and KubeJS (P4.4) |
 | *planned* `world/`, `purification/`, `research/`, `tech/`, `cure/`, `quest/`, `integration/` | Feature systems by roadmap phase |
@@ -87,7 +88,7 @@ Player attachment `viral_load`, synced to its own player. Gain per tick in feste
 
 The Counterstrain is deployed from a dispersal source: a position, radius and rate, ticked by whatever holds it. `remission:dispersal_payload` (a placed block) is the only holder Remission needs to finish the game (P9.2). The source API must not assume a block, so `integration/create/` (P10.6) can tick it from a moving Create contraption, Aeronautics airships included.
 
-### Contracts for the pack (phases 3–8)
+### Contracts for the pack (phases 2–8)
 
 | Surface | Location | Owner skill |
 | --- | --- | --- |
@@ -97,6 +98,7 @@ The Counterstrain is deployed from a dispersal source: a position, radius and ra
 | Fester variants | per-source-biome fester biome (data map, shape fixed in P4.2) | remission-data-formats, minecraft-world-generation |
 | Machine recipes | recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing` | remission-data-formats, kubejs-scripting |
 | Quest gates | advancement triggers `remission:*` (`nidus_destroyed`, `host_scanned`, ...), custom stats (`remission:nidi_destroyed`, ...) | remission-data-formats, ftb-quests-authoring |
+| Debug commands | `/remission infect <targets> <level>`, `/remission cleanse <targets>`, `/remission inspect <target>` (permission 2; P2.3, built) | remission-data-formats |
 | Quest-fired events | commands (`/remission surge start`, `/remission nidus seed`, `/remission region advance`; P8.2) | ftb-quests-authoring |
 | API events and queries | `com.cubiecode.remission.api` (P4.4) | remission-data-formats |
 | Dispersal payload | `remission:dispersal_payload` and its dispersal source API (P9.2; contraption holder P10.6) | remission-data-formats |

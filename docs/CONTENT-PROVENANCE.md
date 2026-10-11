@@ -55,6 +55,14 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.hosts` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Config screen section title for host settings. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.stageThresholds` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Config screen label for the host stage thresholds list. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.stageThresholds.tooltip` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Tooltip explaining Strain level and host stage; keep it short and in glossary terms. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.infect.success.single` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | `/remission infect` feedback for one target (name, Strain level, host stage). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.infect.success.multiple` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | `/remission infect` feedback for several targets (count, Strain level). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.cleanse.success.single` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | `/remission cleanse` feedback for one target (name). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.cleanse.success.multiple` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | `/remission cleanse` feedback for several targets (count). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.inspect.success` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | `/remission inspect` report for a target carrying the Strain (name, level, stage). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.inspect.clean` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | `/remission inspect` report for a clean target (name). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.failed.not_living` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Command error: the target cannot carry the Strain (name). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.failed.no_living_targets` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Command error: no selected target can carry the Strain. |
 
 ## Mod and pack metadata
 
