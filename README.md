@@ -13,7 +13,7 @@ Status: phase 0 (scaffold) is complete. No gameplay is implemented yet; see the 
 | Mod ID / package | `remission` / `com.cubiecode.remission` |
 | Pack tooling | packwiz (pinned commit, built by `tools/install-packwiz.sh`) |
 | Pack content | KubeJS 2101.7 (+ ProbeJS, optional), FTB Quests 2101.1, datapacks via `kubejs/data/` |
-| Companion mods | Mekanism, Applied Energistics 2, Create, Ars Nouveau, JEI, Xaero's Minimap |
+| Companion mods | Mekanism, Applied Energistics 2, Create, Ars Nouveau, EMI + JEI, Xaero's Minimap |
 
 Development, builds, tests and visual checks run on the headless home server `foundry` (RTX 4070 through Xvfb + VirtualGL). See [development environment](docs/DEV-ENVIRONMENT.md).
 
@@ -42,7 +42,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `tools/pack.sh refresh` / `check` / `export` | packwiz index refresh, CI drift check, `.mrpack` + CurseForge zip to `.local/dist/` |
 | `tools/bump-version.sh mod\|pack X.Y.Z` | Set the mod or pack version (independent) |
 
-Dev runs include KubeJS, ProbeJS, FTB Quests, JEI, Mekanism and AE2 from Modrinth/FTB Maven for integration testing; disable with `-Pdev_runtime_mods=false`. `-Pdev_jbr=true` runs the client/server on JetBrains Runtime with enhanced hot-swap (opt-in).
+Dev runs include KubeJS, ProbeJS, FTB Quests, EMI + JEI, Mekanism and AE2 from Modrinth/FTB Maven for integration testing; disable with `-Pdev_runtime_mods=false`. `-Pdev_jbr=true` runs the client/server on JetBrains Runtime with enhanced hot-swap (opt-in).
 
 ## Repository layout
 

@@ -246,8 +246,8 @@ Goals: corruption becomes a resource processed by machines into tools for the fi
 - Owner:
 - PR:
 - Depends on: P7.1
-- Scope: Three machines with recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing`, energy, JEI categories, default recipes via datagen.
-- Acceptance: Recipe schemas documented; JEI shows them; gametests run each machine.
+- Scope: Three machines with recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing`, energy, recipe viewer categories (a JEI plugin, shown in EMI through its JEI compatibility; native EMI plugin only if needed), default recipes via datagen.
+- Acceptance: Recipe schemas documented; EMI (with JEI installed) and JEI alone both show them; gametests run each machine.
 - Skills: neoforge-mod-dev, remission-data-formats
 
 ### P7.3: Serums, purifier fuel, prototype strains and KubeJS integration
@@ -335,7 +335,7 @@ Goals: Counterstrain becomes a playable pack.
 - PR:
 - Depends on: P10.1
 - Scope: Starting structure/map, KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau, datapack worldgen tweaks for hearts.
-- Acceptance: New world starts at the crash site; gated recipes verified in JEI; harness scene `pack/crash_site`.
+- Acceptance: New world starts at the crash site; gated recipes verified in EMI; harness scene `pack/crash_site`.
 - Skills: kubejs-scripting, minecraft-datapack, minecraft-world-generation, playtesting, visual-checks
 
 ### P10.3: Balancing pass

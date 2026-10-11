@@ -6,7 +6,7 @@ name: CI
 # unset means ubuntu-latest. Self-hosted jobs run as `lab` without sudo, so no
 # step may install system packages. Java comes from setup-java (Temurin 21,
 # matching .sdkmanrc); packwiz is built by tools/install-packwiz.sh.
-# Integration-test mods (KubeJS, JEI, ...) are disabled here so CI tests
+# Integration-test mods (KubeJS, EMI, JEI, ...) are disabled here so CI tests
 # Remission on its own and does not depend on Modrinth/FTB Maven uptime.
 on:
   push:

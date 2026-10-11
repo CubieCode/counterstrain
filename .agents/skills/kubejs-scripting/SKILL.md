@@ -12,7 +12,7 @@ ProbeJS: in a dev client (`tools/run-client-headless.sh`, or a playtest instance
 Locations, in `pack/kubejs/`:
 - `startup_scripts/`: `StartupEvents.registry('item'|'block'|'fluid', e => e.create(...))`, `StartupEvents.modifyCreativeTab`. Runs once at launch, before registries freeze, and needs a restart.
 - `server_scripts/`: `ServerEvents.recipes`, `ServerEvents.tags('item'|'block'|'entity_type', ...)`, `ServerEvents.recipeSchemaRegistry` and gating logic. Reload with `/reload`.
-- `client_scripts/`: `ItemEvents.modifyTooltips`, `RecipeViewerEvents.*` (JEI hiding/info is server-driven in 2101), `ClientEvents.lang`. Applied on resource reload (F3+T) or restart.
+- `client_scripts/`: `ItemEvents.modifyTooltips`, `RecipeViewerEvents.*` (one API for both viewers; server-driven in 2101; EMI support is partial: adding/removing entries and hiding recipes, so check results in EMI, which is what players see), `ClientEvents.lang`. Applied on resource reload (F3+T) or restart.
 - `data/` and `assets/`: datapack and resource pack loaded automatically (the pack datapack, e.g. `kubejs/data/remission/tags/entity_type/immune.json`).
 
 Name files by topic (`server_scripts/recipes/mekanism.js`, `server_scripts/gating/chapter1.js`); scripts load alphabetically. Start each file with a header comment saying what it changes and why.

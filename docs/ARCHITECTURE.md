@@ -19,7 +19,7 @@ Phase 0 is scaffold only. Remission registers its deferred registers, configs, p
                  │ generic defaults, no pack deps│
                  └──────────────┬────────────────┘
                                 │ optional, guarded integrations
-              Mekanism · AE2 · Create · Ars Nouveau · JEI · map mods
+              Mekanism · AE2 · Create · Ars Nouveau · EMI/JEI · map mod
 ```
 
 - Remission compiles against NeoForge only. Integrations with other mods are optional (`compileOnly` API + runtime checks via `ModList`) and live in `integration/<modid>/`.
@@ -75,7 +75,7 @@ All schemas start as stubs in the remission-data-formats skill and change only w
 ## Runtime and test infrastructure
 
 - Run configs: `client` (`run/client`), `server` (`run/server`), `gameTestServer` (`run/gametest`, exits on completion), `data` (`run/data`, writes `src/generated/resources`).
-- Dev runtime mods (`localRuntime`, never published): KubeJS + Rhino + Better Advanced Tooltips, ProbeJS, Architectury, FTB Library/Teams/Quests (FTB Maven, not on Modrinth), JEI, Mekanism, AE2 + GuideME. Toggle `dev_runtime_mods`. CI disables them.
+- Dev runtime mods (`localRuntime`, never published): KubeJS + Rhino + Better Advanced Tooltips, ProbeJS, Architectury, FTB Library/Teams/Quests (FTB Maven, not on Modrinth), JEI + EMI, Mekanism, AE2 + GuideME. Toggle `dev_runtime_mods`. CI disables them.
 - Headless client: `tools/run-client-headless.sh` (Xvfb + VirtualGL EGL on the RTX 4070). Phase 1 adds a dev-only harness that loads fixed scenes, screenshots them and quits.
 
 ## Decisions
@@ -83,5 +83,6 @@ All schemas start as stubs in the remission-data-formats skill and change only w
 - **Gradle 9.8.1** wrapper instead of the MDK's 9.2.1: current at scaffold time, builds with no deprecation warnings.
 - **Modrinth Maven pins by version ID** where a project reuses a version number across loaders (JEI resolved to its Fabric jar by number).
 - **FTB mods from FTB Maven / CurseForge:** FTB Quests, Library and Teams are not on Modrinth. The pack adds them with `packwiz cf add`.
+- **EMI + JEI together:** EMI is the recipe viewer players see; it takes over JEI's runtime UI (its built-in JEI compatibility) and shows every mod's JEI plugin recipes. JEI stays installed so mods with only JEI plugins keep working. Remission's recipe viewer integration (P7.2) is a JEI plugin first, which reaches both; a native EMI plugin is added only for EMI-specific features.
 - **Pack datapack in `pack/kubejs/data/`:** KubeJS loads it as a datapack in every world without another mod.
 - **Performance:** spread, catch-up and visual stage changes must be budgeted per tick and measured on foundry (phase 11 includes client FPS under heavy spread).

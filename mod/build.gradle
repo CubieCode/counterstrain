@@ -119,7 +119,9 @@ dependencies {
         localRuntime("dev.ftb.mods:ftb-library-neoforge:${ftb_library_version}") { transitive = false }
         localRuntime("dev.ftb.mods:ftb-teams-neoforge:${ftb_teams_version}") { transitive = false }
         localRuntime("dev.ftb.mods:ftb-quests-neoforge:${ftb_quests_version}") { transitive = false }
+        // EMI replaces JEI's UI and shows JEI plugins' recipes through its JEI compatibility.
         localRuntime "maven.modrinth:jei:${jei_version}"
+        localRuntime "maven.modrinth:emi:${emi_version}"
         localRuntime "maven.modrinth:mekanism:${mekanism_version}"
         localRuntime "maven.modrinth:guideme:${guideme_version}"
         localRuntime "maven.modrinth:ae2:${ae2_version}"
