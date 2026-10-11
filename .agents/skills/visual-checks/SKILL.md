@@ -68,7 +68,7 @@ It writes `<shot>-diff.png` (the actual image dimmed to grey, pixels over the th
 **Recording:** list in the PR each scene, the image paths or artifact name, the renderer line, the comparison result and what you checked. Attach or upload images; don't commit run output (only reviewed references, as above). Say plainly when a check could not be done.
 
 **Acceptance:** A visual exit criterion is met only when:
-- the listed scenes run in the GPU workflow,
+- the listed scenes run in the GPU workflow (`gpu-smoke.yml` runs every scene file; dispatch it on your branch or label the PR `gpu-smoke`, and link the run),
 - diffs are within tolerance or intentional changes have been reviewed and the references updated,
 - an agent or human has looked at the images.
 

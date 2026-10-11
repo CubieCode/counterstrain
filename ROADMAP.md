@@ -74,9 +74,9 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.3: GPU workflow runs scenes
 
-- Status: `todo`
-- Owner:
-- PR:
+- Status: `review`
+- Owner: feat/p1.3-gpu-workflow-scenes
+- PR: https://github.com/CubieCode/counterstrain/pull/11
 - Depends on: P1.1
 - Scope: `gpu-smoke.yml` runs the harness scene list instead of a timeout, uploads screenshots, diffs and logs; optional PR trigger by label.
 - Acceptance: A manual run on `[self-hosted, foundry, gpu]` passes, uploads artifacts and fails on llvmpipe or a crashed scene.

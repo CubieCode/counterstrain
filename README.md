@@ -4,7 +4,7 @@ Counterstrain is a quest-driven, tech-focused Minecraft 1.21.1 (NeoForge) modpac
 
 Inspired by Blightfall.
 
-Status: phase 0 (scaffold) is complete; phases 1 (visual test harness) and 2 (corruption state) are in progress. The dev-only scene harness, the entity corruption attachment and the provenance check are built; no player-visible gameplay yet. See the [roadmap](ROADMAP.md), [design](docs/DESIGN.md) and [architecture](docs/ARCHITECTURE.md). Player-facing content and its origin (AI, procedural, human, licensed) is tracked in [content provenance](docs/CONTENT-PROVENANCE.md).
+Status: phase 0 (scaffold) is complete; phases 1 (visual test harness) and 2 (corruption state) are in progress. The dev-only scene harness and its GPU workflow, the entity corruption attachment and the provenance check are built; no player-visible gameplay yet. See the [roadmap](ROADMAP.md), [design](docs/DESIGN.md) and [architecture](docs/ARCHITECTURE.md). Player-facing content and its origin (AI, procedural, human, licensed) is tracked in [content provenance](docs/CONTENT-PROVENANCE.md).
 
 ## Stack and decisions
 
@@ -39,6 +39,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `cd mod && ./gradlew runServer` | Dedicated dev server (`mod/run/server`, accept the EULA there first) |
 | `tools/run-client-headless.sh --timeout 180` | Dev client on foundry's GPU; logs in `.local/runs/latest/` |
 | `tools/run-client-headless.sh --scene smoke/mob_lineup` | Dev-only harness scene: fixed world, screenshots in `.local/runs/latest/screenshots/`, then exits |
+| `tools/run-scenes.sh [--scenes "a/b c/d"]` | Run every harness scene (or the listed ones) headlessly, compare their screenshots with the references; summary in `.local/scene-runs/latest/` |
 | `tools/verify-gpu-render.sh LOG` | Fail unless a client log names the RTX 4070 |
 | `tools/compare-screenshots.sh --scene <id> --actual DIR --out DIR` | Diff a scene run's screenshots against the reviewed references in `tools/visual-references/` (diff images, exit 1 on a difference); `--self-test` runs synthetic cases |
 | `tools/collect-screenshots.sh` | Copy screenshots to `.local/screenshots/latest/` |
@@ -79,7 +80,7 @@ Remission is not in the packwiz index until it is published. For development, `t
 
 ## Releases
 
-The mod and the pack are versioned independently. CI (`ci.yml`) builds, runs datagen and gametests and checks the pack on every push and PR that touches more than Markdown, and its `ci-ok` job and `docs.yml` are the required checks for `main`; `docs.yml` runs `tools/check-docs.py` and `tools/check-provenance.sh`; `gpu-smoke.yml` is the manual GPU client check. Tags `mod-v<version>` and `pack-v<version>` build draft GitHub releases (`release-mod.yml`, `release-pack.yml`). Platform publishing is roadmap P12.3: Remission goes to Modrinth and CurseForge; Counterstrain is CurseForge-first (the CurseForge zip is the release artifact; see [distribution](docs/DESIGN.md#distribution)). See the release skill.
+The mod and the pack are versioned independently. CI (`ci.yml`) builds, runs datagen and gametests and checks the pack on every push and PR that touches more than Markdown, and its `ci-ok` job and `docs.yml` are the required checks for `main`; `docs.yml` runs `tools/check-docs.py` and `tools/check-provenance.sh`; `gpu-smoke.yml` runs every harness scene on foundry's GPU (`tools/run-scenes.sh`) on manual dispatch or when a same-repo PR carries the `gpu-smoke` label, and uploads logs, screenshots and diffs. Tags `mod-v<version>` and `pack-v<version>` build draft GitHub releases (`release-mod.yml`, `release-pack.yml`). Platform publishing is roadmap P12.3: Remission goes to Modrinth and CurseForge; Counterstrain is CurseForge-first (the CurseForge zip is the release artifact; see [distribution](docs/DESIGN.md#distribution)). See the release skill.
 
 ## License
 
