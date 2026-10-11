@@ -43,6 +43,7 @@ public final class FesteringLandTests {
         final Map<Long, ChunkCorruption> chunks = new HashMap<>();
         final List<Nidus> nidi = new ArrayList<>();
         final Set<Long> destroyed = new HashSet<>();
+        final Set<Long> unloaded = new HashSet<>();
         final int half;
         LongPredicate blocked = chunk -> false;
 
@@ -52,7 +53,8 @@ public final class FesteringLandTests {
 
         @Override
         public boolean isLoaded(long chunk) {
-            return Math.abs(ChunkPos.getX(chunk)) <= half && Math.abs(ChunkPos.getZ(chunk)) <= half;
+            return Math.abs(ChunkPos.getX(chunk)) <= half && Math.abs(ChunkPos.getZ(chunk)) <= half
+                    && !unloaded.contains(chunk);
         }
 
         @Override
@@ -272,6 +274,48 @@ public final class FesteringLandTests {
         helper.assertValueEqual(results.get(1), results.get(0), "levels after outside-in vs inside-out catch-up");
         helper.assertValueEqual(results.get(0).get(ChunkPos.asLong(SETTINGS.radius(), 0)), SETTINGS.target(SETTINGS.radius()),
                 "edge of reach after a long absence");
+        helper.succeed();
+    }
+
+    /**
+     * A chunk that reloads behind a backlog of catch-ups while a live pass is due ends at the same level as when its
+     * catch-up runs before any live pass (P4.5): the pass skips it instead of stepping it and moving its last change to
+     * now, which would cost it the passes it missed while away.
+     */
+    @GameTest(template = "empty")
+    public static void livePassWaitsForCatchUp(GameTestHelper helper) {
+        long chunk = ChunkPos.asLong(1, 0);
+        List<Integer> results = new ArrayList<>();
+        for (int catchUpBudget : new int[] {SETTINGS.catchUpBudget(), 4096}) {
+            SpreadSettings settings = new SpreadSettings(SETTINGS.intervalTicks(), SETTINGS.nidusGrowth(), SETTINGS.spreadStep(),
+                    SETTINGS.falloff(), SETTINGS.spreadThreshold(), SETTINGS.chunkBudget(), catchUpBudget);
+            MapLand land = new MapLand(12);
+            land.nidi.add(nidusInChunk(0, 0));
+            land.set(ChunkPos.asLong(0, 0), new ChunkCorruption(ChunkCorruption.MAX_LEVEL, 0L));
+            land.set(chunk, new ChunkCorruption(10, 0L));
+            land.unloaded.add(chunk);
+            SpreadEngine engine = new SpreadEngine(land, () -> settings);
+            // Passes run at multiples of 20; the chunk is away for the one at 200 and reloads at 205.
+            run(engine, 200, 205);
+            land.unloaded.remove(chunk);
+            // Out-of-reach chunks queued ahead of it hold its catch-up past the pass at 220 with the normal budget.
+            for (int x = 6; x <= 12; x++) {
+                for (int z = -12; z <= 12; z++) {
+                    engine.chunkLoaded(ChunkPos.asLong(x, z));
+                }
+            }
+            engine.chunkLoaded(chunk);
+            run(engine, 205, 221);
+            if (catchUpBudget == SETTINGS.catchUpBudget()) {
+                helper.assertTrue(engine.pendingCatchUps() > 0, "catch-up done before the live pass at 220");
+            }
+            run(engine, 221, 260);
+            helper.assertValueEqual(engine.pendingCatchUps(), 0, "queue at 260");
+            results.add(level(land, 1, 0));
+        }
+        helper.assertValueEqual(results.get(0), results.get(1), "level with a live pass due before catch-up vs without");
+        // 10 passes missed while away and the one at 220, either way, then the pass at 240.
+        helper.assertValueEqual(results.get(1), 10 + 12 * SETTINGS.spreadStep(), "level at 260");
         helper.succeed();
     }
 

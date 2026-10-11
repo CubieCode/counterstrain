@@ -225,8 +225,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P4.1, P3.1, P4.4
-- Scope: Periodic surges that accelerate spread, spawn hosts and release miasma clouds (drifting airborne areas above festering land; their viral load effect is added by P5.1), with warnings; config and command to trigger. Emits surge started and surge ended events.
+- Depends on: P4.1, P3.1, P4.4, P8.1
+- Scope: Periodic surges that accelerate spread, spawn hosts and release miasma clouds (drifting airborne areas above festering land; their viral load effect is added by P5.1), with warnings; config and command to trigger. Emits surge started and surge ended events. Adds the surge survived advancement trigger and stat, following P8.1's trigger and stat conventions.
 - Acceptance: Gametests for scheduling and cloud spawning and drift; harness scenes `world/surge` and `world/miasma_cloud`. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
@@ -244,9 +244,10 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.5: Live spread waits for catch-up
 
-- Status: `todo`
-- Owner:
-- PR:
+- Status: `done`
+- Owner: feat/p4.5-catchup-ordering
+- PR: https://github.com/CubieCode/counterstrain/pull/35
+- Validation: PR #35; live passes skip chunks still queued for catch-up; gametest `livePassWaitsForCatchUp` plus 88/88 gametests; SpreadBenchmark live and catch-up figures within ARCHITECTURE's recorded ranges (catch-up still 32 ticks); CI green.
 - Depends on: P4.1, P4.4
 - Scope: Fix a P4.1 ordering bug found during P4.4: a live pass (`SpreadEngine.visit`) can step a chunk that has just loaded and is still queued for catch-up, which writes `last_update_game_time = now` so the queued catch-up then credits almost none of the time the chunk was away. Live passes must not advance a chunk (or its time) before its pending catch-up has run, for example by skipping queued chunks in `visit` until they are caught up, or by catching them up first within the tick budget. Firebreak and multiplier behaviour (P4.4) and the catch-up budget are unchanged. Update the catch-up rules in docs/ARCHITECTURE.md and remission-data-formats if their wording changes.
 - Acceptance: A gametest reloads a chunk while a live pass is due and shows it ends at the same level as when no live pass runs before its catch-up; existing spread, catch-up and PublicApiTests still pass; `SpreadBenchmark` live and catch-up figures recorded in the PR with no meaningful regression.
@@ -264,8 +265,8 @@ Goals: the player can survive the Strain and push it back locally.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P4.1, P4.4, P4.3
-- Scope: Player attachment `viral_load`; gain in festering chunks, from drinking water from (or swimming in) water in festering chunks, and from flying through miasma clouds; land gain falls off with height above the ground (config: on/off, falloff curve), so airborne players and vehicles avoid the worst of it; decay; escalating debuffs; HUD element; sync. Emits viral load changed and adds the viral load query.
+- Depends on: P4.1, P4.4, P4.3, P8.1
+- Scope: Player attachment `viral_load`; gain in festering chunks, from drinking water from (or swimming in) water in festering chunks, and from flying through miasma clouds; land gain falls off with height above the ground (config: on/off, falloff curve), so airborne players and vehicles avoid the worst of it; decay; escalating debuffs; HUD element; sync. Emits viral load changed and adds the viral load query. Adds any viral load advancement triggers and stats the pack needs, following P8.1's conventions.
 - Acceptance: Gametests for gain (land, drinking, swimming, miasma clouds), altitude falloff (on and off) and decay; harness scene `survival/hud`. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
@@ -274,8 +275,8 @@ Goals: the player can survive the Strain and push it back locally.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P4.1, P4.2, P4.4
-- Scope: Handheld purifier item, `remission:quarantine_pylon` block with radius, `remission:mendroot` cleansing plant (plantable, so automation can place it); purified chunks enter remission and grant remission zone bonuses (config). Emits block purified and chunk entered remission.
+- Depends on: P4.1, P4.2, P4.4, P8.1
+- Scope: Handheld purifier item, `remission:quarantine_pylon` block with radius, `remission:mendroot` cleansing plant (plantable, so automation can place it); purified chunks enter remission and grant remission zone bonuses (config). Emits block purified and chunk entered remission. Adds the region-cleansed advancement trigger (share of chunks in remission around a point) and a chunks-cleansed stat, following P8.1's conventions.
 - Acceptance: Gametests for radius, cleansing and remission entry; harness scene `purification/pylon_radius` (before/after). Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
