@@ -11,7 +11,7 @@ Names follow the glossary and naming rule in docs/DESIGN.md: content IDs, trigge
 
 ## Entity attachment `remission:corruption` (built, P2.1)
 
-`CorruptionState` on any entity, read and written through `com.cubiecode.remission.corruption.Corruption` (`get`, `set(entity, level)`, `isHost`; server writes only). Saved inside the entity's `neoforge:attachments` compound, omitted at level 0:
+`CorruptionState` on any entity, read and written through `com.cubiecode.remission.corruption.Corruption` (`get`, `set(entity, level)`, `isHost`, `isImmune`; server writes only). `set` on an entity in `#remission:immune` ignores any level above 0 and returns the entity's current state; level 0 always cleanses. When `set` turns an entity into a host or back, it applies or removes its mob profile `attributes` (below). Saved inside the entity's `neoforge:attachments` compound, omitted at level 0:
 
 ```json
 { "level": 50, "stage": 2 }
@@ -25,7 +25,7 @@ Names follow the glossary and naming rule in docs/DESIGN.md: content IDs, trigge
 
 Config `config/remission-common.toml`, `[hosts] stageThresholds = [1, 34, 67]`: 1–8 ints in 1–100, order-independent. Changes apply the next time a level is set.
 
-Sync: NeoForge attachment sync, wire format `CorruptionState.STREAM_CODEC` (var-int `level`, var-int `stage`), to players tracking the entity and to the entity itself if it is a player, on change, on start-tracking and on the player's login, respawn and dimension change. Clients read it with `Corruption.get`. Not copied on death or conversion. P4.4 adds the host corrupted / cleansed events, fired from `set`; the debug commands below drive it.
+Sync: NeoForge attachment sync, wire format `CorruptionState.STREAM_CODEC` (var-int `level`, var-int `stage`), to players tracking the entity and to the entity itself if it is a player, on change, on start-tracking and on the player's login, respawn and dimension change. Clients read it with `Corruption.get`. Not copied on death or by vanilla conversions (a zombie villager cured, a pig struck by lightning); infection's own `convert_to` sets it on the replacement (below). P4.4 adds the host corrupted / cleansed events, fired from `set`; the debug commands below drive it.
 
 ## Scanner and data items (built, P6.1)
 
@@ -61,13 +61,24 @@ Matching scans in pack recipes (1.21.1 ingredients): any scan of a kind with `{"
 
 Not part of this contract yet: the `remission:host_scanned` trigger and `remission:hosts_scanned` stat (P8.1), per-player scan progress for the bestiary (P6.2) and scanning samples (unassigned).
 
-## Entity tag `#remission:immune` (planned, P3.3)
+## Infection (built, P3.3)
 
-`data/<ns>/tags/entity_type/immune.json`, standard tag JSON (`{"replace": false, "values": ["minecraft:wither", "#c:bosses", {"id": "othermod:x", "required": false}]}`). Immune mobs never become hosts or convert. Defaults: Remission ships bosses and players-only types; the pack extends it.
+`com.cubiecode.remission.infection.Infection`, server side. A `Mob` that dies (`LivingDeathEvent`, listened at `LOW` priority so other mods' death protection wins) while the damage source's responsible entity (`DamageSource.getEntity()`, so a host skeleton's arrow counts) is a host does not die; the event is cancelled and it becomes a host at the first host stage (level = the lowest `hosts.stageThresholds` entry):
 
-## Mob profile (planned, P3.3)
+- With no mob profile `convert_to`, or `convert_to` naming its own type, it converts in place: same entity, healed to full health, no death loot or XP.
+- Otherwise `Mob.convertTo(type, true)` replaces it (position, age, AI flag, name, persistence, invulnerability, equipment with drop chances, vehicle), `LivingConversionEvent.Pre` can veto it and `.Post` fires. The replacement joins the level first and is infected right after.
 
-Datapack registry `remission:mob_profile`, files `data/<ns>/remission/mob_profile/<name>.json`, reloaded with datapacks (registry: requires world reload; decide in P3.3 and record).
+The victim dies normally when it is immune, already a host, its profile sets `conversion.on_kill` to false, `convert_to` names an immune type or a non-mob type (logged), or another mod vetoes the conversion. Players and other non-`Mob` living entities are never infected on kill.
+
+Festering land: `Infection.canInfectFromFesteringLand(Mob)` (not immune, not a host, profile `conversion.festering_land` not false) is the eligibility check for the phase 4 source; nothing calls it yet and no exposure is tracked.
+
+## Entity tag `#remission:immune` (built, P3.3)
+
+`data/<ns>/tags/entity_type/immune.json`, standard tag JSON (`{"replace": false, "values": ["minecraft:wither", "#c:bosses", {"id": "othermod:x", "required": false}]}`); Java `Corruption.IMMUNE`. An immune entity never becomes a host by any route: `Corruption.set` ignores levels above 0, infection on kill and `convert_to` skip it, and `/remission infect` skips it. A type added to the tag after it already carries the Strain keeps its state until cleansed. Remission ships `#c:bosses` (ender dragon, wither, and whatever other mods tag) and `minecraft:player` (players carry viral load instead, P5.1); the pack extends it.
+
+## Mob profile (built, P3.3)
+
+Datapack registry `remission:mob_profile` (`MobProfiles.KEY`), files `data/<ns>/remission/mob_profile/<name>.json`, server side only (not synced). **Reload:** datapack registries load with the world, so adding, editing or removing a profile needs a world reload (rejoin a singleplayer world, restart a server); `/reload` does not re-read profiles, but tags a profile names in `entities` do rebind on `/reload`. Existing hosts pick up changed `attributes` the next time they join a level after the reload. Remission ships no profiles.
 
 ```json
 {
@@ -80,11 +91,38 @@ Datapack registry `remission:mob_profile`, files `data/<ns>/remission/mob_profil
 }
 ```
 
-`entities`: id, tag or list (HolderSet). `behaviour`: `melee` | `ranged` | `flying` | `swimming` | `passive_hostile` | `none` (planned enum). `attributes`: added as modifiers while the mob is a host. `convert_to`: optional entity id replacing the victim on conversion. `conversion`: whether a kill by this host (`on_kill`) and time in festering chunks (`festering_land`) infect. Highest `priority` wins per entity; mobs with no profile use category defaults.
+| Field | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `entities` | entity type id, `#tag` or list (HolderSet) | required | Types the profile applies to. |
+| `priority` | int | 0 | Where several profiles match a type, the highest wins; ties go to the profile with the lexicographically smallest id. Profiles never merge. |
+| `behaviour` | `melee` \| `ranged` \| `flying` \| `swimming` \| `passive_hostile` \| `none` (`MobBehaviour`) | absent | How the host fights (P3.1); absent uses the category default. |
+| `attributes` | map attribute id → number | `{}` | Added (`add_value`) as permanent modifiers with id `remission:mob_profile` when the mob becomes a host, removed when it stops being one, reconciled with the current profile whenever a host joins a level. Attributes the type lacks are skipped. |
+| `convert_to` | entity type id | absent | Mob type that replaces this mob when a host kills it (Infection above). Must be a non-immune `Mob` type. |
+| `conversion.on_kill` | bool | true | Whether this mob becomes a host when a host kills it. |
+| `conversion.festering_land` | bool | true | Whether prolonged time in festering land can make this mob a host (phase 4). |
 
-## Loot condition `remission:is_corrupted` (planned, P3.3)
+All `conversion` flags describe the profiled mob as the one being infected. A profile that fails to decode (unknown `behaviour`, attribute or entity id) is a datapack registry error, which stops the world from loading. Lookup: `MobProfiles.find(Entity)` → `Optional<MobProfile>`; `MobProfiles.select(candidates, type)` is the same rule over a given list.
 
-`{"condition": "remission:is_corrupted", "entity": "this", "min_stage": 1}`: true when the entity is a host at or above the stage. Used in loot tables and global loot modifiers. GLMs: `data/<ns>/loot_modifiers/<name>.json`, listed in `data/neoforge/loot_modifiers/global_loot_modifiers.json` (`{"replace": false, "entries": ["remission:host_samples"]}`). Remission's own defaults are datagen (`RemissionLootModifierProvider`).
+## Loot condition `remission:is_corrupted` (built, P3.3)
+
+`{"condition": "remission:is_corrupted", "entity": "this", "min_stage": 1}`: true when the `entity` loot target (`this`, `attacker`, `direct_attacker`, `attacking_player`; default `this`) is a living entity at host stage `min_stage` (int ≥ 1, default 1) or higher; false when the target is absent or not living. Java `IsCorruptedCondition`. Usable in loot tables, predicates and global loot modifiers.
+
+## Global loot modifiers (built, P3.3)
+
+Codec `remission:add_item` (`AddItemModifier`): `{"type": "remission:add_item", "conditions": [...], "item": {"id": "remission:host_tissue", "count": 1}}` adds a copy of `item` (an item stack: `id`, optional `count`, `components`) when every condition passes. Remission's default, `data/remission/loot_modifiers/host_samples.json` (datagen, `RemissionLootModifierProvider`), listed in `data/neoforge/loot_modifiers/global_loot_modifiers.json` (`{"replace": false, "entries": ["remission:host_samples"]}`):
+
+```json
+{
+  "type": "remission:add_item",
+  "conditions": [
+    { "condition": "remission:is_corrupted" },
+    { "condition": "minecraft:damage_source_properties" }
+  ],
+  "item": { "id": "remission:host_tissue", "count": 1 }
+}
+```
+
+One `remission:host_tissue` from the death loot of any host (the damage source condition limits it to death drops, not bartering or other tables that set `this`). A host converted on kill does not die, so it drops nothing. Packs change it by overriding the same file, drop it by overriding `global_loot_modifiers.json` with `"replace": true` and relisting the modifiers they keep, and add their own modifiers in their namespace.
 
 ## Recipe types (planned, P7.2)
 
@@ -122,11 +160,11 @@ Registered in `commands/RemissionCommands` on `RegisterCommandsEvent`. Every `/r
 
 | Syntax | Effect | Result (`execute store result`) | Feedback |
 | --- | --- | --- | --- |
-| `/remission infect <targets> <level>` | `targets`: entity selector, any number; `level`: int 1–100. Sets every living target to `level` (may lower it) and restages it from `hosts.stageThresholds`. Non-living targets are skipped. | Living targets set | `commands.remission.infect.success.single` (name, level, stage) / `.multiple` (count, level); broadcast to ops |
+| `/remission infect <targets> <level>` | `targets`: entity selector, any number; `level`: int 1–100. Sets every living target to `level` (may lower it) and restages it from `hosts.stageThresholds`. Non-living and `#remission:immune` targets are skipped. | Living, non-immune targets set | `commands.remission.infect.success.single` (name, level, stage) / `.multiple` (count, level); broadcast to ops |
 | `/remission cleanse <targets>` | Sets every living target to level 0 (removes the attachment). Already clean targets count. | Living targets cleansed | `commands.remission.cleanse.success.single` (name) / `.multiple` (count); broadcast to ops |
 | `/remission inspect <target>` | One entity. Reports its stored level and stage; changes nothing. | Strain level (0 if clean) | `commands.remission.inspect.success` (name, level, stage) or `commands.remission.inspect.clean` (name) |
 
-Errors: `commands.remission.failed.no_living_targets` when `infect` or `cleanse` selects no living entity; `commands.remission.failed.not_living` (name) when `inspect` targets a non-living entity. Vanilla parse errors cover an out-of-range level and a multi-entity `inspect` selector. Example: `/execute store result score @s strain run remission inspect @e[type=minecraft:cow,limit=1,sort=nearest]`.
+Errors: `commands.remission.failed.no_living_targets` when `infect` or `cleanse` selects no living entity; `commands.remission.failed.immune` when every living target of `infect` is immune; `commands.remission.failed.not_living` (name) when `inspect` targets a non-living entity. Vanilla parse errors cover an out-of-range level and a multi-entity `inspect` selector. Example: `/execute store result score @s strain run remission inspect @e[type=minecraft:cow,limit=1,sort=nearest]`.
 
 ## Quest-fired events (planned, P8.2)
 
@@ -181,7 +219,7 @@ Package `com.cubiecode.remission.api`; nothing outside it is public. Events are 
 
 | Event | Fired by | Payload (planned) | Cancellable |
 | --- | --- | --- | --- |
-| host corrupted | P2.1 setter, infection (P3.3) | entity, old and new state, cause | no |
+| host corrupted | P2.1 setter, infection (P3.3, through the setter) | entity, old and new state, cause | no |
 | host cleansed | P2.1 setter, purification | entity, old state, cause | no |
 | chunk stage changed | P4.1 | level, chunk pos, old and new stage | no |
 | nidus destroyed | P4.1 | level, pos, player (optional) | no |
