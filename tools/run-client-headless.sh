@@ -24,6 +24,10 @@
 # ffmpeg with x11grab and libx264 (foundry's system /usr/bin/ffmpeg; override
 # with FFMPEG=/path); without one the script fails before taking the GPU lock.
 # Recording does not touch the game's screenshots.
+# If FML's early display fails (e.g. "Crash during font initialization"), its
+# error dialog falls back to a console "y/n:" prompt that never gets an answer
+# and repeats endlessly; the run is stopped as soon as that prompt appears
+# (reason=early-display-error) instead of filling console.log until --timeout.
 # Output: .local/runs/client-<UTC time>/ (and .local/runs/latest):
 #   console.log      Gradle and game stdout/stderr
 #   latest.log       the game's log (mod/run/client/logs/latest.log)
@@ -163,11 +167,20 @@ while kill -0 "$pid" 2>/dev/null; do
     reason=timeout
     break
   fi
+  # The early display's unanswerable error prompt (see the header).
+  if grep -a -q -m1 -E '\[EARLYDISPLAY/\]: ERROR DISPLAY|^y/n: ' "$run_dir/console.log" 2>/dev/null; then
+    reason=early-display-error
+    break
+  fi
   sleep 2
 done
 
-if [[ "$reason" == timeout ]]; then
-  log "Timeout reached; capturing and stopping the client"
+if [[ "$reason" != exited ]]; then
+  if [[ "$reason" == timeout ]]; then
+    log "Timeout reached; capturing and stopping the client"
+  else
+    log "error: the early display failed and is waiting on an error prompt; stopping the client"
+  fi
   if ((framebuffer)) && [[ -f "$fb_dir/Xvfb_screen0" ]]; then
     python3 -I "$repo_root/tools/xwd-to-png.py" "$fb_dir/Xvfb_screen0" "$run_dir/framebuffer.png" \
       || log "framebuffer conversion failed"
@@ -193,6 +206,12 @@ if [[ "$reason" == timeout ]]; then
   fi
 fi
 wait "$pid" 2>/dev/null && exit_code=0 || exit_code=$?
+if [[ "$reason" == early-display-error ]]; then
+  # Keep the log readable: the prompt repeats thousands of times per second.
+  head -c 16M "$run_dir/console.log" >"$run_dir/console.log.tmp" && mv "$run_dir/console.log.tmp" "$run_dir/console.log"
+  grep -a -m1 -A1 -E 'Failure details:' "$run_dir/console.log" >&2 || true
+  log "error: early display failure (see the EARLYDISPLAY lines in $run_dir/console.log); usually transient, rerun"
+fi
 rm -rf "$fb_dir"
 
 leftover=0
@@ -211,6 +230,7 @@ renderer_log="$run_dir/latest.log"
 "$repo_root/tools/verify-gpu-render.sh" "$renderer_log" >"$run_dir/renderer.txt" 2>&1 || status=1
 cat "$run_dir/renderer.txt" >&2
 
+[[ "$reason" == early-display-error ]] && status=1
 if [[ "$reason" == exited && "$exit_code" -ne 0 ]]; then
   log "error: client exited with code $exit_code (see $run_dir/console.log)"
   status=1
