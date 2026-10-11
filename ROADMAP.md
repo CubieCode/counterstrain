@@ -63,20 +63,22 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.2: Image comparison and motion capture
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p1.2-motion-capture
 - PR: https://github.com/CubieCode/counterstrain/pull/10, https://github.com/CubieCode/counterstrain/pull/13
+- Validation: PRs #10 and #13; compare self-test and GPU runs (unchanged run exit 0, changed scene exit 1 with diff image), `--record` clip 1280x720 from the RTX 4070; reference `smoke/mob_lineup` reviewed.
 - Depends on: P1.1
-- Scope: Decide where reviewed reference images live (a small committed set, or workflow artifacts plus `.local/`) and keep the repository small. Add a tolerant comparison script (per-pixel diff threshold, diff image output) using no root-only tools. Optional ffmpeg clip capture of the Xvfb display for motion checks, only if ffmpeg is available as a user-level install; report if not.
+- Scope: Decide where reviewed reference images live (a small committed set, or workflow artifacts plus `.local/`) and keep the repository small. Add a tolerant comparison script (per-pixel diff threshold, diff image output) using no root-only tools. Optional ffmpeg clip capture of the Xvfb display for motion checks, only if ffmpeg is available on foundry without root; report if not.
 - Acceptance: Changing the scene produces a reported diff with a diff image; an unchanged run passes. Motion capture works, or is documented as unavailable with the reason.
 - Skills: visual-checks, headless-client
 - Parallel: After P1.1
 
 ### P1.3: GPU workflow runs scenes
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p1.3-gpu-workflow-scenes
 - PR: https://github.com/CubieCode/counterstrain/pull/11
+- Validation: PR #11; gpu-smoke runs 38121198473 (pass, compare match), 38120934939 (broken scene fails), 38121021980 (llvmpipe fails).
 - Depends on: P1.1
 - Scope: `gpu-smoke.yml` runs the harness scene list instead of a timeout, uploads screenshots, diffs and logs; optional PR trigger by label.
 - Acceptance: A manual run on `[self-hosted, foundry, gpu]` passes, uploads artifacts and fails on llvmpipe or a crashed scene.
@@ -113,9 +115,10 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.2: Generic host render layer
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p2.2-host-render-layer
 - PR: https://github.com/CubieCode/counterstrain/pull/12
+- Validation: PR #12; gpu-smoke run 38122453882 passes `corruption/stages_vanilla`, `corruption/stages_modded` and `smoke/mob_lineup` with compare match on the RTX 4070; screenshots reviewed; references committed.
 - Depends on: P2.1, P1.1
 - Scope: Layer added to every living-entity renderer (including players) in `EntityRenderersEvent.AddLayers`, re-rendering the parent model with a stage-dependent Strain overlay; client config for intensity. Placeholder art.
 - Acceptance: Works on vanilla and dev-runtime modded mobs (including non-standard models), baby mobs, armour; no crash with renderers lacking a model. Harness scenes `corruption/stages_vanilla`, `corruption/stages_modded`. Ledger updated; placeholders marked.
@@ -124,9 +127,10 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.3: Debug commands
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p2.3-debug-commands
 - PR: https://github.com/CubieCode/counterstrain/pull/9
+- Validation: PR #9; 6 command gametests (12/12 total) in CI.
 - Depends on: P2.1
 - Scope: `/remission infect <targets> <level>`, `/remission cleanse <targets>`, `/remission inspect <target>`; permission level 2.
 - Acceptance: Commands work with selectors; gametests drive them. Ledger updated for command feedback lang strings.
