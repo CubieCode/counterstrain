@@ -1,6 +1,8 @@
 package com.cubiecode.remission.gametest;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.api.ChunkStageChangedEvent;
+import com.cubiecode.remission.api.StrainSpreadAttemptEvent;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionBlocks;
 import com.cubiecode.remission.world.ChunkCorruption;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -22,6 +25,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 
 /**
@@ -42,12 +46,32 @@ public final class SpreadBenchmark {
         if (System.getenv("REMISSION_SPREAD_BENCHMARK") == null) {
             return List.of();
         }
-        // Default config with 16 nidi; then a stress case: 64 nidi and a pass every second, so the budget is always spent.
+        // Default config with 16 nidi; then a stress case: 64 nidi and a pass every second, so the budget is always spent;
+        // then the stress case again with a listener on each public land event (P4.4), as an integration would add.
         return List.of(
                 new TestFunction("spreadBenchmark", "remission.spreadbenchmark_default", "remission:empty", 200, 0L, true,
-                        helper -> measure(helper, "default", 4, 0, 64)),
+                        helper -> measure(helper, "default", 4, 0, 64, false)),
                 new TestFunction("spreadBenchmark", "remission.spreadbenchmark_stress", "remission:empty", 200, 0L, true,
-                        helper -> measure(helper, "stress", 8, 20, 128)));
+                        helper -> measure(helper, "stress", 8, 20, 128, false)),
+                new TestFunction("spreadBenchmark", "remission.spreadbenchmark_listeners", "remission:empty", 200, 0L, true,
+                        helper -> measure(helper, "listeners", 8, 20, 192, true)));
+    }
+
+    private static void measure(GameTestHelper helper, String name, int nidiPerSide, int intervalTicks, int offset,
+                                boolean listeners) {
+        Consumer<StrainSpreadAttemptEvent> spread = event -> event.setRateMultiplier(event.getRateMultiplier() * 1.0);
+        Consumer<ChunkStageChangedEvent> stage = event -> {
+        };
+        if (listeners) {
+            NeoForge.EVENT_BUS.addListener(StrainSpreadAttemptEvent.class, spread);
+            NeoForge.EVENT_BUS.addListener(ChunkStageChangedEvent.class, stage);
+        }
+        try {
+            measure(helper, name, nidiPerSide, intervalTicks, offset);
+        } finally {
+            NeoForge.EVENT_BUS.unregister(spread);
+            NeoForge.EVENT_BUS.unregister(stage);
+        }
     }
 
     private static void measure(GameTestHelper helper, String name, int nidiPerSide, int intervalTicks, int offset) {

@@ -1,6 +1,7 @@
 package com.cubiecode.remission.infection;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.api.CorruptionCause;
 import com.cubiecode.remission.behaviour.MobProfile;
 import com.cubiecode.remission.behaviour.MobProfiles;
 import com.cubiecode.remission.config.RemissionCommonConfig;
@@ -51,7 +52,7 @@ public final class Infection {
         Optional<EntityType<?>> convertTo = profile.flatMap(MobProfile::convertTo).map(holder -> holder.value());
         if (convertTo.isEmpty() || convertTo.get() == victim.getType()) {
             victim.setHealth(victim.getMaxHealth());
-            Corruption.set(victim, initialLevel());
+            Corruption.set(victim, initialLevel(), CorruptionCause.INFECTION);
             return victim;
         }
         return convert(victim, convertTo.get());
@@ -97,7 +98,7 @@ public final class Infection {
         if (host == null) {
             return null;
         }
-        Corruption.set(host, initialLevel());
+        Corruption.set(host, initialLevel(), CorruptionCause.INFECTION);
         EventHooks.onLivingConvert(victim, host);
         return host;
     }

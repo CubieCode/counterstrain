@@ -32,8 +32,11 @@ public final class SpreadEngine {
 
         void set(long chunk, ChunkCorruption state);
 
-        /** Lets the level scale or cancel (return 0) one chunk-to-chunk step. */
-        int spreadAttempt(long from, long to, int amount);
+        /**
+         * Lets the level scale or cancel (return 0) one chunk-to-chunk step at {@code gameTime}; {@code catchUp} when it
+         * is part of a reloaded chunk's fast-forward.
+         */
+        int spreadAttempt(long from, long to, int amount, long gameTime, boolean catchUp);
 
         /** Every indexed nidus in a fixed order. */
         List<Nidus> nidi();
@@ -121,7 +124,7 @@ public final class SpreadEngine {
             int rate = distance == 0 ? current.nidusGrowth() : current.spreadStep();
             int amount = (int) Math.min(target - level, missed * rate);
             if (distance > 0) {
-                amount = clamp(land.spreadAttempt(parent(origin, dx, dz), chunk, amount), target - level);
+                amount = clamp(land.spreadAttempt(parent(origin, dx, dz), chunk, amount, now, true), target - level);
             }
             level += amount;
         }
@@ -200,8 +203,8 @@ public final class SpreadEngine {
             if (parentLevel < pass.spreadThreshold()) {
                 return;
             }
-            amount = clamp(land.spreadAttempt(parent, chunk, Math.min(pass.spreadStep(), target - state.level())),
-                    target - state.level());
+            amount = clamp(land.spreadAttempt(parent, chunk, Math.min(pass.spreadStep(), target - state.level()), now,
+                    false), target - state.level());
         }
         if (amount > 0) {
             land.set(chunk, new ChunkCorruption(state.level() + amount, now));

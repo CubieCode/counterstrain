@@ -66,7 +66,7 @@ public final class FesteringLandTests {
         }
 
         @Override
-        public int spreadAttempt(long from, long to, int amount) {
+        public int spreadAttempt(long from, long to, int amount, long gameTime, boolean catchUp) {
             return blocked.test(to) ? 0 : amount;
         }
 

@@ -16,6 +16,7 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.IntValue SPREAD_THRESHOLD;
     public static final ModConfigSpec.IntValue SPREAD_CHUNK_BUDGET;
     public static final ModConfigSpec.IntValue SPREAD_CATCH_UP_BUDGET;
+    public static final ModConfigSpec.ConfigValue<List<? extends Integer>> FESTERING_STAGE_THRESHOLDS;
 
     static {
         BUILDER.push("hosts");
@@ -51,6 +52,16 @@ public final class RemissionCommonConfig {
         SPREAD_CATCH_UP_BUDGET = BUILDER
                 .comment("Loaded chunks fast-forwarded per server tick and level; the rest wait for later ticks.")
                 .defineInRange("catchUpBudget", 32, 1, 4096);
+        BUILDER.pop();
+
+        BUILDER.push("festering");
+        FESTERING_STAGE_THRESHOLDS = BUILDER
+                .comment("Chunk Strain levels (1-" + CorruptionState.MAX_LEVEL + ") at which land reaches each festering stage.",
+                        "A chunk's stage is the number of thresholds its level meets; one entry per stage.",
+                        "Read whenever a chunk's level changes or a stage is queried.")
+                .defineList(List.of("stageThresholds"), () -> List.of(1, 25, 50, 75), () -> CorruptionState.MAX_LEVEL,
+                        value -> value instanceof Integer i && i >= 1 && i <= CorruptionState.MAX_LEVEL,
+                        ModConfigSpec.Range.of(1, 8));
         BUILDER.pop();
     }
 
