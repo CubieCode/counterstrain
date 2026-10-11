@@ -104,7 +104,7 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 - Status: `review`
 - Owner: feat/p2.1-corruption-attachment
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/5
 - Depends on: P0.1
 - Scope: `CorruptionState` record (level, stage; `variant` reserved for resistant mutations), codec, entity attachment `corruption`, server API (`get/set/isHost`), sync to tracking clients on change and start-tracking (choose custom payload vs NeoForge attachment sync and record it in ARCHITECTURE). Common config for stage thresholds.
 - Acceptance: State survives save/reload and dimension change; clients see changes for tracked entities only; gametests cover set/get/persist and stage thresholds.
