@@ -5,6 +5,7 @@ import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 import net.minecraft.world.entity.FlyingMob;
 import net.minecraft.world.entity.LivingEntity;
@@ -65,8 +66,20 @@ public final class HostBehaviours {
     }
 
     /**
-     * How {@code mob} fights as a host. This is the single seam for per-mob profiles (P3.3); today it is the category
-     * default, checked in this order:
+     * How {@code mob} fights as a host: the {@code behaviour} of its {@code remission:mob_profile}
+     * ({@link MobProfiles#find}) when the profile sets one, else the category default. The single seam for host behaviour.
+     */
+    public static MobBehaviour behaviourFor(Mob mob) {
+        return behaviourFor(mob, MobProfiles.find(mob));
+    }
+
+    /** {@link #behaviourFor(Mob)} with an explicit profile. */
+    public static MobBehaviour behaviourFor(Mob mob, Optional<MobProfile> profile) {
+        return profile.flatMap(MobProfile::behaviour).orElseGet(() -> categoryDefault(mob));
+    }
+
+    /**
+     * The behaviour of a mob with no profile behaviour, checked in this order:
      * <ol>
      * <li>{@code none}: brain-based mobs (any memory in their {@code Brain}: villagers, piglins, axolotls, goats...).</li>
      * <li>{@code flying}: {@link FlyingMob}, {@link FlyingAnimal}, {@link AmbientCreature}, category {@code ambient}
@@ -77,7 +90,7 @@ public final class HostBehaviours {
      * </ol>
      */
     @SuppressWarnings("deprecation") // Brain#getMemories is marked debug-only; it is the only way to see registered memories
-    public static MobBehaviour behaviourFor(Mob mob) {
+    public static MobBehaviour categoryDefault(Mob mob) {
         if (!mob.getBrain().getMemories().isEmpty()) {
             return MobBehaviour.NONE;
         }
@@ -105,10 +118,18 @@ public final class HostBehaviours {
         if (mob.level().isClientSide()) {
             return;
         }
+        update(mob, MobProfiles.find(mob));
+    }
+
+    /** {@link #update(Mob)} with an explicit profile. Server only. */
+    public static void update(Mob mob, Optional<MobProfile> profile) {
+        if (mob.level().isClientSide()) {
+            return;
+        }
         boolean applied = hasHostGoals(mob);
         boolean host = Corruption.isHost(mob);
         if (host && !applied) {
-            apply(mob);
+            apply(mob, behaviourFor(mob, profile));
         } else if (!host && applied) {
             restore(mob);
         }
@@ -124,8 +145,7 @@ public final class HostBehaviours {
         return target.attackable() && !Corruption.isHost(target);
     }
 
-    private static void apply(Mob mob) {
-        MobBehaviour behaviour = behaviourFor(mob);
+    private static void apply(Mob mob, MobBehaviour behaviour) {
         if (behaviour != MobBehaviour.MELEE && behaviour != MobBehaviour.RANGED
                 && behaviour != MobBehaviour.PASSIVE_HOSTILE) {
             // flying and swimming wait for P3.2; none keeps the mob's own AI. Host-on-host targeting is still

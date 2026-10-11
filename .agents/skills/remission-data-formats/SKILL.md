@@ -95,7 +95,7 @@ Datapack registry `remission:mob_profile` (`MobProfiles.KEY`), files `data/<ns>/
 | --- | --- | --- | --- |
 | `entities` | entity type id, `#tag` or list (HolderSet) | required | Types the profile applies to. |
 | `priority` | int | 0 | Where several profiles match a type, the highest wins; ties go to the profile with the lexicographically smallest id. Profiles never merge. |
-| `behaviour` | `melee` \| `ranged` \| `flying` \| `swimming` \| `passive_hostile` \| `none` (`MobBehaviour`) | absent | How the host fights (P3.1); absent uses the category default. |
+| `behaviour` | `melee` \| `ranged` \| `flying` \| `swimming` \| `passive_hostile` \| `none` (`MobBehaviour`, built) | absent | How the host fights; `HostBehaviours.behaviourFor` uses it ahead of the category default when present. Value meanings and category defaults: docs/ARCHITECTURE.md, Behaviour. `flying` and `swimming` change no goals until P3.2; `none` opts the mob out of host goals. |
 | `attributes` | map attribute id → number | `{}` | Added (`add_value`) as permanent modifiers with id `remission:mob_profile` when the mob becomes a host, removed when it stops being one, reconciled with the current profile whenever a host joins a level. Attributes the type lacks are skipped. |
 | `convert_to` | entity type id | absent | Mob type that replaces this mob when a host kills it (Infection above). Must be a non-immune `Mob` type. |
 | `conversion.on_kill` | bool | true | Whether this mob becomes a host when a host kills it. |
