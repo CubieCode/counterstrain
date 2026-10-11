@@ -228,8 +228,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.4: Public API and events
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p4.4-public-api
 - PR:
 - Depends on: P2.1, P4.1
 - Scope: Create `com.cubiecode.remission.api`: event base classes and conventions (server side, `NeoForge.EVENT_BUS`, posted after the change; batched changes post per chunk), and the hooks for systems already built: host corrupted, host cleansed, chunk stage changed, nidus destroyed, a cancellable Strain spread attempt with a rate multiplier, and queries for corruption stage at a position or chunk and whether an entity is a host. Document every event and query (fields, side, when fired, cancellable or not) in remission-data-formats and the ARCHITECTURE contracts table. The remaining DESIGN hooks (block festered, block purified, chunk entered remission, surge started/ended, viral load changed and its query) are added by the items that build those systems.
