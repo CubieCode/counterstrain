@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option; P2.3 adds the `/remission` debug commands (below). Everything below marked *planned* is a roadmap item.
+Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 has started: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option; P2.3 adds the `/remission` debug commands (below). Phase 6 has started: P6.1 adds the scanner and scan data items (research, below). Everything below marked *planned* is a roadmap item.
 
 ## Repository and products
 
@@ -37,14 +37,15 @@ Phase 0 was scaffold only: deferred registers, configs, payload registrar, datag
 | `client/` | `@Mod(dist = CLIENT)` entrypoint, client config screen, `HostOverlayLayer` and `HostRenderTypes` (host rendering, below); planned: renderers, client payload handling |
 | `server/` | `@Mod(dist = DEDICATED_SERVER)` entrypoint; dedicated-server-only setup |
 | `config/` | `RemissionCommonConfig` (gameplay: `hosts.stageThresholds`), `RemissionClientConfig` (presentation: `hosts.overlayIntensity`) |
-| `registry/` | One `DeferredRegister` holder per kind: blocks, items, attachments, loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
+| `registry/` | One `DeferredRegister` holder per kind: blocks, items, data components, attachments, loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
 | `network/` | `RegisterPayloadHandlersEvent` registrar, `PROTOCOL_VERSION`; no payloads yet (corruption uses attachment sync) |
 | `data/` | `GatherDataEvent` wiring and providers (blockstates, item models, tags, recipes, loot tables, global loot modifiers) |
 | `corruption/` | `CorruptionState` record and codecs, `Corruption` server API (`get`, `set`, `isHost`) |
 | `commands/` | `RemissionCommands`: the `/remission` command tree, registered on `RegisterCommandsEvent` |
 | `gametest/` | `@GameTestHolder` classes; `remission:empty` is a 3x3x3 air template |
 | *planned* `api/` | Public events and queries for integrations, addons and KubeJS (P4.4) |
-| *planned* `world/`, `purification/`, `research/`, `tech/`, `cure/`, `quest/`, `integration/` | Feature systems by roadmap phase |
+| `research/` | Scanner item and behaviour (`ScannerItem`, `Scanning`), scan data items (`ScanItem`) and the `scan_data` component (`ScanData`); P6.1 |
+| *planned* `world/`, `purification/`, `tech/`, `cure/`, `quest/`, `integration/` | Feature systems by roadmap phase |
 
 Resources: `src/main/resources` (hand-written: lang, textures, structures), `src/generated/resources` (datagen, committed), `src/main/templates/META-INF/neoforge.mods.toml` (expanded from `gradle.properties`).
 
@@ -72,6 +73,15 @@ Internal Java system names and public API types may keep the generic word "corru
 - Client config `hosts.overlayIntensity` (0–1, default 1) is the overlay's vertex alpha; 0 turns it off. Presentation only.
 - Limits: layers that draw their own model (armour, slime gel, the drowned's outer layer, sheep wool, saddles drawn by other layers) are not overlaid, so hosts under them look muted (roadmap item P2.4); renderers that are not `LivingEntityRenderer`s get nothing. Stage particles (DESIGN) are not built yet.
 - Harness scenes `corruption/stages_vanilla` and `corruption/stages_modded` (visual-checks) show stages 0–3 on a vanilla lineup (baby, armoured, player in third person) and on the Mekanism robit with non-standard vanilla renderers (armour stand, slimes, guardian, wither; the ender dragon as a renderer without the layer).
+
+### Research (phase 6, built in P6.1)
+
+- `remission:scanner` makes data items: a host gives `remission:host_scan`, a block gives `remission:block_scan`, a living non-host gives nothing. The data item carries the `remission:scan_data` component (`ScanData`: host entity type id and stored host stage, or block id), registered in `RemissionDataComponents` as persistent and network-synchronized. Field contract: remission-data-formats ("Scanner and data items").
+- The server decides and writes; the client only claims the interaction (arm swing). Entity scans run from `PlayerInteractEvent.EntityInteract` / `EntityInteractSpecific` so they come before the target's own interaction (villager trading, mounting); block scans run from `onItemUseFirst`, before the block's use. A 20-tick item cooldown follows every attempt and also stops a double scan when both entity events fire.
+- Feedback is a vanilla action-bar message; no payloads. The scan reads host state through `Corruption.get` and never changes it.
+- No timestamp or player is stored, so identical scans stack and recipe ingredients can match the full component value (NeoForge components ingredient).
+- Later: `host_scanned` trigger and `hosts_scanned` stat (P8.1), per-player scan progress and the bestiary (P6.2), machines that consume scans (P7.2). The scanner sits in the vanilla Tools and Utilities tab until Remission has its own creative tab.
+- Harness scene `research/scanner` (visual-checks): the three items in item frames, and an armour stand pointing the scanner at a stage 2 host cow.
 
 ### Behaviour (phase 3)
 
@@ -107,6 +117,7 @@ The Counterstrain is deployed from a dispersal source: a position, radius and ra
 | Host loot | `data/<ns>/loot_modifiers/*.json` + `data/neoforge/loot_modifiers/global_loot_modifiers.json`, condition `remission:is_corrupted` | remission-data-formats |
 | Fester variants | per-source-biome fester biome (data map, shape fixed in P4.2) | remission-data-formats, minecraft-world-generation |
 | Machine recipes | recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing` | remission-data-formats, kubejs-scripting |
+| Scan data items | items `remission:host_scan`, `remission:block_scan`, data component `remission:scan_data` (P6.1, built) | remission-data-formats, kubejs-scripting |
 | Quest gates | advancement triggers `remission:*` (`nidus_destroyed`, `host_scanned`, ...), custom stats (`remission:nidi_destroyed`, ...) | remission-data-formats, ftb-quests-authoring |
 | Debug commands | `/remission infect <targets> <level>`, `/remission cleanse <targets>`, `/remission inspect <target>` (permission 2; P2.3, built) | remission-data-formats |
 | Quest-fired events | commands (`/remission surge start`, `/remission nidus seed`, `/remission region advance`; P8.2) | ftb-quests-authoring |
