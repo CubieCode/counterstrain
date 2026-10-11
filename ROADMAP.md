@@ -225,8 +225,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P4.1, P3.1, P4.4
-- Scope: Periodic surges that accelerate spread, spawn hosts and release miasma clouds (drifting airborne areas above festering land; their viral load effect is added by P5.1), with warnings; config and command to trigger. Emits surge started and surge ended events.
+- Depends on: P4.1, P3.1, P4.4, P8.1
+- Scope: Periodic surges that accelerate spread, spawn hosts and release miasma clouds (drifting airborne areas above festering land; their viral load effect is added by P5.1), with warnings; config and command to trigger. Emits surge started and surge ended events. Adds the surge survived advancement trigger and stat, following P8.1's trigger and stat conventions.
 - Acceptance: Gametests for scheduling and cloud spawning and drift; harness scenes `world/surge` and `world/miasma_cloud`. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
@@ -264,8 +264,8 @@ Goals: the player can survive the Strain and push it back locally.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P4.1, P4.4, P4.3
-- Scope: Player attachment `viral_load`; gain in festering chunks, from drinking water from (or swimming in) water in festering chunks, and from flying through miasma clouds; land gain falls off with height above the ground (config: on/off, falloff curve), so airborne players and vehicles avoid the worst of it; decay; escalating debuffs; HUD element; sync. Emits viral load changed and adds the viral load query.
+- Depends on: P4.1, P4.4, P4.3, P8.1
+- Scope: Player attachment `viral_load`; gain in festering chunks, from drinking water from (or swimming in) water in festering chunks, and from flying through miasma clouds; land gain falls off with height above the ground (config: on/off, falloff curve), so airborne players and vehicles avoid the worst of it; decay; escalating debuffs; HUD element; sync. Emits viral load changed and adds the viral load query. Adds any viral load advancement triggers and stats the pack needs, following P8.1's conventions.
 - Acceptance: Gametests for gain (land, drinking, swimming, miasma clouds), altitude falloff (on and off) and decay; harness scene `survival/hud`. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
@@ -274,8 +274,8 @@ Goals: the player can survive the Strain and push it back locally.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P4.1, P4.2, P4.4
-- Scope: Handheld purifier item, `remission:quarantine_pylon` block with radius, `remission:mendroot` cleansing plant (plantable, so automation can place it); purified chunks enter remission and grant remission zone bonuses (config). Emits block purified and chunk entered remission.
+- Depends on: P4.1, P4.2, P4.4, P8.1
+- Scope: Handheld purifier item, `remission:quarantine_pylon` block with radius, `remission:mendroot` cleansing plant (plantable, so automation can place it); purified chunks enter remission and grant remission zone bonuses (config). Emits block purified and chunk entered remission. Adds the region-cleansed advancement trigger (share of chunks in remission around a point) and a chunks-cleansed stat, following P8.1's conventions.
 - Acceptance: Gametests for radius, cleansing and remission entry; harness scene `purification/pylon_radius` (before/after). Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
