@@ -228,7 +228,7 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.4: Public API and events
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p4.4-public-api
 - PR:
 - Depends on: P2.1, P4.1
