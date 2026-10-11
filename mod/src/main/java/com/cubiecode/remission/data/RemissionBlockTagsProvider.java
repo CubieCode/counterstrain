@@ -23,7 +23,7 @@ public final class RemissionBlockTagsProvider extends BlockTagsProvider {
         // festering log do not decay.
         tag(BlockTags.MINEABLE_WITH_SHOVEL).add(RemissionBlocks.FESTERING_GRASS.get());
         tag(BlockTags.MINEABLE_WITH_AXE).add(RemissionBlocks.FESTERING_LOG.get());
-        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(RemissionBlocks.FESTERED_STONE.get());
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(RemissionBlocks.FESTERED_STONE.get(), RemissionBlocks.FESTERED_DEEPSLATE.get());
         tag(BlockTags.DIRT).add(RemissionBlocks.FESTERING_GRASS.get());
         tag(BlockTags.LOGS).add(RemissionBlocks.FESTERING_LOG.get());
         tag(BlockTags.LEAVES).add(RemissionBlocks.FESTERING_LEAVES.get());

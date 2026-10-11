@@ -1,7 +1,7 @@
 {
   "values": {
-    "#minecraft:base_stone_overworld": {
-      "block": "remission:festered_stone",
+    "#minecraft:deepslate_ore_replaceables": {
+      "block": "remission:festered_deepslate",
       "stage": 3
     },
     "#minecraft:leaves": {
@@ -11,6 +11,10 @@
     "#minecraft:logs": {
       "block": "remission:festering_log",
       "stage": 2
+    },
+    "#minecraft:stone_ore_replaceables": {
+      "block": "remission:festered_stone",
+      "stage": 3
     },
     "minecraft:grass_block": {
       "block": "remission:festering_grass"

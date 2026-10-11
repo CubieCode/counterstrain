@@ -14,7 +14,7 @@ import net.neoforged.neoforge.registries.datamaps.DataMapType;
 import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
 
 /**
- * The data that says what festering land turns into (P4.2). Both are NeoForge data maps, server side only, reloaded
+ * The data that says what festering land turns into (P4.2; underground stages P4.6). Both are NeoForge data maps, server side only, reloaded
  * with {@code /reload}; contracts in the remission-data-formats skill.
  */
 @EventBusSubscriber(modid = Remission.MOD_ID)
@@ -39,17 +39,35 @@ public final class FesterMaps {
     private FesterMaps() {
     }
 
+    /** The {@code underground_stage} of a {@code festers_into} entry that does not set one. */
+    public static final int UNDERGROUND_STAGE = 3;
+
     /**
      * One {@code festers_into} value.
      *
-     * @param block the block it turns into; state properties both blocks share (axis, snowy, leaf distance) carry over
-     * @param stage the chunk festering stage at which it turns, at least 1 (default 1)
+     * @param block            the block it turns into; state properties both blocks share (axis, snowy, leaf distance)
+     *                         carry over
+     * @param stage            the chunk festering stage at which it turns, at least 1 (default 1)
+     * @param undergroundStage the chunk festering stage from which it also turns where it faces air away from the
+     *                         surface (cave walls, floors and ceilings), never below {@code stage}; 0 turns that off
+     *                         (default {@link #UNDERGROUND_STAGE})
      */
-    public record FesterBlock(Block block, int stage) {
+    public record FesterBlock(Block block, int stage, int undergroundStage) {
         public static final Codec<FesterBlock> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 BuiltInRegistries.BLOCK.byNameCodec().fieldOf("block").forGetter(FesterBlock::block),
-                Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("stage", 1).forGetter(FesterBlock::stage)
+                Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("stage", 1).forGetter(FesterBlock::stage),
+                Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("underground_stage", UNDERGROUND_STAGE)
+                        .forGetter(FesterBlock::undergroundStage)
         ).apply(instance, FesterBlock::new));
+
+        public FesterBlock(Block block, int stage) {
+            this(block, stage, UNDERGROUND_STAGE);
+        }
+
+        /** Whether it turns underground in a chunk at festering stage {@code chunkStage}. */
+        public boolean festersUnderground(int chunkStage) {
+            return undergroundStage > 0 && chunkStage >= Math.max(stage, undergroundStage);
+        }
     }
 
     /**

@@ -38,6 +38,8 @@ Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in t
 | `mod/src/main/resources/assets/remission/textures/block/festering_log_top.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festering log end grain (P4.2): violet rings with a dark rim and green flecks. |
 | `mod/src/main/resources/assets/remission/textures/block/festering_leaves.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festering leaves (P4.2): dark mauve foliage with transparent gaps (cutout, untinted). The art pass should keep the hole density close to vanilla leaves so canopies read the same with fancy and fast graphics. |
 | `mod/src/main/resources/assets/remission/textures/block/festered_stone.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festered stone (P4.2): vanilla-grey stone with violet cracks and green flecks; currently reads as stripes when tiled. The art pass should make the cracks irregular across tiles. |
+| `mod/src/main/resources/assets/remission/textures/block/festered_deepslate.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festered deepslate side (P4.6): dark slate grey in horizontal bands with bruise-violet seams and blotches and a few yellow-green flecks. Must read as violet festering, never as sculk (no teal or cyan); the art pass should keep deepslate's layered feel. |
+| `mod/src/main/resources/assets/remission/textures/block/festered_deepslate_top.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festered deepslate end (P4.6): the side palette in rough concentric bands with wandering violet seams. |
 
 ## Models
 
@@ -60,10 +62,13 @@ Datagen block and item models are `procedural (datagen)` and follow their textur
 | `mod/src/generated/resources/assets/remission/models/block/festering_log_horizontal.json` | model | procedural (datagen) | draft | `cube_column_horizontal` for `remission:festering_log` on the x and z axes (`logBlock`, P4.2). |
 | `mod/src/generated/resources/assets/remission/models/block/festering_leaves.json` | model | procedural (datagen) | draft | `cube_all` for `remission:festering_leaves`, render type `cutout_mipped` (P4.2). |
 | `mod/src/generated/resources/assets/remission/models/block/festered_stone.json` | model | procedural (datagen) | draft | `cube_all` for `remission:festered_stone` (P4.2). |
+| `mod/src/generated/resources/assets/remission/models/block/festered_deepslate.json` | model | procedural (datagen) | draft | `cube_column` for `remission:festered_deepslate` (`axisBlock`, P4.6). |
+| `mod/src/generated/resources/assets/remission/models/block/festered_deepslate_horizontal.json` | model | procedural (datagen) | draft | `cube_column_horizontal` for `remission:festered_deepslate` on the x and z axes (`axisBlock`, P4.6). |
 | `mod/src/generated/resources/assets/remission/models/item/festering_grass.json` | model | procedural (datagen) | draft | Festering grass block item model, inherits the block model. |
 | `mod/src/generated/resources/assets/remission/models/item/festering_log.json` | model | procedural (datagen) | draft | Festering log block item model, inherits the block model. |
 | `mod/src/generated/resources/assets/remission/models/item/festering_leaves.json` | model | procedural (datagen) | draft | Festering leaves block item model, inherits the block model. |
 | `mod/src/generated/resources/assets/remission/models/item/festered_stone.json` | model | procedural (datagen) | draft | Festered stone block item model, inherits the block model. |
+| `mod/src/generated/resources/assets/remission/models/item/festered_deepslate.json` | model | procedural (datagen) | draft | Festered deepslate block item model, inherits the block model. |
 
 ## GUI art, icons and logos
 
@@ -131,6 +136,7 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.festering_log` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festering log block and item name (P4.2); glossary term. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.festering_leaves` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festering leaves block and item name (P4.2); glossary term. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.festered_stone` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festered stone block and item name (P4.2); glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.festered_deepslate` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festered deepslate block and item name (P4.6); glossary term. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:biome.remission.fester` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Name of the `remission:fester` biome (P4.2), shown in F3 and by biome-aware mods; glossary term. |
 
 ## Mod and pack metadata
