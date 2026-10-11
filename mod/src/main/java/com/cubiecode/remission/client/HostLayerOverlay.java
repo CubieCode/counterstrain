@@ -37,7 +37,8 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
  * the drowned's outer layer, horse and wolf armour), which {@link HostOverlayLayer} cannot reach because it only
  * redraws the parent model with the parent texture.
  *
- * <p>One companion is added after each such layer, in any {@link LivingEntityRenderer} that uses it (modded renderers
+ * <p>One companion per such layer is appended to the end of the layer list (after eyes, held items and the rest) of
+ * any {@link LivingEntityRenderer} that uses it (modded renderers
  * included). For hosts, the companion runs its layer again with a buffer source that sends every textured entity draw
  * into the host overlay render type for that same texture, with the overlay colour; glint, trim atlas and outline
  * draws are dropped. The layer's own logic (which pieces, which models, NeoForge custom armour models and textures)
@@ -66,7 +67,7 @@ final class HostLayerOverlay<T extends LivingEntity, M extends EntityModel<T>> e
     }
 
     /**
-     * Adds a companion after every wrapped layer of every living-entity renderer and player skin renderer. Runs at
+     * Appends a companion for every wrapped layer to every living-entity renderer and player skin renderer. Runs at
      * the lowest priority so layers other mods add in this event are seen too.
      */
     static void addLayers(EntityRenderersEvent.AddLayers event) {

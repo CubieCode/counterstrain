@@ -26,6 +26,7 @@ final class HostRenderTypes {
 
     private static ShaderInstance shader;
 
+    /** Bounded by the loaded mob textures x patterns x layering states in use. */
     private static final Function<Key, RenderType> HOST_OVERLAY = Util.memoize(key -> RenderType.create(
             Remission.MOD_ID + "_host_overlay",
             DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 1536, true, true,
