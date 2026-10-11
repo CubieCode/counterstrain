@@ -2,6 +2,7 @@ package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.world.NidusBlock;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -20,6 +21,19 @@ public final class RemissionBlocks {
                     .strength(5.0F, 6.0F)
                     .sound(SoundType.SCULK_CATALYST)
                     .pushReaction(PushReaction.BLOCK));
+
+    /** Miasma in the world (P7.1). */
+    public static final DeferredBlock<LiquidBlock> MIASMA = BLOCKS.registerBlock("miasma",
+            properties -> new LiquidBlock(RemissionFluids.MIASMA.get(), properties),
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_PURPLE)
+                    .replaceable()
+                    .noCollission()
+                    .strength(100.0F)
+                    .pushReaction(PushReaction.DESTROY)
+                    .noLootTable()
+                    .liquid()
+                    .sound(SoundType.EMPTY));
 
     private RemissionBlocks() {
     }

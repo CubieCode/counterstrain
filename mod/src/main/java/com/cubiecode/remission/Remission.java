@@ -2,11 +2,13 @@ package com.cubiecode.remission;
 
 import com.cubiecode.remission.commands.RemissionCommands;
 import com.cubiecode.remission.config.RemissionCommonConfig;
+import com.cubiecode.remission.integration.mekanism.MekanismIntegration;
 import com.cubiecode.remission.registry.RemissionRegistries;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
@@ -20,6 +22,10 @@ public final class Remission {
 
     public Remission(IEventBus modBus, ModContainer container) {
         RemissionRegistries.register(modBus);
+        // Optional integrations: each class is touched only when its mod is loaded.
+        if (ModList.get().isLoaded(MekanismIntegration.MOD_ID)) {
+            MekanismIntegration.register(modBus);
+        }
         container.registerConfig(ModConfig.Type.COMMON, RemissionCommonConfig.SPEC);
         NeoForge.EVENT_BUS.addListener(RemissionCommands::register);
         LOGGER.info("Remission loading");

@@ -17,5 +17,8 @@ public final class RemissionItemModelProvider extends ItemModelProvider {
         basicItem(RemissionItems.HOST_SCAN.get());
         basicItem(RemissionItems.BLOCK_SCAN.get());
         basicItem(RemissionItems.HOST_TISSUE.get());
+        basicItem(RemissionItems.MIASMA_BUCKET.get());
+        basicItem(RemissionItems.NIDUS_CORE.get());
+        basicItem(RemissionItems.FESTERED_SOIL.get());
     }
 }

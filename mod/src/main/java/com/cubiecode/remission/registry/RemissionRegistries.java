@@ -10,6 +10,8 @@ public final class RemissionRegistries {
     public static void register(IEventBus modBus) {
         RemissionBlocks.BLOCKS.register(modBus);
         RemissionItems.ITEMS.register(modBus);
+        RemissionFluids.FLUID_TYPES.register(modBus);
+        RemissionFluids.FLUIDS.register(modBus);
         RemissionBlockEntities.BLOCK_ENTITY_TYPES.register(modBus);
         RemissionAttachments.ATTACHMENT_TYPES.register(modBus);
         RemissionLootConditions.LOOT_CONDITION_TYPES.register(modBus);

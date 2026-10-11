@@ -1,0 +1,18 @@
+{
+  "type": "remission:add_item",
+  "conditions": [
+    {
+      "blocks": "#remission:festered_soil_sources",
+      "condition": "remission:is_festering",
+      "min_stage": 2
+    },
+    {
+      "chance": 0.25,
+      "condition": "minecraft:random_chance"
+    }
+  ],
+  "item": {
+    "count": 1,
+    "id": "remission:festered_soil"
+  }
+}

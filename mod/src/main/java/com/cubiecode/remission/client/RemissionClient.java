@@ -22,5 +22,6 @@ public final class RemissionClient {
         modBus.addListener((EntityRenderersEvent.AddLayers event) -> HostOverlayLayer.addLayers(event));
         modBus.addListener(EventPriority.LOWEST,
                 (EntityRenderersEvent.AddLayers event) -> HostLayerOverlay.addLayers(event));
+        modBus.addListener(MiasmaClientExtensions::register);
     }
 }

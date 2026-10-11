@@ -130,7 +130,7 @@ All `conversion` flags describe the profiled mob as the one being infected. A pr
 
 ## Global loot modifiers (built, P3.3)
 
-Codec `remission:add_item` (`AddItemModifier`): `{"type": "remission:add_item", "conditions": [...], "item": {"id": "remission:host_tissue", "count": 1}}` adds a copy of `item` (an item stack: `id`, optional `count`, `components`) when every condition passes. Remission's default, `data/remission/loot_modifiers/host_samples.json` (datagen, `RemissionLootModifierProvider`), listed in `data/neoforge/loot_modifiers/global_loot_modifiers.json` (`{"replace": false, "entries": ["remission:host_samples"]}`):
+Codec `remission:add_item` (`AddItemModifier`): `{"type": "remission:add_item", "conditions": [...], "item": {"id": "remission:host_tissue", "count": 1}}` adds a copy of `item` (an item stack: `id`, optional `count`, `components`) when every condition passes. Remission's default, `data/remission/loot_modifiers/host_samples.json` (datagen, `RemissionLootModifierProvider`), listed in `data/neoforge/loot_modifiers/global_loot_modifiers.json` (`{"replace": false, "entries": ["remission:host_samples", "remission:festered_soil_samples"]}`; the second is P7.1, below):
 
 ```json
 {
@@ -144,6 +144,33 @@ Codec `remission:add_item` (`AddItemModifier`): `{"type": "remission:add_item", 
 ```
 
 One `remission:host_tissue` from the death loot of any host (the damage source condition limits it to death drops, not bartering or other tables that set `this`). A host converted on kill does not die, so it drops nothing. Packs change it by overriding the same file, drop it by overriding `global_loot_modifiers.json` with `"replace": true` and relisting the modifiers they keep, and add their own modifiers in their namespace.
+
+## Miasma and samples (built, P7.1)
+
+IDs: fluid `remission:miasma` (source) and `remission:flowing_miasma`, fluid type `remission:miasma`, liquid block `remission:miasma` (no loot table), item `remission:miasma_bucket`; sample items `remission:host_tissue` (P3.3, above), `remission:nidus_core`, `remission:festered_soil`. Fluid tags are not set; packs tag miasma themselves (e.g. `#c:miasma`) when a machine or mod needs one. With Mekanism installed, Remission also registers the chemical `remission:miasma` in Mekanism's chemical registry (`mekanism:chemical`; Mekanism's generic texture tinted violet, lang key `chemical.remission.miasma`); without Mekanism nothing is registered. Recipes converting between the fluid and the chemical are pack-side (P10.2).
+
+**Nidus core:** the block loot table `data/remission/loot_table/blocks/nidus.json` (datagen) drops one `remission:nidus_core` (survives explosions; never the nidus itself). Packs change it by overriding that file.
+
+**Festered soil:** loot condition `remission:is_festering`, Java `IsFesteringCondition`:
+
+```json
+{ "condition": "remission:is_festering", "min_stage": 2, "blocks": "#remission:festered_soil_sources" }
+```
+
+True when the chunk holding the loot `origin` is at festering stage `min_stage` (int ≥ 1, default 1) or higher (`CorruptionQueries.stageAt`, so `[festering] stageThresholds` applies) and, when `blocks` (a block id, list or `#tag`; optional) is set, the loot `block_state` is one of them. False without an origin, or with `blocks` set and no block state. Usable in block loot tables, predicates and global loot modifiers. Remission's default, `data/remission/loot_modifiers/festered_soil_samples.json` (datagen, codec `remission:add_item`):
+
+```json
+{
+  "type": "remission:add_item",
+  "conditions": [
+    { "condition": "remission:is_festering", "min_stage": 2, "blocks": "#remission:festered_soil_sources" },
+    { "condition": "minecraft:random_chance", "chance": 0.25 }
+  ],
+  "item": { "id": "remission:festered_soil", "count": 1 }
+}
+```
+
+A 25% chance of one `remission:festered_soil` on top of the normal drops when a block in `#remission:festered_soil_sources` breaks (by hand, tool or explosion) in a chunk at festering stage 2 or higher. Block tag `data/<ns>/tags/block/festered_soil_sources.json` defaults to `#minecraft:dirt` (dirt, grass, podzol, mycelium, mud, moss and the rest of vanilla's tag); packs extend it (festering blocks, modded soils) or replace it with `"replace": true`, and override or drop the modifier as for host samples.
 
 ## Recipe types (planned, P7.2)
 

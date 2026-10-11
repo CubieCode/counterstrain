@@ -4,7 +4,9 @@ import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.research.ScanItem;
 import com.cubiecode.remission.research.ScannerItem;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -22,6 +24,15 @@ public final class RemissionItems {
 
     /** Sample dropped by hosts ({@code remission:host_samples} loot modifier). */
     public static final DeferredItem<Item> HOST_TISSUE = ITEMS.registerSimpleItem("host_tissue");
+
+    // Miasma and samples (P7.1)
+    public static final DeferredItem<BucketItem> MIASMA_BUCKET = ITEMS.registerItem("miasma_bucket",
+            properties -> new BucketItem(RemissionFluids.MIASMA.get(), properties),
+            new Item.Properties().craftRemainder(Items.BUCKET).stacksTo(1));
+    /** Sample dropped by a broken nidus (its block loot table). */
+    public static final DeferredItem<Item> NIDUS_CORE = ITEMS.registerSimpleItem("nidus_core");
+    /** Sample dropped by festering ground ({@code remission:festered_soil_samples} loot modifier). */
+    public static final DeferredItem<Item> FESTERED_SOIL = ITEMS.registerSimpleItem("festered_soil");
 
     private RemissionItems() {
     }

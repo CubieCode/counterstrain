@@ -27,6 +27,11 @@ Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in t
 | `mod/src/main/resources/assets/remission/textures/item/block_scan.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel-map script, not kept) | placeholder | Block scan data item (P6.1): the host scan's card in slate teal with pale readout lines. |
 | `mod/src/main/resources/assets/remission/textures/block/nidus.png` | texture | ai (Claude Opus 5.5, 2026-10-11; noise script, not kept) | placeholder | Nidus block (P4.1), all faces: dark bruise-violet organic mass with green veins and a sickly glowing core. The art pass should make it read as the living source of the Strain from a distance, matching the host overlay palette. |
 | `mod/src/main/resources/assets/remission/textures/item/host_tissue.png` | texture | ai (Claude Opus 5.5, 2026-10-11; pixel script, not kept) | placeholder | Host tissue sample item (P3.3): a ragged lump of flesh-pink tissue with violet Strain veins. Should read as a biological sample, not food, and sit alongside nidus cores and festered soil as the sample family. |
+| `mod/src/main/resources/assets/remission/textures/block/miasma_still.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Miasma fluid surface (P7.1), 16×16: murky dark violet with lighter swirls and sparse sickly-green flecks. Static (no `.mcmeta`) so harness scenes stay byte-identical; the art pass should add a slow, thick animation (and then keep it out of fixed scenes or freeze it) and match the host overlay palette. |
+| `mod/src/main/resources/assets/remission/textures/block/miasma_flow.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Miasma flowing texture (P7.1), 32×32 like vanilla's flow textures: the still palette with diagonal streaks. Static for the same reason as the still texture. |
+| `mod/src/main/resources/assets/remission/textures/item/miasma_bucket.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Miasma bucket (P7.1): a vanilla-style iron bucket brimming with violet miasma and green flecks. Should read as a bucket of the miasma fluid at inventory size. |
+| `mod/src/main/resources/assets/remission/textures/item/nidus_core.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Nidus core sample (P7.1): a dark violet shell around a glowing sickly-green heart. The rarest sample; should read as the living centre of a nidus, matching the nidus block. |
+| `mod/src/main/resources/assets/remission/textures/item/festered_soil.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Festered soil sample (P7.1): a clump of dirt shot through with violet veins. Third of the sample family with host tissue and nidus cores. |
 
 ## Models
 
@@ -40,6 +45,10 @@ Datagen block and item models are `procedural (datagen)` and follow their textur
 | `mod/src/generated/resources/assets/remission/models/block/nidus.json` | model | procedural (datagen) | draft | Nidus block model: `cube_all` with the nidus texture. A custom shape (pulsing growth, roots) can replace it in the art pass. |
 | `mod/src/generated/resources/assets/remission/models/item/nidus.json` | model | procedural (datagen) | draft | Nidus block item model, inherits the block model. |
 | `mod/src/generated/resources/assets/remission/models/item/host_tissue.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:host_tissue` (`RemissionItemModelProvider`, P3.3). |
+| `mod/src/generated/resources/assets/remission/models/block/miasma.json` | model | procedural (datagen) | draft | Miasma liquid block model: particle texture only (the fluid renderer draws the fluid), as vanilla's water and lava models (P7.1). |
+| `mod/src/generated/resources/assets/remission/models/item/miasma_bucket.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:miasma_bucket` (P7.1). |
+| `mod/src/generated/resources/assets/remission/models/item/nidus_core.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:nidus_core` (P7.1). |
+| `mod/src/generated/resources/assets/remission/models/item/festered_soil.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:festered_soil` (P7.1). |
 
 ## GUI art, icons and logos
 
@@ -94,6 +103,11 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.catchUpBudget*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Spread config label and tooltip: catch-up chunks per tick. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.failed.immune` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Command error: every target of `/remission infect` is immune (P3.3). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.host_tissue` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Item name for the host tissue sample (P3.3). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.miasma` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Miasma liquid block and fluid type name (P7.1); the glossary term, likely final. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.miasma_bucket` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Miasma bucket item name (P7.1). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.nidus_core` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Nidus core sample item name (P7.1); the glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.festered_soil` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festered soil sample item name (P7.1). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:chemical.remission.miasma` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Mekanism chemical name for miasma (P7.1); shown only when Mekanism is installed. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:key.categories.remission` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Controls screen category for Remission key mappings (P6.2). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:key.remission.bestiary` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Key mapping name for opening the bestiary (P6.2). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:gui.remission.bestiary*` | lang | ai (Claude Opus 5.5, 2026-10-11) | draft | Bestiary screen title, progress line (scanned of total host types) and per-row status (highest host stage scanned, not scanned) (P6.2). |

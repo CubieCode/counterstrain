@@ -14,5 +14,7 @@ public final class RemissionBlockStateProvider extends BlockStateProvider {
     @Override
     protected void registerStatesAndModels() {
         simpleBlockWithItem(RemissionBlocks.NIDUS.get(), cubeAll(RemissionBlocks.NIDUS.get()));
+        // Fluid blocks render through the fluid renderer; the model only supplies the break particle.
+        simpleBlock(RemissionBlocks.MIASMA.get(), models().getBuilder("miasma").texture("particle", modLoc("block/miasma_still")));
     }
 }
