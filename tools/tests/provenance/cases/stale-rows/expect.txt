@@ -1,0 +1,4 @@
+docs/CONTENT-PROVENANCE.md:5: `mod/src/main/resources/assets/remission/textures/block/gone.png` does not exist
+docs/CONTENT-PROVENANCE.md:6: `mod/src/main/resources/assets/remission/textures/block/kept.png` has status removed but the file still exists
+docs/CONTENT-PROVENANCE.md:8: `mod/src/main/resources/assets/remission/textures/block/dup.png` already has a row at line 7
+docs/CONTENT-PROVENANCE.md:9: `docs/MISSING.md` has unknown status 'done'

@@ -1,0 +1,5 @@
+# Test ledger for the final-marked case (tools/check-provenance.py --self-test).
+
+| Path / ID | Type | Origin | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/textures/item/mendroot.png` | texture | human (fixture) | final | Marker left on final art. |

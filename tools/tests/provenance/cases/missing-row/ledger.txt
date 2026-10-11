@@ -1,0 +1,5 @@
+# Test ledger for the missing-row case (tools/check-provenance.py --self-test).
+
+| Path / ID | Type | Origin | Status | Notes |
+| --- | --- | --- | --- | --- |
+

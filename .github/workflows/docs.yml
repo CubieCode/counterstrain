@@ -1,6 +1,7 @@
 name: Docs
 # Checks that docs, ROADMAP, READMEs and skills still match the repository
-# (tools/check-docs.py). Runs on every change, not only Markdown: code changes
+# (tools/check-docs.py), and that player-facing assets have content provenance
+# rows (tools/check-provenance.sh, plus its fixture self-test). Runs on every change, not only Markdown: code changes
 # are what make docs stale. Fork pull requests run on ubuntu-latest.
 on:
   push:
@@ -19,3 +20,5 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: python3 -I tools/check-docs.py --verbose
+      - name: Content provenance
+        run: tools/check-provenance.sh --verbose && tools/check-provenance.sh --self-test
