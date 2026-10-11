@@ -1,0 +1,29 @@
+# Local scratch: run logs, test instances, screenshots, exports
+.local/
+.DS_Store
+
+# Gradle and IDEs
+.gradle/
+build/
+!mod/gradle/wrapper/gradle-wrapper.jar
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.vscode/
+.classpath
+.project
+.settings/
+bin/
+.kotlin/
+
+# Minecraft dev runs and datagen cache
+mod/run/
+mod/repo/
+mod/src/generated/**/.cache/
+
+# KubeJS / ProbeJS local output in the pack
+pack/kubejs/probe/
+pack/.probe/
+pack/local/
