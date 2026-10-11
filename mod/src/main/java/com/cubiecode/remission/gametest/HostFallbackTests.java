@@ -10,8 +10,10 @@ import com.cubiecode.remission.behaviour.MobProfiles;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.data.RemissionMobProfileProvider;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderSet;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.EntityType;
@@ -24,6 +26,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
 import net.minecraft.world.entity.monster.piglin.Piglin;
+import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -131,6 +134,20 @@ public final class HostFallbackTests {
         assertAttacks(helper, helper.spawn(EntityType.AXOLOTL, 1, 2, 1), helper.spawnWithNoFreeWill(EntityType.DOLPHIN, 5, 3, 5));
     }
 
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 300)
+    public static void hostWardenAttacksUninfectedMob(GameTestHelper helper) {
+        // A warden fights only while angry at its target, so the brain goal angers it; it roars before it attacks.
+        assertAttacks(helper, helper.spawn(EntityType.WARDEN, 1, 2, 1), helper.spawnWithNoFreeWill(EntityType.PIG, 5, 2, 5));
+    }
+
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 200)
+    public static void hostBreezeAttacksIronGolem(GameTestHelper helper) {
+        // A breeze only ever attacks players and iron golems (Breeze#canAttackType), so the prey is a golem; its wind
+        // charges are owned by the breeze, so the golem is hurt by it.
+        assertAttacks(helper, helper.spawn(EntityType.BREEZE, 1, 2, 1),
+                helper.spawnWithNoFreeWill(EntityType.IRON_GOLEM, 5, 2, 5));
+    }
+
     @GameTest(template = "empty", batch = BATCH)
     public static void unsupportedBrainMobsAreMarkedInDefaultProfile(GameTestHelper helper) {
         for (EntityType<? extends Mob> type : List.of(EntityType.VILLAGER, EntityType.ALLAY, EntityType.FROG)) {
@@ -145,6 +162,23 @@ public final class HostFallbackTests {
             helper.assertFalse(HostBehaviours.hasHostGoals(mob), type + " host got host goals");
             mob.discard();
         }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", batch = BATCH)
+    public static void packProfileReplacesDefaultProfile(GameTestHelper helper) {
+        // Profiles never merge: a pack's priority 0 frog profile without a behaviour wins over remission:unsupported,
+        // and the frog falls back to its category default (melee), as documented in remission-data-formats.
+        MobProfile unsupported = helper.getLevel().registryAccess().registryOrThrow(MobProfiles.KEY)
+                .get(Remission.id("unsupported"));
+        helper.assertTrue(unsupported != null, "no remission:unsupported profile");
+        MobProfile pack = new MobProfile(HolderSet.direct(EntityType.FROG.builtInRegistryHolder()), 0, Optional.empty(),
+                Map.of(), Optional.empty(), MobProfile.Conversion.DEFAULT);
+        Optional<MobProfile> chosen = MobProfiles.select(List.of(pack, unsupported), EntityType.FROG);
+        helper.assertTrue(chosen.isPresent() && chosen.get() == pack, "the pack profile did not replace the default");
+        Mob frog = helper.spawnWithNoFreeWill(EntityType.FROG, 1, 2, 1);
+        helper.assertValueEqual(HostBehaviours.behaviourFor(frog, chosen), MobBehaviour.MELEE, "frog behaviour");
+        helper.assertValueEqual(HostBehaviours.behaviourFor(frog), MobBehaviour.NONE, "frog behaviour from the default");
         helper.succeed();
     }
 
@@ -170,7 +204,8 @@ public final class HostFallbackTests {
                 + " has not hurt the " + prey.getType() + ": target=" + host.getTarget() + " brainTarget="
                 + (host.getBrain().checkMemory(MemoryModuleType.ATTACK_TARGET, MemoryStatus.REGISTERED)
                         ? host.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET) : "n/a")
-                + " pos=" + helper.relativeVec(host.position())));
+                + " pos=" + helper.relativeVec(host.position()) + " activity=" + host.getBrain().getActiveNonCoreActivity()
+                + (host instanceof Warden warden ? " anger=" + warden.getAngerLevel() : "")));
     }
 
     private static void flood(GameTestHelper helper) {

@@ -53,9 +53,6 @@ public final class HostPursuitGoal extends Goal {
     public void start() {
         repathDelay = 0;
         pathing = false;
-        if (mob instanceof Bat bat) {
-            bat.setResting(false);
-        }
     }
 
     @Override
@@ -76,6 +73,10 @@ public final class HostPursuitGoal extends Goal {
         LivingEntity target = mob.getTarget();
         if (target == null) {
             return;
+        }
+        if (mob instanceof Bat bat && bat.isResting()) {
+            // A bat can settle on a ceiling mid-chase; a resting bat does not move.
+            bat.setResting(false);
         }
         mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
         move(target);
