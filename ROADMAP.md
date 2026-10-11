@@ -140,8 +140,8 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.4: Host overlay on separately modelled layers
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p2.4-layer-overlay
 - PR:
 - Depends on: P2.2
 - Scope: Extend the Strain overlay to render layers that draw their own model or texture over the body, which P2.2's layer cannot reach: humanoid armour (players, zombies, skeletons, armour stands), sheep wool, slime outer gel, the drowned's outer layer, horse and wolf armour, and the same vanilla layer helpers when modded renderers use them. Emissive and eye layers (spider and enderman eyes) stay untouched. Prefer wrapping or re-registering those layers from `EntityRenderersEvent.AddLayers` without mixins; if a mixin turns out to be necessary, report it first, since adding a mixin config changes the mod metadata and build files (serialization gates). Reuse P2.2's render type, patterns and `hosts.overlayIntensity`; no new art unless a layer needs it. GeckoLib-style and other non-`LivingEntityRenderer` renderers remain out of scope.
