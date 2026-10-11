@@ -1,6 +1,6 @@
 # Vendored skills
 
-Project skills (`neoforge-mod-dev`, `remission-data-formats`, `packwiz-pack`, `kubejs-scripting`, `ftb-quests-authoring`, `roadmap-workflow`, `roadmap-orchestrate`, `docs-sync`, `release`, `playtesting`, `headless-client`, `visual-checks`) take precedence over these wherever they overlap.
+Project skills (`neoforge-mod-dev`, `remission-data-formats`, `packwiz-pack`, `kubejs-scripting`, `ftb-quests-authoring`, `roadmap-workflow`, `roadmap-orchestrate`, `docs-sync`, `release`, `playtesting`, `headless-client`, `visual-checks`, `content-provenance`) take precedence over these wherever they overlap.
 
 | | |
 | --- | --- |

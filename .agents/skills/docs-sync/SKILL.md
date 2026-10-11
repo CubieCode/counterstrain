@@ -30,6 +30,8 @@ Fix the doc, not the check. If a check is wrong, fix `tools/check-docs.py` in th
 | `.github/workflows/*` | README releases/CI, DEV-ENVIRONMENT runners, release, headless-client |
 | Roadmap progress | ROADMAP item fields, phase exit criteria, README status line, safe waves |
 | User-visible mod or pack change | `mod/CHANGELOG.md` / `pack/CHANGELOG.md` under Unreleased |
+| Player-facing content (textures, models, sounds, lang, quests, lore, store copy) | docs/CONTENT-PROVENANCE.md rows and markers (content-provenance) |
+| New concept or name | DESIGN glossary; no reused terms from the pack's inspirations |
 
 For each statement ask: is it still true, is it complete (new commands, files, options, mods), and does it describe what the code does rather than what was planned? Remove "planned"/"stub" wording once something is built, and do not describe unbuilt features as present. Check counts and lists by looking (number of mods, scenes, triggers), not from memory. Keep worktui's voice: short, specific, no filler.
 

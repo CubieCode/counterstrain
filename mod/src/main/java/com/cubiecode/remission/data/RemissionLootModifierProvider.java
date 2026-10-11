@@ -6,7 +6,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
 import net.neoforged.neoforge.common.data.GlobalLootModifierProvider;
 
-/** Global loot modifiers (planned: corrupted-mob drops gated on {@code remission:is_corrupted}). */
+/** Global loot modifiers (planned: host drops gated on {@code remission:is_corrupted}). */
 public final class RemissionLootModifierProvider extends GlobalLootModifierProvider {
     public RemissionLootModifierProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> lookup) {
         super(output, lookup, Remission.MOD_ID);
