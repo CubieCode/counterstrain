@@ -21,6 +21,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - C: P3.1 + P3.3 + P4.1 + P6.1, after P2.1. Agree the `mob_profile` record (P3.3 owns the contract) before P3.1 starts; registry and lang edits append-only; one registry-spine owner.
 - D: P4.4 + P3.2 + P6.2. P4.4 owns the `api/` package and the API section of remission-data-formats.
 - P4.5 (follow-up to P4.1) runs before P4.3 or alone; it owns `world/SpreadEngine`.
+- P6.3 (follow-up to P6.2) can join any wave or run alone; it owns `research/Bestiary` and the bestiary scene reference.
 - E: P4.2 + P4.3. P4.2 owns new blocks, textures and biome data; P4.3 owns surge scheduling and miasma clouds. Each adds its own API events; append-only edits in `api/`, one remission-data-formats owner (P4.2).
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - G: P7.2 → P7.3 serially (recipe types and KubeJS schemas are contracts), with P8.1 in parallel (owns triggers and stats contracts).
