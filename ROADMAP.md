@@ -63,8 +63,8 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.2: Image comparison and motion capture
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p1.2-image-comparison
 - PR:
 - Depends on: P1.1
 - Scope: Decide where reviewed reference images live (a small committed set, or workflow artifacts plus `.local/`) and keep the repository small. Add a tolerant comparison script (per-pixel diff threshold, diff image output) using no root-only tools. Optional ffmpeg clip capture of the Xvfb display for motion checks, only if ffmpeg is available as a user-level install; report if not.
