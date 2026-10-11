@@ -1,28 +1,48 @@
 name: GPU client smoke test
-# Launches the dev client on foundry's RTX 4070 through Xvfb + VirtualGL,
-# fails unless the log names the GPU renderer, and uploads logs and images.
-# Manual and timeout-based for now; P1.3 switches it to the harness scene list
-# (tools/run-client-headless.sh --scene).
+# Runs every harness scene (tools/run-scenes.sh, each through
+# tools/run-client-headless.sh --scene) on foundry's RTX 4070 through Xvfb +
+# VirtualGL. A scene fails if the log does not name the GPU renderer, the game
+# crashes or times out, the harness does not report status=ok, or its
+# screenshots differ from the references (when tools/compare-screenshots.sh
+# exists). Logs, screenshots, diffs and the summary are uploaded either way.
+# Triggers: manual dispatch, or a same-repo PR carrying the `gpu-smoke` label
+# (runs when the label is added and on each push while it stays).
 # The runner is `lab` on foundry: no sudo, Xvfb and /opt/VirtualGL provided by
-# the host. See the headless-client skill.
+# the host. It shares the GPU lock with local Orca lanes, so a job may wait for
+# their client runs. See the headless-client skill.
 on:
   workflow_dispatch:
     inputs:
-      timeout:
-        description: Seconds to run the client before stopping it
-        default: '180'
+      scenes:
+        description: Scene IDs to run, separated by spaces or commas (blank runs all)
+        default: ''
       resolution:
         description: Virtual display and window size
         default: 1920x1080
+      scene_timeout:
+        description: Seconds each scene may run once the GPU lock is held
+        default: '600'
+  pull_request:
+    types: [labeled, synchronize, reopened]
 permissions:
   contents: read
 concurrency:
   group: gpu-smoke
   cancel-in-progress: false
 jobs:
-  client:
+  scenes:
+    # Fork PRs never reach the self-hosted runner.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       contains(github.event.pull_request.labels.*.name, 'gpu-smoke') &&
+       (github.event.action != 'labeled' || github.event.label.name == 'gpu-smoke'))
     runs-on: [self-hosted, foundry, gpu]
-    timeout-minutes: 30
+    timeout-minutes: 90
+    env:
+      SCENES: ${{ inputs.scenes || '' }}
+      RESOLUTION: ${{ inputs.resolution || '1920x1080' }}
+      SCENE_TIMEOUT: ${{ inputs.scene_timeout || '600' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -33,19 +53,17 @@ jobs:
         run: |
           command -v xvfb-run
           test -x /opt/VirtualGL/bin/vglrun
-      - name: Run client headlessly
+      - name: Run harness scenes
         run: >-
-          tools/run-client-headless.sh
-          --timeout "${{ inputs.timeout }}"
-          --resolution "${{ inputs.resolution }}"
-      - name: Collect screenshots
-        if: always()
-        run: tools/collect-screenshots.sh
+          tools/run-scenes.sh
+          --scenes "$SCENES"
+          --resolution "$RESOLUTION"
+          --timeout "$SCENE_TIMEOUT"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: gpu-smoke-${{ github.run_id }}
+          name: gpu-smoke-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .local/runs/client-*/
-            .local/screenshots/2*/
+            .local/scene-runs/2*/
           if-no-files-found: warn
