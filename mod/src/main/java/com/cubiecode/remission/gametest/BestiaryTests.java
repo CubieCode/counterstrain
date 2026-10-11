@@ -11,16 +11,21 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import io.netty.buffer.Unpooled;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -160,12 +165,13 @@ public final class BestiaryTests {
         List<EntityType<?>> hosts = Bestiary.hostTypes();
         // Living mobs of every kind, including MISC-category ones (villager, iron golem) and non-mob living entities.
         for (EntityType<?> type : List.of(EntityType.COW, EntityType.ZOMBIE, EntityType.VILLAGER, EntityType.ENDERMAN,
-                EntityType.IRON_GOLEM, EntityType.SQUID, EntityType.ARMOR_STAND)) {
+                EntityType.IRON_GOLEM, EntityType.SQUID)) {
             helper.assertTrue(hosts.contains(type), "missing host type " + type);
         }
-        // The player, immune bosses (#c:bosses) and non-living entities.
-        for (EntityType<?> type : List.of(EntityType.PLAYER, EntityType.WITHER, EntityType.ENDER_DRAGON, EntityType.ITEM,
-                EntityType.ARROW, EntityType.BOAT, EntityType.ITEM_FRAME, EntityType.LIGHTNING_BOLT)) {
+        // The player, immune bosses (#c:bosses), the default #remission:bestiary_hidden types and non-living entities.
+        for (EntityType<?> type : List.of(EntityType.PLAYER, EntityType.WITHER, EntityType.ENDER_DRAGON, EntityType.GIANT,
+                EntityType.ILLUSIONER, EntityType.ARMOR_STAND, EntityType.ITEM, EntityType.ARROW, EntityType.BOAT,
+                EntityType.ITEM_FRAME, EntityType.LIGHTNING_BOLT)) {
             helper.assertFalse(hosts.contains(type), "listed non-host type " + type);
         }
         if (ModList.get().isLoaded("mekanism")) {
@@ -174,6 +180,39 @@ public final class BestiaryTests {
         }
         Remission.LOGGER.info("Bestiary lists {} host types from {} mods", hosts.size(), hosts.stream()
                 .map(type -> BuiltInRegistries.ENTITY_TYPE.getKey(type).getNamespace()).distinct().count());
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void hiddenTypesRecordNothing(GameTestHelper helper) {
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        Bestiary.recordScan(player, BuiltInRegistries.ENTITY_TYPE.getKey(EntityType.ILLUSIONER), 2);
+        Bestiary.recordScan(player, BuiltInRegistries.ENTITY_TYPE.getKey(EntityType.ARMOR_STAND), 1);
+        helper.assertTrue(Bestiary.get(player).isEmpty(), "hidden types recorded as progress");
+        helper.succeed();
+    }
+
+    // A pack's tag replaces or extends the default like any tag. Rebinds the entity type tags as a datapack reload
+    // would (bestiary_hidden = only the cow, as a "replace": true pack tag), checks, and restores them in the same
+    // call, so no other test sees the change; its own batch keeps it apart from tests that read tags while running.
+    @GameTest(template = "empty", batch = "bestiary_tags")
+    public static void hiddenTagIsReadLive(GameTestHelper helper) {
+        Registry<EntityType<?>> registry = helper.getLevel().registryAccess().registryOrThrow(Registries.ENTITY_TYPE);
+        Map<TagKey<EntityType<?>>, List<Holder<EntityType<?>>>> original = new HashMap<>();
+        registry.getTags().forEach(pair -> original.put(pair.getFirst(), pair.getSecond().stream().toList()));
+        Map<TagKey<EntityType<?>>, List<Holder<EntityType<?>>>> packTags = new HashMap<>(original);
+        packTags.put(Bestiary.HIDDEN, List.of(EntityType.COW.builtInRegistryHolder()));
+        try {
+            registry.bindTags(packTags);
+            List<EntityType<?>> hosts = Bestiary.hostTypes();
+            helper.assertFalse(hosts.contains(EntityType.COW), "pack-hidden cow listed");
+            helper.assertTrue(hosts.contains(EntityType.GIANT) && hosts.contains(EntityType.ILLUSIONER)
+                    && hosts.contains(EntityType.ARMOR_STAND), "replaced defaults still hidden");
+        } finally {
+            registry.bindTags(original);
+        }
+        helper.assertTrue(Bestiary.hostTypes().contains(EntityType.COW), "cow not listed after restoring tags");
+        helper.assertFalse(Bestiary.hostTypes().contains(EntityType.GIANT), "giant listed after restoring tags");
         helper.succeed();
     }
 

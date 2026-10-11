@@ -309,7 +309,7 @@ Goals: knowledge is gathered from the world and recorded.
 
 ### P6.3: Hidden bestiary types
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p6.3-bestiary-hidden
 - PR:
 - Depends on: P6.2
