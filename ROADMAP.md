@@ -140,7 +140,7 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.4: Host overlay on separately modelled layers
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p2.4-layer-overlay
 - PR:
 - Depends on: P2.2
