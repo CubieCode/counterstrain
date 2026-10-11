@@ -348,7 +348,7 @@ Goals: Counterstrain becomes a playable pack.
 - PR:
 - Depends on: P10.1
 - Scope: Starting structure/map, KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau, datapack worldgen tweaks for hearts.
-- Acceptance: New world starts at the crash site; gated recipes verified in EMI; harness scene `pack/crash_site`.
+- Acceptance: New world starts at the crash site; gated recipes verified in EMI; harness scene `start/crash_site`.
 - Skills: kubejs-scripting, minecraft-datapack, minecraft-world-generation, playtesting, visual-checks
 
 ### P10.3: Balancing pass

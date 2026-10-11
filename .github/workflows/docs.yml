@@ -1,0 +1,21 @@
+name: Docs
+# Checks that docs, ROADMAP, READMEs and skills still match the repository
+# (tools/check-docs.py). Runs on every change, not only Markdown: code changes
+# are what make docs stale. Fork pull requests run on ubuntu-latest.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ${{ fromJSON((github.event.pull_request.head.repo.fork && '"ubuntu-latest"') || vars.RUNNER || '"ubuntu-latest"') }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 -I tools/check-docs.py --verbose

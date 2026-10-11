@@ -19,7 +19,7 @@ All development, builds, tests and visual checks run on the home server `foundry
 ## Other user-level tools
 
 - **packwiz:** no releases upstream; `tools/install-packwiz.sh` builds the pinned commit into `~/.local/bin`. It uses `go` from PATH or downloads the official Go tarball into `~/.cache/counterstrain/`.
-- `python3` (standard library only) converts Xvfb framebuffer dumps to PNG.
+- `python3` (standard library only) runs `tools/xwd-to-png.py`, which converts Xvfb framebuffer dumps to PNG, and `tools/check-docs.py`.
 
 ## Rendering stack
 
