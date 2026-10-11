@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 is complete: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option; P2.3 adds the `/remission` debug commands (below). Phase 3 has started: P3.1 adds host goals and attack attributes (Behaviour, below); P3.3 adds infection on kill, `#remission:immune`, the `remission:mob_profile` datapack registry, the `remission:is_corrupted` loot condition and the host tissue loot modifier. Phase 4 has started: P4.1 adds the `chunk_corruption` chunk attachment, the `remission:nidus` block and its saved index, and the budgeted spread engine with its `spread` config (festering land, below). Phase 6 has started: P6.1 adds the scanner and scan data items (research, below). Everything below marked *planned* is a roadmap item.
+Phase 0 was scaffold only: deferred registers, configs, payload registrar, datagen providers and one smoke gametest. Phase 2 is complete: P2.1 adds the `corruption` entity attachment, its server API and the host stage thresholds config; P2.2 adds the host render layer and its client intensity option; P2.3 adds the `/remission` debug commands (below). Phase 3 has started: P3.1 adds host goals and attack attributes (Behaviour, below); P3.3 adds infection on kill, `#remission:immune`, the `remission:mob_profile` datapack registry, the `remission:is_corrupted` loot condition and the host tissue loot modifier. Phase 4 has started: P4.1 adds the `chunk_corruption` chunk attachment, the `remission:nidus` block and its saved index, and the budgeted spread engine with its `spread` config (festering land, below). Phase 6 has started: P6.1 adds the scanner and scan data items; P6.2 adds the `bestiary` player attachment and the bestiary screen (research, below). Everything below marked *planned* is a roadmap item.
 
 ## Repository and products
 
@@ -37,7 +37,7 @@ Phase 0 was scaffold only: deferred registers, configs, payload registrar, datag
 | `client/` | `@Mod(dist = CLIENT)` entrypoint, client config screen, `HostOverlayLayer` and `HostRenderTypes` (host rendering, below); planned: renderers, client payload handling |
 | `server/` | `@Mod(dist = DEDICATED_SERVER)` entrypoint; dedicated-server-only setup |
 | `config/` | `RemissionCommonConfig` (gameplay: `hosts.stageThresholds`, the `spread` rates and budgets), `RemissionClientConfig` (presentation: `hosts.overlayIntensity`) |
-| `registry/` | One `DeferredRegister` holder per kind: blocks, items (scanner, scans, `host_tissue`), block entities, data components, attachments (`corruption`, transient `host_goals`, `chunk_corruption`), loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
+| `registry/` | One `DeferredRegister` holder per kind: blocks, items (scanner, scans, `host_tissue`), block entities, data components, attachments (`corruption`, transient `host_goals`, `chunk_corruption`, `bestiary`), loot conditions, loot modifier codecs, recipe types/serializers, advancement triggers; `RemissionRegistries.register(modBus)` wires them |
 | `network/` | `RegisterPayloadHandlersEvent` registrar, `PROTOCOL_VERSION`; no payloads yet (corruption uses attachment sync) |
 | `data/` | `GatherDataEvent` wiring and providers (blockstates, item models, tags, recipes, loot tables, global loot modifiers) |
 | `corruption/` | `CorruptionState` record and codecs, `Corruption` server API (`get`, `set`, `isHost`, `isImmune`, tag key `IMMUNE`) |
@@ -48,7 +48,7 @@ Phase 0 was scaffold only: deferred registers, configs, payload registrar, datag
 | `behaviour/` | `MobBehaviour` (the `mob_profile` behaviour enum), `MobProfile` record and codec, `MobProfiles` (datapack registry key and lookup), `HostBehaviours` (profile-first behaviour, category defaults, goal stripping and injection), `HostBehaviourEvents` (join, attribute patching, host-on-host target veto) |
 | `gametest/` | `@GameTestHolder` classes; `remission:empty` is a 3x3x3 air template, `remission:host_arena` a 7x5x7 stone-floored glass box (5x3x5 inside) for fights |
 | *planned* `api/` | Public events and queries for integrations, addons and KubeJS (P4.4) |
-| `research/` | Scanner item and behaviour (`ScannerItem`, `Scanning`), scan data items (`ScanItem`) and the `scan_data` component (`ScanData`); P6.1 |
+| `research/` | Scanner item and behaviour (`ScannerItem`, `Scanning`), scan data items (`ScanItem`) and the `scan_data` component (`ScanData`); P6.1. Host type rule and per-player progress (`Bestiary`, `BestiaryProgress`); P6.2 |
 | *planned* `purification/`, `tech/`, `cure/`, `quest/`, `integration/` | Feature systems by roadmap phase |
 
 Resources: `src/main/resources` (hand-written: lang, textures, structures), `src/generated/resources` (datagen, committed), `src/main/templates/META-INF/neoforge.mods.toml` (expanded from `gradle.properties`).
@@ -84,8 +84,15 @@ Internal Java system names and public API types may keep the generic word "corru
 - The server decides and writes; the client only claims the interaction (arm swing). Entity scans run from `PlayerInteractEvent.EntityInteract` / `EntityInteractSpecific` so they come before the target's own interaction (villager trading, mounting); block scans run from `onItemUseFirst`, before the block's use. A 20-tick item cooldown follows every attempt and also stops a double scan when both entity events fire.
 - Feedback is a vanilla action-bar message; no payloads. The scan reads host state through `Corruption.get` and never changes it.
 - No timestamp or player is stored, so identical scans stack and recipe ingredients can match the full component value (NeoForge components ingredient).
-- Later: `host_scanned` trigger and `hosts_scanned` stat (P8.1), per-player scan progress and the bestiary (P6.2), machines that consume scans (P7.2). The scanner sits in the vanilla Tools and Utilities tab until Remission has its own creative tab.
+- Later: `host_scanned` trigger and `hosts_scanned` stat (P8.1), machines that consume scans (P7.2). The scanner sits in the vanilla Tools and Utilities tab until Remission has its own creative tab.
 - Harness scene `research/scanner` (visual-checks): the three items in item frames, and an armour stand pointing the scanner at a stage 2 host cow.
+
+### Research: bestiary (built in P6.2)
+
+- Host types are not a list: `Bestiary.isHostType` takes every registered entity type that has default attributes (every living type must register them, so this needs no entity instance), is not `minecraft:player` and is not in `#remission:immune`. Installed mods widen it at once (82 types in dev runs with Mekanism: vanilla plus the robit). Players can still carry the Strain and be scanned as hosts; they are just not a bestiary entry. Armour stands are living and listed; a pack that wants them out tags them immune.
+- Progress is the player attachment `remission:bestiary` (`BestiaryProgress`: entity type id → highest host stage scanned). `Scanning.scanEntity` calls `Bestiary.recordScan` on the server whenever it gives a host scan; only bestiary host types are recorded (a scanned host player, for one, is not), and a lower stage never lowers the record. Saved with the player (only when non-empty) and copied on death. Synced through NeoForge attachment sync, so no custom payload and no `PROTOCOL_VERSION` change: updates go to the owning player only (`Bestiary.syncsTo`), but NeoForge's initial sync when a client starts tracking an entity ignores that predicate, so clients tracking the player also receive the current map. That is harmless: the screen reads only the local player's progress. Field contract: remission-data-formats ("Bestiary").
+- Client: `client/research/BestiaryKeys` (a `Dist.CLIENT` subscriber, not `RemissionClient`) registers the key mapping `key.remission.bestiary` (category `key.categories.remission`, default M, in game only) and opens `BestiaryScreen`, a read-only vanilla list: header "X of N host types scanned" (lang `gui.remission.bestiary.progress`), one row per host type (spawn egg icon if the type has one, name, mod name, highest stage scanned or "Not scanned"), scanned types first, then by mod (vanilla first) and name. The client computes the host types itself from its registry and the synced entity type tags. No custom GUI art.
+- Harness scene `research/bestiary` (visual-checks): shot `hosts` shows the scanned hosts in the world, shot `list` opens the bestiary through the key mapping.
 
 ### Behaviour (phase 3, goals and attributes built in P3.1)
 

@@ -39,5 +39,11 @@
   "remission.configuration.catchUpBudget": "Catch-up chunks per tick",
   "remission.configuration.catchUpBudget.tooltip": "Chunks brought up to date each server tick after they load.",
   "commands.remission.failed.immune": "None of the targets can become hosts",
-  "item.remission.host_tissue": "Host Tissue"
+  "item.remission.host_tissue": "Host Tissue",
+  "key.categories.remission": "Remission",
+  "key.remission.bestiary": "Open Bestiary",
+  "gui.remission.bestiary.title": "Bestiary",
+  "gui.remission.bestiary.progress": "%s of %s host types scanned",
+  "gui.remission.bestiary.scanned": "Host stage %s",
+  "gui.remission.bestiary.unscanned": "Not scanned"
 }

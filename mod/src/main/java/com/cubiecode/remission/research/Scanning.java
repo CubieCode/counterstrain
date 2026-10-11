@@ -21,9 +21,10 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 /**
- * Scanner behaviour. Scanning a host gives a host scan, scanning a block gives a block scan; a living entity that is not
- * a host gives nothing. Every scan attempt starts a {@link #COOLDOWN_TICKS} cooldown. The server decides and records; the
- * client only claims the interaction so the arm swings and the mob's own interaction (trading, mounting) is skipped.
+ * Scanner behaviour. Scanning a host gives a host scan and records it in the player's {@link Bestiary}, scanning a block
+ * gives a block scan; a living entity that is not a host gives nothing. Every scan attempt starts a
+ * {@link #COOLDOWN_TICKS} cooldown. The server decides and records; the client only claims the interaction so the arm
+ * swings and the mob's own interaction (trading, mounting) is skipped.
  */
 @EventBusSubscriber(modid = Remission.MOD_ID)
 public final class Scanning {
@@ -78,6 +79,7 @@ public final class Scanning {
         }
         ScanData data = ScanData.host(BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()), state.stage());
         give(player, RemissionItems.HOST_SCAN.get().getDefaultInstance(), data);
+        Bestiary.recordScan(player, data.id(), data.stage());
         player.displayClientMessage(Component.translatable("message.remission.scanner.host", data.subjectName(), data.stage()), true);
         return InteractionResult.CONSUME;
     }

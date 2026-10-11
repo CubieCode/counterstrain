@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -18,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import net.minecraft.client.CloudStatus;
 import net.minecraft.client.GraphicsStatus;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.Screenshot;
@@ -77,6 +79,7 @@ final class SceneRunner {
     private int shotIndex;
     private int stableTicks;
     private boolean captureRequested;
+    private boolean pressed;
 
     SceneRunner(String sceneId, Path outputDir, long timeoutSeconds) {
         this.sceneId = sceneId;
@@ -140,6 +143,7 @@ final class SceneRunner {
                 if (captureRequested) {
                     return;
                 }
+                pressKey(mc);
                 stableTicks = isSettled(mc) ? stableTicks + 1 : 0;
                 if (stableTicks >= SETTLE_TICKS) {
                     captureRequested = true;
@@ -324,6 +328,11 @@ final class SceneRunner {
     private void startShot(Minecraft mc, int index) {
         shotIndex = index;
         stableTicks = 0;
+        // A screen a previous shot's key press opened.
+        if (mc.screen != null) {
+            mc.setScreen(null);
+        }
+        pressed = false;
         Scene.Camera camera = scene.shots().get(index).camera();
         mc.options.setCameraType(scene.shots().get(index).view());
         MinecraftServer server = mc.getSingleplayerServer();
@@ -337,7 +346,9 @@ final class SceneRunner {
 
     /** Camera in place, every chunk in view loaded and no section compiles queued. */
     private boolean isSettled(Minecraft mc) {
-        if (!pending.isDone() || mc.level == null || mc.player == null || mc.screen != null || mc.getOverlay() != null) {
+        boolean wantsScreen = scene.shots().get(shotIndex).press().isPresent();
+        if (!pending.isDone() || mc.level == null || mc.player == null || (mc.screen != null) != wantsScreen
+                || mc.getOverlay() != null) {
             return false;
         }
         pending.join();
@@ -358,6 +369,27 @@ final class SceneRunner {
             }
         }
         return mc.levelRenderer.hasRenderedAllSections();
+    }
+
+    /** Clicks the shot's {@code press} key mapping once, after the camera move reached the server. */
+    private void pressKey(Minecraft mc) {
+        String name = scene.shots().get(shotIndex).press().orElse(null);
+        if (name == null || pressed || !pending.isDone()) {
+            return;
+        }
+        KeyMapping mapping = Arrays.stream(mc.options.keyMappings)
+                .filter(m -> m.getName().equals(name)).findFirst()
+                .orElseThrow(() -> new IllegalStateException("unknown key mapping " + name));
+        // KeyMapping.click presses every mapping on the key; a shot must open exactly one thing.
+        List<String> clashes = Arrays.stream(mc.options.keyMappings)
+                .filter(m -> m != mapping && m.getKey().equals(mapping.getKey()) && m.getKeyConflictContext().isActive())
+                .map(KeyMapping::getName).toList();
+        if (!clashes.isEmpty()) {
+            throw new IllegalStateException("key " + mapping.getKey().getName() + " of " + name + " is also bound to " + clashes);
+        }
+        KeyMapping.click(mapping.getKey());
+        pressed = true;
+        RemissionHarness.LOGGER.debug("Scene {}: pressed {}", sceneId, name);
     }
 
     private void fail(String message, Throwable cause) {

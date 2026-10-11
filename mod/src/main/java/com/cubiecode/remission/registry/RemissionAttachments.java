@@ -3,6 +3,8 @@ package com.cubiecode.remission.registry;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.behaviour.AppliedHostGoals;
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.research.Bestiary;
+import com.cubiecode.remission.research.BestiaryProgress;
 import com.cubiecode.remission.world.ChunkCorruption;
 import java.util.function.Supplier;
 import net.neoforged.neoforge.attachment.AttachmentType;
@@ -38,6 +40,19 @@ public final class RemissionAttachments {
     public static final Supplier<AttachmentType<ChunkCorruption>> CHUNK_CORRUPTION = ATTACHMENT_TYPES.register("chunk_corruption",
             () -> AttachmentType.builder(() -> ChunkCorruption.NONE)
                     .serialize(ChunkCorruption.CODEC, state -> state.level() > 0)
+                    .build());
+
+    /**
+     * Per-player bestiary progress (P6.2): highest host stage scanned per host type. Saved with the player (never empty)
+     * and copied on death. Through NeoForge's attachment sync, updates go to the owning player only; the initial sync when
+     * a client starts tracking the player ignores the predicate, so tracking clients also get the current map (harmless:
+     * the bestiary screen reads only the local player's progress).
+     */
+    public static final Supplier<AttachmentType<BestiaryProgress>> BESTIARY = ATTACHMENT_TYPES.register("bestiary",
+            () -> AttachmentType.builder(() -> BestiaryProgress.EMPTY)
+                    .serialize(BestiaryProgress.CODEC, progress -> !progress.isEmpty())
+                    .copyOnDeath()
+                    .sync(Bestiary::syncsTo, BestiaryProgress.STREAM_CODEC)
                     .build());
 
     private RemissionAttachments() {

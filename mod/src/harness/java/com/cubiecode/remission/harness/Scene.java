@@ -80,8 +80,11 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
     /**
      * One screenshot, saved as {@code <name>.png}. {@code view} is the camera type:
      * {@code first_person} (default), {@code third_person_back} or {@code third_person_front}.
+     * {@code press} names a key mapping (e.g. {@code key.remission.bestiary}) clicked once the
+     * camera is in place; the shot then waits for the screen it opens, which closes before the
+     * next shot.
      */
-    record Shot(String name, Camera camera, CameraType view) {
+    record Shot(String name, Camera camera, CameraType view, Optional<String> press) {
         private static final Codec<CameraType> VIEW_CODEC = Codec.STRING.comapFlatMap(
                 v -> Arrays.stream(CameraType.values()).filter(t -> t.name().toLowerCase(Locale.ROOT).equals(v))
                         .findFirst().map(DataResult::success)
@@ -94,7 +97,8 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
                                 : DataResult.error(() -> "shot name must match [a-z0-9_]+: " + n))
                         .fieldOf("name").forGetter(Shot::name),
                 Camera.CODEC.fieldOf("camera").forGetter(Shot::camera),
-                VIEW_CODEC.optionalFieldOf("view", CameraType.FIRST_PERSON).forGetter(Shot::view)
+                VIEW_CODEC.optionalFieldOf("view", CameraType.FIRST_PERSON).forGetter(Shot::view),
+                Codec.STRING.optionalFieldOf("press").forGetter(Shot::press)
         ).apply(i, Shot::new));
     }
 

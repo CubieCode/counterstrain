@@ -43,5 +43,6 @@ public final class RemissionHarness {
         long timeoutSeconds = Long.getLong(TIMEOUT_PROPERTY, 300L);
         LOGGER.info("Scene harness enabled: scene {}, output {}", sceneId, outputDir.toAbsolutePath());
         NeoForge.EVENT_BUS.register(new SceneRunner(sceneId, outputDir, timeoutSeconds));
+        NeoForge.EVENT_BUS.addListener(HarnessCommands::register);
     }
 }
