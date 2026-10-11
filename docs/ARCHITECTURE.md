@@ -77,7 +77,11 @@ Chunk attachment `{level, last_update_game_time}`; nidi (`remission:nidus`) are 
 
 ### Viral load (phase 5)
 
-Player attachment `viral_load`, synced to its own player. Gain per tick in festering chunks, plus drinking festering water and swimming in water in festering chunks; decay elsewhere; serums and gear reduce gain.
+Player attachment `viral_load`, synced to its own player. Gain per tick in festering chunks (scaled down by height above the ground when the altitude falloff config is on), plus drinking festering water, swimming in water in festering chunks and flying through miasma clouds (spawned by surges, P4.3); decay elsewhere; serums and gear reduce gain.
+
+### Dispersal payload (phase 9)
+
+The Counterstrain is deployed from a dispersal source: a position, radius and rate, ticked by whatever holds it. `remission:dispersal_payload` (a placed block) is the only holder Remission needs to finish the game (P9.2). The source API must not assume a block, so `integration/create/` (P10.6) can tick it from a moving Create contraption, Aeronautics airships included.
 
 ### Contracts for the pack (phases 3–8)
 
@@ -91,6 +95,7 @@ Player attachment `viral_load`, synced to its own player. Gain per tick in feste
 | Quest gates | advancement triggers `remission:*` (`nidus_destroyed`, `host_scanned`, ...), custom stats (`remission:nidi_destroyed`, ...) | remission-data-formats, ftb-quests-authoring |
 | Quest-fired events | commands (`/remission surge start`, `/remission nidus seed`, `/remission region advance`; P8.2) | ftb-quests-authoring |
 | API events and queries | `com.cubiecode.remission.api` (P4.4) | remission-data-formats |
+| Dispersal payload | `remission:dispersal_payload` and its dispersal source API (P9.2; contraption holder P10.6) | remission-data-formats |
 | KubeJS event bindings | Remission events exposed to KubeJS scripts (P8.3) | kubejs-scripting, remission-data-formats |
 
 All schemas start as stubs in the remission-data-formats skill and change only with the code that reads them.
@@ -106,6 +111,7 @@ All schemas start as stubs in the remission-data-formats skill and change only w
 - **Gradle 9.8.1** wrapper instead of the MDK's 9.2.1: current at scaffold time, builds with no deprecation warnings.
 - **Modrinth Maven pins by version ID** where a project reuses a version number across loaders (JEI resolved to its Fabric jar by number).
 - **FTB mods from FTB Maven / CurseForge:** FTB Quests, Library and Teams are not on Modrinth. The pack adds them with `packwiz cf add`.
+- **Distribution:** Remission publishes to Modrinth and CurseForge; Counterstrain is CurseForge-first, and its CurseForge zip is the release artifact (DESIGN, Distribution). A Modrinth `.mrpack` cannot download CurseForge files, and the pack already needs CurseForge-only mods. `packwiz curseforge export` lists only CurseForge-sourced mods in `manifest.json` and embeds every other jar under `overrides/mods/`. That is why pack mods are sourced from CurseForge; P10.1 re-sources the current Modrinth-sourced ones. The `.mrpack` export is for local testing only.
 - **EMI + JEI together:** EMI is the recipe viewer players see; it takes over JEI's runtime UI (its built-in JEI compatibility) and shows every mod's JEI plugin recipes. JEI stays installed so mods with only JEI plugins keep working. Remission's recipe viewer integration (P7.2) is a JEI plugin first, which reaches both; a native EMI plugin is added only for EMI-specific features.
 - **JourneyMap for maps:** chosen over Xaero's (closed source, no overlay API) and FTB Chunks (icon-only API: chunk colouring would work on the full-screen map but not on the zoomed or rotated minimap). JourneyMap's API (`info.journeymap:journeymap-api-neoforge:2.0.0-1.21.1` from maven.blamejared.com, `compileOnly`) has `PolygonOverlay` on the full-screen map, minimap and web map, `PolygonHelper`/`MapPolygonWithHoles` to merge chunks into outlines with remission-zone holes, and a server-side overlay API. The P8.2 festering overlay uses it as an optional integration in `integration/journeymap/`.
 - **No climate mods:** Tough As Nails and Cold Sweat are out; viral load is the only exposure system.

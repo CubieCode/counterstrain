@@ -15,6 +15,7 @@ Canonical skills are `.agents/skills/`; `.claude/skills` is a committed symlink 
 - `tools/`: bash scripts that need no root. `docs/`: design (with the glossary), architecture, lore, content provenance, environment. `ROADMAP.md`: phased items and status.
 - Mod: from `mod/`, `./gradlew build`, `./gradlew runData`, `./gradlew runGameTestServer`. Client: `tools/run-client-headless.sh --timeout 180` only, never a bare `runClient` on foundry.
 - Pack: `tools/pack.sh refresh|check|export`; never hand-edit hashes in `index.toml`.
+- Distribution (docs/DESIGN.md): Remission publishes to Modrinth and CurseForge; Counterstrain is CurseForge-first, with the CurseForge zip as the release artifact and the `.mrpack` for local testing. Add pack mods from CurseForge (`packwiz cf add`); a Modrinth-only mod is added only if it is confirmed redistributable in a CurseForge pack. A Modrinth pack release is a revisit item, not a plan.
 - Local test instance: `tools/build-mod.sh [instance]`. Versions: `tools/bump-version.sh mod|pack X.Y.Z`.
 
 ## Mod and pack boundary

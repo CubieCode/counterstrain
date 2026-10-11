@@ -74,7 +74,7 @@ No quest chapters yet: `pack/config/ftbquests/quests/chapters/` holds only an au
 
 ## Store pages
 
-No Modrinth or CurseForge copy or gallery images yet; publishing is P12.3 and final store art is P12.2.
+No store copy or gallery images yet: Remission's Modrinth and CurseForge pages and Counterstrain's CurseForge page ([distribution](DESIGN.md#distribution)). Publishing is P12.3; final store art is P12.2.
 
 | Path / ID | Type | Origin | Status | Notes |
 | --- | --- | --- | --- | --- |

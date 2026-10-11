@@ -76,6 +76,10 @@ Per-source-biome fester target so modded biomes fester into their own variant, f
 
 Data component `remission:contaminated` on item stacks carried through festering chunks, a tag for containers that protect their contents, and a decontamination recipe type or KubeJS hook. Fields fixed in P10.6.
 
+## Dispersal payload (planned, P9.2)
+
+Block `remission:dispersal_payload` deploys the Counterstrain. The planned API is a dispersal source (level, position, radius, rate) ticked by its holder. The placed block is one holder; the optional Create integration (P10.6) ticks it from a moving contraption. The API must not assume a block. Fields are fixed in P9.2.
+
 ## Public API events and queries (planned, P4.4)
 
 Package `com.cubiecode.remission.api`; nothing outside it is public. Events are NeoForge events posted server side on `NeoForge.EVENT_BUS` after the change is applied, except the cancellable spread attempt, which is posted before. Batched changes (catch-up, stage batches) post one event per chunk unless the event is block-scoped. Java names may use "corruption".

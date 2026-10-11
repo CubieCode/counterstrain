@@ -19,13 +19,13 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - B: P2.2 + P2.3 + P1.2 + P1.3, after A. P1.2 owns comparison scripts; P1.3 owns `gpu-smoke.yml`; P2.2 owns client rendering; P2.3 owns commands.
 - C: P3.1 + P3.3 + P4.1 + P6.1, after P2.1. Agree the `mob_profile` record (P3.3 owns the contract) before P3.1 starts; registry and lang edits append-only; one registry-spine owner.
 - D: P4.4 + P3.2 + P6.2. P4.4 owns the `api/` package and the API section of remission-data-formats.
-- E: P4.2 + P4.3 + P5.1. P4.2 owns new blocks, textures and biome data; P4.3 owns surge scheduling; P5.1 owns the player attachment and HUD. Each adds its own API events; append-only edits in `api/`, one remission-data-formats owner (P4.2).
-- F: P5.2 + P7.1.
+- E: P4.2 + P4.3. P4.2 owns new blocks, textures and biome data; P4.3 owns surge scheduling and miasma clouds. Each adds its own API events; append-only edits in `api/`, one remission-data-formats owner (P4.2).
+- F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - G: P7.2 → P7.3 serially (recipe types and KubeJS schemas are contracts), with P8.1 in parallel (owns triggers and stats contracts).
 - H: P8.2 + P9.1, then P8.3 + P9.2. P8.2 owns command syntax; P8.3 owns the KubeJS binding contract.
 - I: P10.1 alone (owns `pack/pack.toml`, `pack/mods/` and the build-file entries for every mod-side integration).
 - J: P10.2 + P10.3 + P10.4 + P10.5, after P10.1. Each owns its `integration/<modid>/` packages and its pack scripts (`pack/kubejs/**/integrations/<modid>.js`); one remission-data-formats owner per wave (P10.2); none touches build files or `pack/mods/`.
-- K: P10.6 + P10.7.
+- K: P10.6 + P10.7. P10.6 extends `integration/create/` after P10.2 has merged.
 - L: P11.1 → P11.2 → P11.3 serially (one pack-content owner).
 - M: P12.1 + P12.2, then P12.3.
 
@@ -202,8 +202,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Owner:
 - PR:
 - Depends on: P4.1, P3.1, P4.4
-- Scope: Periodic surges that accelerate spread and spawn hosts, with warnings; config and command to trigger. Emits surge started and surge ended events.
-- Acceptance: Gametest for scheduling; harness scene `world/surge`. Ledger updated for warning text.
+- Scope: Periodic surges that accelerate spread, spawn hosts and release miasma clouds (drifting airborne areas above festering land; their viral load effect is added by P5.1), with warnings; config and command to trigger. Emits surge started and surge ended events.
+- Acceptance: Gametests for scheduling and cloud spawning and drift; harness scenes `world/surge` and `world/miasma_cloud`. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
 ### P4.4: Public API and events
@@ -228,9 +228,9 @@ Goals: the player can survive the Strain and push it back locally.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P4.1, P4.4
-- Scope: Player attachment `viral_load`; gain in festering chunks, from drinking water from (or swimming in) water in festering chunks; decay; escalating debuffs; HUD element; sync. Emits viral load changed and adds the viral load query.
-- Acceptance: Gametests for gain (land, drinking, swimming) and decay; harness scene `survival/hud`. Ledger updated; placeholders marked.
+- Depends on: P4.1, P4.4, P4.3
+- Scope: Player attachment `viral_load`; gain in festering chunks, from drinking water from (or swimming in) water in festering chunks, and from flying through miasma clouds; land gain falls off with height above the ground (config: on/off, falloff curve), so airborne players and vehicles avoid the worst of it; decay; escalating debuffs; HUD element; sync. Emits viral load changed and adds the viral load query.
+- Acceptance: Gametests for gain (land, drinking, swimming, miasma clouds), altitude falloff (on and off) and decay; harness scene `survival/hud`. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
 ### P5.2: Handheld purifier, quarantine pylons and mendroot
@@ -364,15 +364,15 @@ Goals: the Counterstrain heals the world.
 - Owner:
 - PR:
 - Depends on: P9.1, P4.3
-- Scope: Defence event, then visible healing back to original blocks/biomes.
-- Acceptance: Harness scenes `cure/before`, `cure/after`, reviewed. Ledger updated for event text and any new art.
+- Scope: `remission:dispersal_payload` block that deploys the Counterstrain, the defence event around it, then visible healing back to original blocks/biomes. The final deployment works with a ground-based payload alone. The payload's API (a dispersal source with a position, ticked by its holder) must not assume a placed block, so a moving holder such as a Create contraption can carry it (P10.6); document it in remission-data-formats.
+- Acceptance: A ground-based payload completes the final deployment in a gametest and a dev run with no optional mods; harness scenes `cure/before`, `cure/after`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
 Exit criteria: a dev world can be fully cured; scenes reviewed.
 
 ## Phase 10: Mod integrations
 
-Goals: the pack's mods take part in the fight against the Strain, each creating a progression gate (DESIGN "Pack integrations"). Pack-side tie-ins use KubeJS and datapacks on Remission's surfaces; mod-side tie-ins live in `integration/<modid>/` with `compileOnly` APIs, guarded by `ModList`, and have gametests. Botania and Create: Steam 'n' Rails have no official 1.21.1 NeoForge release and are not part of this phase until revisited.
+Goals: the pack's mods take part in the fight against the Strain, each creating a progression gate (DESIGN "Pack integrations"). Pack-side tie-ins use KubeJS and datapacks on Remission's surfaces; mod-side tie-ins live in `integration/<modid>/` with `compileOnly` APIs, guarded by `ModList`, and have gametests. Mods considered and rejected for 1.21.1 are listed in DESIGN ("Considered and unavailable on 1.21.1"). Every mod added follows DESIGN's [distribution](docs/DESIGN.md#distribution) policy: available on CurseForge, and sourced from it.
 
 ### P10.1: Integration membership
 
@@ -380,8 +380,8 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Owner:
 - PR:
 - Depends on: P4.4, P8.3
-- Scope: Add the verified mods with packwiz (PneumaticCraft: Repressurized, Occultism, Serene Seasons, Farmer's Delight, Productive Bees, Iron's Spells 'n Spellbooks, Waystones, Immersive Engineering, MineColonies with its required mods, Sophisticated Backpacks and Storage, Simple Voice Chat, the chosen field journal mod, Biomes O' Plenty, Terralith) and their required dependencies; record versions and IDs; pin by version ID where needed and note beta-only files. Add `compileOnly` APIs and dev-runtime entries for every mod-side integration in phase 10 to `mod/build.gradle`/`mod/gradle.properties` and optional dependency entries to the `neoforge.mods.toml` template. Update README stack and the pack changelog.
-- Acceptance: `tools/pack.sh check` passes; the full pack starts headlessly on foundry (dedicated server and client) with the renderer verified; every new file name says neoforge/1.21.1; `./gradlew build runGameTestServer` passes with and without dev-runtime mods.
+- Scope: Add the verified mods from CurseForge with `packwiz cf add` (PneumaticCraft: Repressurized, Occultism, Serene Seasons, Farmer's Delight, Productive Bees, Iron's Spells 'n Spellbooks, Waystones, Immersive Engineering, MineColonies with its required mods, Sophisticated Backpacks and Storage, Simple Voice Chat, Create Aeronautics with Sable, the chosen field journal mod, Biomes O' Plenty, Terralith) and their required dependencies; record versions and IDs; note beta-only files. Re-source the existing Modrinth-sourced pack mods from CurseForge (same files) and drop the separate Better Advanced Tooltips entry (Modrinth-only; KubeJS bundles it), so the CurseForge export embeds no jars it may not redistribute. Add `compileOnly` APIs and dev-runtime entries for every mod-side integration in phase 10 to `mod/build.gradle`/`mod/gradle.properties` and optional dependency entries to the `neoforge.mods.toml` template. Update README stack and the pack changelog.
+- Acceptance: `tools/pack.sh check` passes; `tools/pack.sh export` adds every mod to the CurseForge manifest and embeds none under `overrides/mods/`; the full pack starts headlessly on foundry (dedicated server and client) with the renderer verified; every new file name says neoforge/1.21.1; `./gradlew build runGameTestServer` passes with and without dev-runtime mods.
 - Skills: packwiz-pack, neoforge-mod-dev, playtesting, headless-client
 - Parallel: Runs alone; owns `pack/pack.toml`, `pack/mods/` and build files for the phase
 
@@ -425,14 +425,14 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Acceptance: Gametests for the school registration and drops; a dev run fights a host boss and casts a school spell; harness scene `integration/host_boss`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, remission-data-formats, visual-checks, content-provenance
 
-### P10.6: Logistics and settlement integrations
+### P10.6: Logistics, settlement and aerial integrations
 
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P10.1, P4.4, P8.3, P5.2, P7.1
-- Scope: Generic item contamination in Remission (`remission:contaminated` data component, gain while carried through festering chunks, decontamination recipe; documented as a contract). Sophisticated Backpacks/Storage (mod-side): a sealed upgrade that protects contents. Immersive Engineering: a quarantine arc multiblock holding a large frontier (mod-side); excavator mineral mixes yielding nidus cores from festered deposits (pack-side). MineColonies (mod-side): colonies founded only in remission zones, guards target hosts, colonists vulnerable to the Strain and surges.
-- Acceptance: Gametests for contamination and each mod-side hook; a dev run founds a colony in a remission zone and is refused in festering land; harness scenes `integration/quarantine_arc` and `integration/sealed_backpack`, reviewed. Ledger updated; placeholders marked.
+- Depends on: P10.1, P4.4, P8.3, P5.2, P7.1, P9.2
+- Scope: Generic item contamination in Remission (`remission:contaminated` data component, gain while carried through festering chunks, decontamination recipe; documented as a contract). Sophisticated Backpacks/Storage (mod-side): a sealed upgrade that protects contents. Immersive Engineering: a quarantine arc multiblock holding a large frontier (mod-side); excavator mineral mixes yielding nidus cores from festered deposits (pack-side). MineColonies (mod-side): colonies founded only in remission zones, guards target hosts, colonists vulnerable to the Strain and surges. Create and Create Aeronautics: a contraption-carried dispersal payload (mod-side in `integration/create/`, on the P9.2 payload API) that disperses the Counterstrain from any moving Create contraption, including airships; recipes and gating for aerial access (pack-side).
+- Acceptance: Gametests for contamination and each mod-side hook, including a payload dispersing while its contraption moves; a dev run founds a colony in a remission zone and is refused in festering land; harness scenes `integration/quarantine_arc`, `integration/sealed_backpack` and `integration/airship_dispersal`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, kubejs-scripting, remission-data-formats, visual-checks, content-provenance
 
 ### P10.7: Atmosphere and lore integrations
@@ -514,8 +514,8 @@ Goals: performant, compatible, with final art and writing, published.
 - Owner:
 - PR:
 - Depends on: P12.1, P12.2
-- Scope: Modrinth/CurseForge projects, publishing steps in release workflows, Remission added to the pack via packwiz.
-- Acceptance: Tagged releases publish; pack references the released mod; store copy and images are the P12.2 final rows.
+- Scope: Remission published to Modrinth and CurseForge; Counterstrain published to CurseForge (the CurseForge zip is the release artifact; a Modrinth pack release stays a DESIGN revisit item); publishing steps in release workflows; once Remission is published, add it to the pack via packwiz from its CurseForge release (`packwiz cf add`) so the CurseForge pack references it.
+- Acceptance: A `mod-v*` tag publishes Remission to both platforms; a `pack-v*` tag publishes the CurseForge pack; the pack references the released mod from CurseForge; store copy and images are the P12.2 final rows.
 - Skills: release, minecraft-ci-release, content-provenance
 
 Exit criteria: mod and pack 1.0 released.

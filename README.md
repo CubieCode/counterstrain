@@ -42,7 +42,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `tools/collect-screenshots.sh` | Copy screenshots to `.local/screenshots/latest/` |
 | `python3 -I tools/check-docs.py` | Check docs, roadmap, READMEs and skills against the code (docs-sync skill) |
 | `tools/build-mod.sh [INSTANCE]` | Build and copy the jar into a test instance's `mods/` |
-| `tools/pack.sh refresh` / `check` / `export` | packwiz index refresh, CI drift check, `.mrpack` + CurseForge zip to `.local/dist/` |
+| `tools/pack.sh refresh` / `check` / `export` | packwiz index refresh, CI drift check, CurseForge zip (release artifact) + `.mrpack` (local testing) to `.local/dist/` |
 | `tools/bump-version.sh mod\|pack X.Y.Z` | Set the mod or pack version (independent) |
 
 Dev runs include KubeJS, ProbeJS, FTB Quests, EMI + JEI, Mekanism, AE2 and JourneyMap from Modrinth/FTB Maven for integration testing; disable with `-Pdev_runtime_mods=false`. `-Pdev_jbr=true` runs the client/server on JetBrains Runtime with enhanced hot-swap (opt-in).
@@ -72,11 +72,11 @@ Use `roadmap-workflow` for one item and `roadmap-orchestrate` for supervised par
 
 ## Remission in the pack
 
-Remission is not in the packwiz index until it is published. For development, `tools/build-mod.sh <instance>` copies the freshly built jar into a test instance next to the packwiz mods (see the playtesting skill). After the first Modrinth release it is added like any other mod (`packwiz mr add remission`) and pinned to the released version.
+Remission is not in the packwiz index until it is published. For development, `tools/build-mod.sh <instance>` copies the freshly built jar into a test instance next to the packwiz mods (see the playtesting skill). Remission is published on both Modrinth and CurseForge. After its first release it is added to the pack from CurseForge (`packwiz cf add remission`) and pinned to the released version, so the CurseForge pack references it.
 
 ## Releases
 
-The mod and the pack are versioned independently. CI (`ci.yml`) builds, runs datagen and gametests and checks the pack on every push and PR; `docs.yml` runs `tools/check-docs.py`; `gpu-smoke.yml` is the manual GPU client check. Tags `mod-v<version>` and `pack-v<version>` build draft GitHub releases (`release-mod.yml`, `release-pack.yml`); platform publishing is a later roadmap item. See the release skill.
+The mod and the pack are versioned independently. CI (`ci.yml`) builds, runs datagen and gametests and checks the pack on every push and PR; `docs.yml` runs `tools/check-docs.py`; `gpu-smoke.yml` is the manual GPU client check. Tags `mod-v<version>` and `pack-v<version>` build draft GitHub releases (`release-mod.yml`, `release-pack.yml`). Platform publishing is roadmap P12.3: Remission goes to Modrinth and CurseForge; Counterstrain is CurseForge-first (the CurseForge zip is the release artifact; see [distribution](docs/DESIGN.md#distribution)). See the release skill.
 
 ## License
 

@@ -32,6 +32,8 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Endgame cure | **the Counterstrain** | "unstable Counterstrain prototypes", "the final deployment" |
 | Samples | host tissue, **nidus cores**, festered soil | `remission:host_tissue`, `remission:nidus_core`, `remission:festered_soil` |
 | Items carried through festering land | **contaminated** (verb: decontaminate) | data component `remission:contaminated` (planned, P10.6) |
+| Drifting airborne Strain | **miasma clouds** | spawned by surges above festering land; add viral load to anything flying through |
+| The Counterstrain's deployable carrier | **dispersal payload** | block `remission:dispersal_payload`; can also ride a moving Create contraption through the optional integration |
 
 "Variant" always means a resistant mutation of the Strain, never a kind of host: scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
 
@@ -64,11 +66,11 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - Per-chunk corruption level (chunk Data Attachment) driving visible festering stages: festering grass, festering trees and foliage, festered stone, and finally a biome flip to `remission:fester` (or a per-biome fester variant set by data, so modded biomes fester too).
 - The Strain spreads from **nidi** (blocks or structures). Destroying a nidus stops its spread but does not cleanse land.
 - **Catch-up:** unloaded chunks record a timestamp; on load they fast-forward deterministically, bounded per tick.
-- **Surges:** periodic events that accelerate spread and spawn hosts, telegraphed to players.
+- **Surges:** periodic events that accelerate spread, spawn hosts and release miasma clouds that drift above festering land, telegraphed to players.
 
 ### Viral load and purification
 
-- **Viral load:** a player attachment that rises in festering chunks, with escalating debuffs; serums and gear reduce it. Drinking water from, or swimming in, water in festering chunks also adds viral load. There are no climate mods: viral load is the only exposure system.
+- **Viral load:** a player attachment that rises in festering chunks, with escalating debuffs; serums and gear reduce it. Drinking water from, or swimming in, water in festering chunks also adds viral load, and so does flying through a miasma cloud. Gain from festering land falls off with height above the ground (config: on/off and the falloff curve), so anything airborne, from elytra to airships, can cross festering zones above the worst of it. There are no climate mods: viral load is the only exposure system.
 - **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot.
 - **Remission zones:** purified chunks enter remission and grant bonuses (spawn safety, growth, resource yields; tunable).
 
@@ -88,7 +90,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 
 - The Counterstrain uses the same chunk spread engine in reverse.
 - The Strain adapts: resistant variants appear in response to the player's methods.
-- A final deployment defence event, after which the world visibly heals.
+- A final deployment defence event, after which the world visibly heals. The Counterstrain is deployed from a **dispersal payload**: a placed block is enough to finish the game. Its API treats the payload as a dispersal source with a position, so a moving holder (a Create contraption or Aeronautics airship, through the optional integration) can carry it instead.
 
 ### Quest hooks
 
@@ -116,29 +118,43 @@ Integrations prefer pack-side KubeJS and datapacks built on these hooks (KubeJS 
 
 ## Pack integrations
 
-Each tie-in creates a progression gate. **Pack-side** means KubeJS scripts and datapacks on Remission's data, recipe and API surfaces; **mod-side optional** means Java in `integration/<modid>/` against the other mod's `compileOnly` API, loaded only when that mod is present. Pack-side is the default; mod-side is used only where the other mod's content can be registered or hooked only from Java. Built in phase 10; pack membership is P10.1. Availability (a 1.21.1 NeoForge release on Modrinth or CurseForge) was checked on 2026-10-11.
+Each tie-in creates a progression gate. **Pack-side** means KubeJS scripts and datapacks on Remission's data, recipe and API surfaces; **mod-side optional** means Java in `integration/<modid>/` against the other mod's `compileOnly` API, loaded only when that mod is present. Pack-side is the default; mod-side is used only where the other mod's content can be registered or hooked only from Java. Built in phase 10; pack membership is P10.1. Availability (a 1.21.1 NeoForge release, and a CurseForge listing per the [distribution](#distribution) policy) was checked on 2026-10-11.
 
 | Mod | Tie-in | Gate | Side and reasoning |
 | --- | --- | --- | --- |
 | Create | Encased fans with a purifying catalyst cleanse blocks in their stream; fan walls act as Strain firebreaks; track in festering chunks degrades | Kinetics needed before you can hold a frontier | Mod-side optional: fan processing types and in-stream block effects are Java registrations. Firebreaks use the spread attempt event. |
+| Create Aeronautics | Airships reach remote and cliff-top nidi and cross festering zones above the worst viral load; miasma clouds and flying hosts make flight risky; the final deployment can disperse the Counterstrain from an airship | Aerial access to remote nidi, and the airship dispersal option for the finale | Altitude falloff of viral load and miasma clouds are generic Remission mechanics (P5.1, P4.3), not Aeronautics-specific. Contraption dispersal: mod-side optional in `integration/create/`, because contraption behaviours are Java; it works on any moving Create contraption, airships included. Recipes and gating: pack-side. Requires Create 6.0.10 or newer and Sable 2.x. |
 | Mekanism | Miasma as a Mekanism chemical; late-game sequencing and Counterstrain stabilisation use Mekanism processing | Late-game lab requires Mekanism infrastructure | Chemical: mod-side optional (P7.1; chemicals are Java registrations). Processing chains: pack-side KubeJS recipes (P10.2). |
 | PneumaticCraft: Repressurized | Miasma pressurised for analysis; drones patrol frontiers and plant mendroot | Automated reclamation locked behind pressure tech | Pack-side: pressure chamber and thermo plant recipes are data; drones plant mendroot with stock programs if mendroot is a plantable item. |
 | Applied Energistics 2 | Research data stored in AE2; the sequencer reads from the network; AE2 cables in festering chunks degrade without shielding | Reliable research network needs shielded cabling | Storage and sequencer: pack-side (machines expose standard item capabilities). Cable degradation: mod-side optional, because cable parts live inside AE2's cable bus. |
 | Ars Nouveau | A Cleanse glyph; host summons; source (mana) drawn from festering land is unstable and can backfire | Early, risky magical purification before tech catches up | Mod-side optional: glyphs and source generation hooks are Java registrations. |
 | Occultism | Spirits harvested from hosts, bound to work in festering zones the player can't safely enter | Mid-game remote work in hostile zones | Pack-side: ritual recipes are data; host essence comes from the host loot modifier; spirits go in `#remission:immune`. |
-| Botania | A purifying flower that consumes the Strain as fuel; Strain-laced mana fouls the mana spreaders it touches | Alternative purification route | **Unavailable on 1.21.1 — revisit.** No official 1.21.1 NeoForge release; an unofficial port (Botania Revived) exists on CurseForge. |
 | Serene Seasons | The Strain spreads faster in summer and goes dormant in winter; nidi surge at season changes | Winter becomes the season to push | Pack-side: a KubeJS handler on the spread attempt event sets the rate multiplier from the season and starts surges on season change. Its 1.21.1 NeoForge files are marked beta. |
 | Farmer's Delight | Festering crops; purifying meals granting viral load resistance | Food becomes expedition prep | Pack-side: festering conversions and food items are data and KubeJS; the resistance effect is Remission's. |
 | Productive Bees | Strain-resistant bee lines bred from purified hives that cleanse land they pollinate | Mid-game foreshadowing of the Counterstrain | Bee types and breeding: pack-side (data). The pollination cleanse is pack-side if Productive Bees exposes a data-driven bee effect, otherwise mod-side optional; decided in P10.4. |
 | Iron's Spells 'n Spellbooks | Spellcasting host bosses; a Strain-themed spell school dropped by them | Boss-gated combat progression | Bosses: pack-side (mob profiles, loot). Spell school: mod-side optional, because schools and spells are Java registrations. |
 | Waystones | Waystones in festering chunks go dark until purified; remission zones become fast-travel hubs | Travel network grows with reclaimed land | Mod-side optional: blocking teleports and darkening the stone need Waystones' Java API. |
 | Immersive Engineering | A multiblock "quarantine arc" that holds a large frontier; the excavator mines nidus cores out of festered deposits | Large-scale containment and late sample supply | Quarantine arc: mod-side optional (multiblocks are Java). Excavator: pack-side (mineral mixes are data). |
-| MineColonies | Colonies can only be founded in remission zones; colonists are vulnerable to the Strain and guards fight hosts; surges threaten colonies | Rebuilding civilisation is the reward for reclaimed land | Mod-side optional: colony founding and guard targeting need MineColonies' Java API. Colonist infection and surges are generic. Available on CurseForge only. |
+| MineColonies | Colonies can only be founded in remission zones; colonists are vulnerable to the Strain and guards fight hosts; surges threaten colonies | Rebuilding civilisation is the reward for reclaimed land | Mod-side optional: colony founding and guard targeting need MineColonies' Java API. Colonist infection and surges are generic. CurseForge-only, which the [distribution](#distribution) policy accepts. |
 | Sophisticated Backpacks / Storage | Items carried through festering zones become contaminated unless stored in a sealed upgrade; contaminated items must be decontaminated before use | Expedition logistics and early sealed-storage goal | Contamination is a generic Remission mechanic any pack can use. The sealed upgrade is mod-side optional, because upgrades are Java registrations. |
 | Simple Voice Chat | Hosts are drawn to players' voices, so talking in festering zones is dangerous (optional, server-configurable) | Atmosphere rather than a hard gate | Mod-side optional: Simple Voice Chat's server plugin API is Java only. |
-| Create: Steam 'n' Rails | Rail lines are the supply lines into reclaimed regions; track in festering chunks degrades | Mid-game logistics between remission zones | **Unavailable on 1.21.1 — revisit.** The official project stops at 1.20.1; an unofficial NeoForge port is in beta. Create's own track degradation is covered by the Create tie-in. |
 | Patchouli or Modonomicon | An in-game field journal that fills in as you scan hosts, find logs and destroy nidi, carrying the story alongside quests | Lore delivery tied to research progress | Pack-side: books and unlocks are data keyed on Remission advancements. Which book mod is decided in P10.7. |
 | Biomes O' Plenty / Terralith | More biome variety for the Strain to fester through, each with its own fester variant | Worldgen variety, no gate | Pack-side: per-biome fester variants are data. Biomes O' Plenty's 1.21.1 NeoForge files are marked beta. |
+
+### Considered and unavailable on 1.21.1
+
+Not proposed again unless an official 1.21.1 NeoForge release appears. Unofficial ports are not used.
+
+- **Botania** (checked 2026-10-11): no official 1.21.1 NeoForge release; the official project stops at 1.20.1.
+- **Create: Steam 'n' Rails** (checked 2026-10-11): no official 1.21.1 NeoForge release; the official project stops at 1.20.1. Create's own track degradation stays in the Create tie-in.
+
+## Distribution
+
+- **Remission** (the mod) is published on both **Modrinth and CurseForge**.
+- **Counterstrain** (the pack) is **CurseForge-first**: the CurseForge zip is the release artifact. Required mods are already CurseForge-only (FTB Quests, FTB Library, FTB Teams, MineColonies), a Modrinth `.mrpack` cannot download files from CurseForge, and embedding those jars needs redistribution permission.
+- A **Modrinth release of the pack** is a revisit item, possible only if every dependency is on Modrinth or can legally be embedded. Nothing is planned around it. The `.mrpack` export is for local testing.
+- **Adding pack mods:** prefer mods available on CurseForge, and source them from CurseForge so the CurseForge manifest references them instead of embedding the jar. A Modrinth-only mod is added only if it is also on CurseForge or confirmed redistributable in a CurseForge pack (CurseForge's approved non-CurseForge mods list, or explicit permission); otherwise it is not added.
+- Remission joins the pack from its CurseForge release once published (P12.3).
 
 ## AI-generated content policy
 

@@ -1,7 +1,9 @@
 name: Release pack
 # Tag pack-v<version> (matching version in pack/pack.toml) to check the
-# packwiz index, export Modrinth and CurseForge files and attach them to a
-# draft GitHub release. Platform uploads are not wired yet (roadmap phase 11).
+# packwiz index, export CurseForge and Modrinth files and attach them to a
+# draft GitHub release. The pack is CurseForge-first: the CurseForge zip is the
+# release artifact and the .mrpack is for local testing. CurseForge upload is
+# not wired yet (roadmap P12.3).
 on:
   push:
     tags: ['pack-v*']

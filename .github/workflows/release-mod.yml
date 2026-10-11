@@ -1,8 +1,9 @@
 name: Release mod
 # Tag mod-v<version> (matching mod_version in mod/gradle.properties) to build
 # Remission and attach the jar to a draft GitHub release.
-# Modrinth/CurseForge publishing is not wired yet (roadmap phase 11); see the
-# release skill. A human reviews and publishes the draft.
+# Remission publishes to Modrinth and CurseForge; platform uploads are not
+# wired yet (roadmap P12.3, release skill). A human reviews and publishes the
+# draft.
 on:
   push:
     tags: ['mod-v*']
