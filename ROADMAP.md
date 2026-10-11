@@ -282,8 +282,8 @@ Goals: knowledge is gathered from the world and recorded.
 
 ### P6.2: Bestiary
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: `feat/p6.2-bestiary`
 - PR:
 - Depends on: P6.1
 - Scope: Bestiary UI listing host types derived from installed entity types; scan progress per player.
