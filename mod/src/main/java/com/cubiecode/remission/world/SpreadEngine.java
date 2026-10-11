@@ -2,9 +2,12 @@ package com.cubiecode.remission.world;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Supplier;
 import net.minecraft.world.level.ChunkPos;
 
@@ -20,7 +23,12 @@ import net.minecraft.world.level.ChunkPos;
  *
  * <p>Catch-up: a chunk that loads again is queued; up to {@code catchUpBudget} queued chunks per tick are moved toward
  * each nidus target by the passes they missed since {@code max(last change, nidus indexed)}, in closed form. The land
- * keeps moving while nobody is near, and a reload does the same work however long it was away.
+ * keeps moving while nobody is near, and a reload does the same work however long it was away. Catch-up follows the
+ * live parent rule: a step whose parent is loaded and below the threshold is held (so a firebreak holds after a
+ * reload too), and an unloaded parent counts as at its own target. When a chunk's loaded, below-threshold parent is
+ * itself still queued, the parent is caught up first (recursively, at most {@code radius} deep, stopping at cycles
+ * between nidi) and its own queue entry is then skipped, so a region that loads at once catches up from the nidus
+ * outward whatever order its chunks loaded in, each chunk once.
  */
 public final class SpreadEngine {
     /** The level as the engine sees it. Chunks are {@link ChunkPos#toLong()} keys; calls come from the server thread. */
@@ -32,8 +40,11 @@ public final class SpreadEngine {
 
         void set(long chunk, ChunkCorruption state);
 
-        /** Lets the level scale or cancel (return 0) one chunk-to-chunk step. */
-        int spreadAttempt(long from, long to, int amount);
+        /**
+         * Lets the level scale or cancel (return 0) one chunk-to-chunk step at {@code gameTime}; {@code catchUp} when it
+         * is part of a reloaded chunk's fast-forward.
+         */
+        int spreadAttempt(long from, long to, int amount, long gameTime, boolean catchUp);
 
         /** Every indexed nidus in a fixed order. */
         List<Nidus> nidi();
@@ -42,13 +53,26 @@ public final class SpreadEngine {
         boolean validate(Nidus nidus);
     }
 
-    /** Work done in one tick, for budget checks and measurement. */
-    public record TickWork(int catchUps, int visits) {
+    /**
+     * Work done in one tick, for budget checks and measurement: chunks caught up (or found unloaded), at most
+     * {@code catchUpBudget}; how many of them were queued parents caught up ahead of a child; live pass visits.
+     */
+    public record TickWork(int catchUps, int parentsFirst, int visits) {
     }
 
     private final Land land;
     private final Supplier<SpreadSettings> settings;
-    private final Queue<Long> pendingCatchUp = new ConcurrentLinkedQueue<>();
+    private final Deque<Long> pendingCatchUp = new ConcurrentLinkedDeque<>();
+    /** How many times each chunk is in {@link #pendingCatchUp}, so a child can find its queued parent. */
+    private final Map<Long, Integer> queued = new ConcurrentHashMap<>();
+    /**
+     * Queue entries left for chunks already caught up this round (one catch-up covers every entry queued before it);
+     * they are skipped without counting against the budget.
+     */
+    private final Map<Long, Integer> covered = new HashMap<>();
+    /** Chunks whose catch-up is waiting on a parent's, to stop at cycles. */
+    private final List<Long> path = new ArrayList<>();
+    private int remaining;
 
     private SpreadSettings pass;
     private List<Nidus> passNidi = List.of();
@@ -65,7 +89,13 @@ public final class SpreadEngine {
 
     /** Queues a chunk for catch-up. Safe to call from any thread. */
     public void chunkLoaded(long chunk) {
-        pendingCatchUp.add(chunk);
+        queued.merge(chunk, 1, Integer::sum);
+        pendingCatchUp.addLast(chunk);
+    }
+
+    private void queueFirst(long chunk) {
+        queued.merge(chunk, 1, Integer::sum);
+        pendingCatchUp.addFirst(chunk);
     }
 
     public int pendingCatchUps() {
@@ -78,27 +108,116 @@ public final class SpreadEngine {
 
     public TickWork tick(long gameTime) {
         SpreadSettings current = settings.get();
-        int catchUps = runCatchUp(gameTime, current);
+        int[] parents = new int[1];
+        int catchUps = runCatchUp(gameTime, current, parents);
         int visits = runPass(gameTime, current);
-        return new TickWork(catchUps, visits);
+        return new TickWork(catchUps, parents[0], visits);
     }
 
-    private int runCatchUp(long now, SpreadSettings current) {
-        int done = 0;
-        while (done < current.catchUpBudget()) {
-            Long chunk = pendingCatchUp.poll();
+    private int runCatchUp(long now, SpreadSettings current, int[] parents) {
+        remaining = current.catchUpBudget();
+        while (remaining > 0) {
+            Long chunk = pendingCatchUp.pollFirst();
             if (chunk == null) {
                 break;
             }
-            done++;
-            if (land.isLoaded(chunk)) {
-                catchUp(chunk, now, current);
+            queued.computeIfPresent(chunk, (key, count) -> count > 1 ? count - 1 : null);
+            Integer left = covered.get(chunk);
+            if (left != null) {
+                if (left > 1) {
+                    covered.put(chunk, left - 1);
+                } else {
+                    covered.remove(chunk);
+                }
+                continue;
             }
+            if (!land.isLoaded(chunk)) {
+                remaining--;
+                continue;
+            }
+            if (!catchUpAfterParents(chunk, now, current, parents)) {
+                // Out of budget partway: the parents done so far are covered; the chunk goes first next tick.
+                queueFirst(chunk);
+                break;
+            }
+            cover(chunk);
         }
-        return done;
+        return current.catchUpBudget() - remaining;
     }
 
-    /** Fast-forwards one loaded chunk to {@code now}; normally run from the catch-up queue. */
+    /**
+     * Catches {@code chunk} up after any loaded, still-queued parent below the threshold (recursively, at most
+     * {@code radius} deep and never through a chunk already on the path, which breaks cycles between nidi). Returns
+     * false, leaving {@code chunk} untouched, when the tick's budget runs out first.
+     */
+    private boolean catchUpAfterParents(long chunk, long now, SpreadSettings current, int[] parents) {
+        if (path.size() < current.radius()) {
+            path.add(chunk);
+            try {
+                for (long parent : queuedParents(chunk, current)) {
+                    if (path.contains(parent) || covered.containsKey(parent)) {
+                        continue;
+                    }
+                    if (!catchUpAfterParents(parent, now, current, parents)) {
+                        return false;
+                    }
+                    cover(parent);
+                    parents[0]++;
+                }
+            } finally {
+                path.remove(chunk);
+            }
+        }
+        if (remaining == 0) {
+            return false;
+        }
+        remaining--;
+        catchUp(chunk, now, current);
+        return true;
+    }
+
+    /** Marks every queue entry of a chunk just caught up as done, so they are skipped. */
+    private void cover(long chunk) {
+        Integer rest = queued.get(chunk);
+        if (rest != null) {
+            covered.put(chunk, rest);
+        }
+    }
+
+    /** Loaded parents below the threshold, still queued, that steps this chunk could catch up on come from. */
+    private List<Long> queuedParents(long chunk, SpreadSettings current) {
+        List<Long> parents = List.of();
+        int level = land.get(chunk).level();
+        int x = ChunkPos.getX(chunk);
+        int z = ChunkPos.getZ(chunk);
+        for (Nidus nidus : land.nidi()) {
+            long origin = nidus.chunk();
+            int dx = x - ChunkPos.getX(origin);
+            int dz = z - ChunkPos.getZ(origin);
+            int distance = Math.abs(dx) + Math.abs(dz);
+            if (distance == 0 || distance > current.radius() || level >= current.target(distance)) {
+                continue;
+            }
+            long parent = parent(origin, dx, dz);
+            if (queued.containsKey(parent) && !covered.containsKey(parent) && land.isLoaded(parent)
+                    && land.get(parent).level() < current.spreadThreshold()) {
+                if (parents.isEmpty()) {
+                    parents = new ArrayList<>(2);
+                }
+                parents.add(parent);
+            }
+        }
+        return parents;
+    }
+
+    /**
+     * Fast-forwards one loaded chunk to {@code now}; normally run from the catch-up queue. A step from a loaded parent
+     * below the spread threshold is held without a spread attempt, as in a live pass; an unloaded parent is assumed to
+     * be at its target. The chunk's last change moves to {@code now} only when its level changed: passes shortened by a
+     * scaled step are then not credited again, but a catch-up whose steps were all held or cancelled keeps the old time,
+     * so a later catch-up credits that history again (still capped at the target). A parent caught up first contributes
+     * its level after that catch-up, which converges on the same targets as live spread rather than replaying history.
+     */
     public void catchUp(long chunk, long now, SpreadSettings current) {
         ChunkCorruption state = land.get(chunk);
         int level = state.level();
@@ -121,7 +240,11 @@ public final class SpreadEngine {
             int rate = distance == 0 ? current.nidusGrowth() : current.spreadStep();
             int amount = (int) Math.min(target - level, missed * rate);
             if (distance > 0) {
-                amount = clamp(land.spreadAttempt(parent(origin, dx, dz), chunk, amount), target - level);
+                long parent = parent(origin, dx, dz);
+                if (land.isLoaded(parent) && land.get(parent).level() < current.spreadThreshold()) {
+                    continue;
+                }
+                amount = clamp(land.spreadAttempt(parent, chunk, amount, now, true), target - level);
             }
             level += amount;
         }
@@ -200,8 +323,8 @@ public final class SpreadEngine {
             if (parentLevel < pass.spreadThreshold()) {
                 return;
             }
-            amount = clamp(land.spreadAttempt(parent, chunk, Math.min(pass.spreadStep(), target - state.level())),
-                    target - state.level());
+            amount = clamp(land.spreadAttempt(parent, chunk, Math.min(pass.spreadStep(), target - state.level()), now,
+                    false), target - state.level());
         }
         if (amount > 0) {
             land.set(chunk, new ChunkCorruption(state.level() + amount, now));

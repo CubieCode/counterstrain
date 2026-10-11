@@ -48,8 +48,8 @@ final class ServerLand implements SpreadEngine.Land {
     }
 
     @Override
-    public int spreadAttempt(long from, long to, int amount) {
-        return SpreadHooks.spreadAttempt(level, new ChunkPos(from), new ChunkPos(to), amount);
+    public int spreadAttempt(long from, long to, int amount, long gameTime, boolean catchUp) {
+        return SpreadHooks.spreadAttempt(level, from, to, amount, gameTime, catchUp);
     }
 
     @Override

@@ -25,7 +25,7 @@ Names follow the glossary and naming rule in docs/DESIGN.md: content IDs, trigge
 
 Config `config/remission-common.toml`, `[hosts] stageThresholds = [1, 34, 67]`: 1–8 ints in 1–100, order-independent. Changes apply the next time a level is set.
 
-Sync: NeoForge attachment sync, wire format `CorruptionState.STREAM_CODEC` (var-int `level`, var-int `stage`), to players tracking the entity and to the entity itself if it is a player, on change, on start-tracking and on the player's login, respawn and dimension change. Clients read it with `Corruption.get`. Not copied on death or by vanilla conversions (a zombie villager cured, a pig struck by lightning); infection's own `convert_to` sets it on the replacement (below). P4.4 adds the host corrupted / cleansed events, fired from `set`; the debug commands below drive it.
+Sync: NeoForge attachment sync, wire format `CorruptionState.STREAM_CODEC` (var-int `level`, var-int `stage`), to players tracking the entity and to the entity itself if it is a player, on change, on start-tracking and on the player's login, respawn and dimension change. Clients read it with `Corruption.get`. Not copied on death or by vanilla conversions (a zombie villager cured, a pig struck by lightning); infection's own `convert_to` sets it on the replacement (below). `set` posts `HostCorruptedEvent` or `HostCleansedEvent` (Public API, below) when the state changes; `set(entity, level, cause)` names the `CorruptionCause` (infection and the debug commands pass theirs). The debug commands below drive it.
 
 ## Scanner and data items (built, P6.1)
 
@@ -189,7 +189,7 @@ Commands (`/remission surge start <pos> [intensity]`, `/remission nidus seed <po
 
 ## Festering land: chunk attachment, nidus, spread config (built, P4.1)
 
-Chunk attachment `remission:chunk_corruption` (`ChunkCorruption` in `com.cubiecode.remission.world`), saved inside the chunk's `neoforge:attachments` compound, omitted at level 0. Server only, not synced. Internal until P4.4 adds the stage queries; packs read it through those.
+Chunk attachment `remission:chunk_corruption` (`ChunkCorruption` in `com.cubiecode.remission.world`), saved inside the chunk's `neoforge:attachments` compound, omitted at level 0. Server only, not synced. Internal: packs read it through `CorruptionQueries` (Public API, below).
 
 ```json
 { "level": 42, "last_update_game_time": 1234000 }
@@ -214,9 +214,9 @@ Config `config/remission-common.toml`, section `[spread]` (all ints, applied fro
 | `chunkBudget` | 256 | 1–65536 | Chunk visits per tick for the live pass; a longer pass continues next tick. |
 | `catchUpBudget` | 32 | 1–4096 | Reloaded chunks fast-forwarded per tick; the rest wait in a queue. |
 
-Rules: spread runs chunk to chunk from the parent neighbour (one step toward the nidus along the larger offset axis), so cancelling one step blocks everything behind it; overlapping nidi each add their step; unloaded chunks are never loaded or written, and an unloaded parent counts as at its target. Default pace: a nidus chunk reaches the threshold after 8 passes (about 2.7 minutes), its neighbours reach 90 after about 45 more, and the seventh ring starts festering after about 128 passes (about 43 minutes of play, two in-game days). These are first-pass numbers for balancing in the pack.
+Rules: spread runs chunk to chunk from the parent neighbour (one step toward the nidus along the larger offset axis), so cancelling one step blocks everything behind it while the blocked chunk is loaded (live passes and catch-up both hold a step whose loaded parent is below the threshold); overlapping nidi each add their step; unloaded chunks are never loaded or written, and an unloaded parent counts as at its target (so a firebreak chunk that unloads stops holding). Catch-up of a region that loads at once runs from the nidus outward whatever the load order: a chunk whose loaded, below-threshold parent is still queued catches that parent up first (at most radius deep, stopping at cycles between nidi), and each chunk is caught up once. Default pace: a nidus chunk reaches the threshold after 8 passes (about 2.7 minutes), its neighbours reach 90 after about 45 more, and the seventh ring starts festering after about 128 passes (about 43 minutes of play, two in-game days). These are first-pass numbers for balancing in the pack.
 
-Events: P4.4 posts the chunk stage changed, nidus destroyed and spread attempt events from the internal points in `SpreadHooks` (`chunkLevelChanged`, `nidusDestroyed`, `spreadAttempt`; the last runs before every live and catch-up step and its returned amount scales or cancels it). No player is passed to the nidus hook yet.
+Events: the spread engine posts `ChunkStageChangedEvent`, `NidusDestroyedEvent` and the cancellable `StrainSpreadAttemptEvent` (Public API, below).
 
 ## Fester variants (planned, P4.2)
 
@@ -230,24 +230,53 @@ Data component `remission:contaminated` on item stacks carried through festering
 
 Block `remission:dispersal_payload` deploys the Counterstrain. The planned API is a dispersal source (level, position, radius, rate) ticked by its holder. The placed block is one holder; the optional Create integration (P10.6) ticks it from a moving contraption. The API must not assume a block. Fields are fixed in P9.2.
 
-## Public API events and queries (planned, P4.4)
+## Public API events and queries (built, P4.4)
 
-Package `com.cubiecode.remission.api`; nothing outside it is public. Events are NeoForge events posted server side on `NeoForge.EVENT_BUS` after the change is applied, except the cancellable spread attempt, which is posted before. Batched changes (catch-up, stage batches) post one event per chunk unless the event is block-scoped. Java names may use "corruption".
+Package `com.cubiecode.remission.api`; nothing outside it is public (the `corruption`, `world` and other packages are internal, even where their classes are `public`). Java names may use "corruption".
+
+Conventions, for every event here and every event later items add:
+
+- NeoForge events on `NeoForge.EVENT_BUS`, posted on the logical server, server thread only. Nothing is posted on the client.
+- Posted after the state change is applied, so `CorruptionQueries` in a listener already returns the new state. The one exception is the cancellable `StrainSpreadAttemptEvent`, posted before its step.
+- Batched changes (catch-up of a reloaded chunk, later bounded stage batches) post one event per chunk, never one per block or per missed pass, unless the event is block-scoped.
+- Base classes are abstract and cannot be listened to: `HostEvent` (extends NeoForge `LivingEvent`; `getEntity()` is the `LivingEntity`) and `FesteringLandEvent` (extends `Event`; `getLevel()` is the `ServerLevel`). Listen to the concrete events.
+- Levels are ints 0–100 (`CorruptionQueries.MAX_LEVEL`) for entities and chunks. Host stages come from `[hosts] stageThresholds`, chunk (festering) stages from `[festering] stageThresholds`.
+
+| Event | Fields (getters) | Fired | Cancellable |
+| --- | --- | --- | --- |
+| `HostCorruptedEvent extends HostEvent` | `getEntity()`, `getOldLevel()`, `getOldStage()`, `getNewLevel()`, `getNewStage()`, `getCause()`; `wasHost()`, `isHost()`, `becameHost()` | After `Corruption.set` raises an entity's level (or, at the same level, its stage after a threshold change), with attachment, host attributes and host goals already applied. Every increase, not only the first; `becameHost()` marks the non-host to host change. Never for immune entities (their state does not change) or no-op sets. | no |
+| `HostCleansedEvent extends HostEvent` | as above; `isFullyCleansed()` (new level 0) | After `Corruption.set` lowers an entity's level (or stage), including partial cleansing. | no |
+| `ChunkStageChangedEvent extends FesteringLandEvent` | `getLevel()`, `getChunk()` (`ChunkPos`), `getOldLevel()`, `getNewLevel()`, `getOldStage()`, `getNewStage()` | After the spread engine stores a chunk level whose festering stage differs from the old one: live passes and catch-up. A catch-up posts once per chunk, so stages can jump by more than one; changes within a stage post nothing. | no |
+| `NidusDestroyedEvent extends FesteringLandEvent` | `getLevel()`, `getPos()` (the nidus block) | After a nidus leaves the level's index: its block was broken, replaced or removed, or a spread pass found an index entry without its block. Its land keeps its level. No player is passed; quests use the `nidus_destroyed` trigger (planned, P8.1). To protect a nidus, cancel the block break. When the block was removed, it is posted from the block's `onRemove` inside `setBlockState`: listeners must not set the block at `getPos()` in the listener (defer it). | no |
+| `StrainSpreadAttemptEvent extends FesteringLandEvent` | `getLevel()`, `getFrom()`, `getTo()` (`ChunkPos`), `getAmount()` (level gain at multiplier 1, capped at the target), `isCatchUp()`, `getRateMultiplier()`/`setRateMultiplier(double)` (default 1; negative or NaN become 0) | Before every chunk-to-chunk step: each live step into a loaded chunk below its target whose parent passed the threshold, and once per nidus in reach when a reloaded chunk catches up (`isCatchUp()`, `getAmount()` covers every missed pass, `getFrom()` may be unloaded). The growth of a nidus's own chunk is not a spread attempt, and a step from a loaded parent below the threshold is held without an event (live and catch-up). | yes: cancelling (or multiplier 0) stops this step; chunks reached through it stay clean while the cancelled chunk is loaded. A step from an unloaded parent is not held (the parent counts as at its target), so keep a firebreak chunk loaded or cancel the steps behind it too |
+
+Spread rate: the gain is `amount * multiplier`, capped at the chunk's target. A fractional part is added as one more level with that probability, drawn from a hash of the two chunks and the game time, so slowed spread still advances on average and the same state and ticks give the same levels. Listeners compose by multiplying (`event.setRateMultiplier(event.getRateMultiplier() * 0.5)`). `last_update_game_time` moves to now only when a catch-up changed the chunk's level: passes shortened by a multiplier below 1 are then not credited again (the chunk ends below where full-rate spread would have taken it and continues from there), while a catch-up whose steps were all cancelled, scaled to 0 or held keeps the old time, so a later reload credits that history again, still capped at the target. A parent caught up first (see the rules above) contributes its level after its own catch-up, which converges on the same targets as live spread rather than replaying exact history.
+
+Re-entrancy: a host event listener that changes the same entity's level (`Corruption.set`) posts a nested event at once; later listeners of the outer event then see its stale values while queries return the nested change. Defer such changes to a later tick.
+
+`CorruptionCause` (enum, `HostEvent.getCause()`): `INFECTION` (killed by a host and infected in place or converted), `COMMAND` (`/remission infect` or `/remission cleanse`), `OTHER` (any other caller). Later items append causes (purification, P5.2); treat unknown values as `OTHER`.
+
+Queries, `CorruptionQueries` (static):
+
+| Method | Returns | Side |
+| --- | --- | --- |
+| `isHost(Entity)` | whether a living entity's stored host stage is ≥ 1; false for non-living entities | both (hosts are synced) |
+| `hostLevel(Entity)`, `hostStage(Entity)` | stored level and host stage; 0 for clean or non-living entities | both |
+| `chunkLevel(ServerLevel, ChunkPos)`, `levelAt(ServerLevel, BlockPos)` | Strain level of a loaded chunk (of the chunk holding the position); 0 if clean or not loaded (never loads a chunk) | server |
+| `chunkStage(ServerLevel, ChunkPos)`, `stageAt(ServerLevel, BlockPos)` | festering stage of that level (every block in a chunk shares its chunk's stage) | server |
+| `chunkStageFor(int level)`, `maxChunkStage()` | stage of a chunk level under the current config; the number of chunk stages | server config |
+
+Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; P4.2 maps them to festering grass, trees and foliage, festered stone and the biome flip). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
+
+Planned by later items, added here when built: block festered (P4.2), surge started / ended (P4.3), viral load changed and a player's viral load query (P5.1), block purified and chunk entered remission (P5.2).
 
 | Event | Fired by | Payload (planned) | Cancellable |
 | --- | --- | --- | --- |
-| host corrupted | P2.1 setter, infection (P3.3, through the setter) | entity, old and new state, cause | no |
-| host cleansed | P2.1 setter, purification | entity, old state, cause | no |
-| chunk stage changed | P4.1 | level, chunk pos, old and new stage | no |
-| nidus destroyed | P4.1 | level, pos, player (optional) | no |
-| Strain spread attempt | P4.1 | level, from and to chunk, rate multiplier (mutable) | yes |
 | block festered | P4.2 | level, pos, old and new block state | no |
 | surge started / ended | P4.3 | level, origin, intensity | no |
 | viral load changed | P5.1 | player, old and new value, cause | no |
 | block purified | P5.2 | level, pos, old and new block state, cause | no |
 | chunk entered remission | P5.2 | level, chunk pos, player (optional) | no |
-
-Queries: corruption stage at a position or chunk, `isHost(entity)`, a player's viral load (P5.1). Exact class names, fields and firing rules are recorded here by the item that builds them.
 
 ## KubeJS event bindings (planned, P8.3)
 

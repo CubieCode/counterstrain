@@ -1,5 +1,6 @@
 package com.cubiecode.remission.commands;
 
+import com.cubiecode.remission.api.CorruptionCause;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -62,7 +63,7 @@ public final class RemissionCommands {
         }
         CorruptionState state = CorruptionState.NONE;
         for (LivingEntity host : hosts) {
-            state = Corruption.set(host, level);
+            state = Corruption.set(host, level, CorruptionCause.COMMAND);
         }
         if (hosts.size() == 1) {
             CorruptionState set = state;
@@ -79,7 +80,7 @@ public final class RemissionCommands {
     private static int cleanse(CommandSourceStack source, Collection<? extends Entity> targets) throws CommandSyntaxException {
         List<LivingEntity> hosts = livingTargets(targets);
         for (LivingEntity host : hosts) {
-            Corruption.set(host, 0);
+            Corruption.set(host, 0, CorruptionCause.COMMAND);
         }
         if (hosts.size() == 1) {
             source.sendSuccess(() -> Component.translatable("commands.remission.cleanse.success.single",
