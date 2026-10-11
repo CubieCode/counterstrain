@@ -11,7 +11,7 @@ Steps for each product:
 1. On a branch, `tools/bump-version.sh mod|pack X.Y.Z` (it edits the file, refreshes the pack index for pack bumps, and never commits or tags).
 2. Add a section to `mod/CHANGELOG.md` or `pack/CHANGELOG.md` (Keep a Changelog style: Added/Changed/Fixed/Removed, newest first, roadmap IDs in parentheses).
 3. Run the full checks (`./gradlew build runData runGameTestServer`, `tools/pack.sh check`, a GPU headless run for anything visual), open the PR `Release: Remission X.Y.Z` / `Release: Counterstrain X.Y.Z`, merge when authorised.
-4. Tag the merge commit on main: `git tag mod-vX.Y.Z` or `pack-vX.Y.Z`, push only that tag.
+4. Tag the release PR's squash commit on main: `git tag mod-vX.Y.Z` or `pack-vX.Y.Z`, push only that tag. A ruleset lets only repository admins create, move or delete `mod-v*`/`pack-v*` tags.
 
 Workflows: `release-mod.yml` checks the tag matches `mod_version`, builds with gametests and creates a **draft** GitHub release with the jar. `release-pack.yml` checks the tag matches `pack.toml`, runs the packwiz drift check, exports the CurseForge zip (the pack release artifact) and the `.mrpack` (local testing), and attaches them to a draft. A human reviews and publishes drafts. Never delete or move a pushed tag; fix forward with a new patch version.
 
