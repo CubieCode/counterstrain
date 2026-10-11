@@ -327,9 +327,10 @@ Goals: the Strain becomes a resource processed by machines into tools for the fi
 
 ### P7.1: Miasma and samples
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p7.1-miasma-samples
 - PR: https://github.com/CubieCode/counterstrain/pull/36
+- Validation: PR #36; `remission:miasma` fluid, bucket and liquid block, optional Mekanism chemical, `nidus_core` and `festered_soil` loot (`remission:is_festering` condition); 98/98 gametests with and without Mekanism; GPU scene `tech/miasma` (RTX 4070) reviewed; CI and gpu-smoke green. Open for balancing: festered soil 25% at stage 2+, nidus drops its core.
 - Depends on: P3.3
 - Scope: `remission:miasma` fluid (and Mekanism chemical `remission:miasma` via optional integration in `integration/mekanism/`), `remission:host_tissue`, `remission:nidus_core` and `remission:festered_soil` sample items and their loot.
 - Acceptance: Fluid renders and flows; Mekanism integration loads only when Mekanism is present. Ledger updated; placeholders marked.
