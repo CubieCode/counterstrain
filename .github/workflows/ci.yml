@@ -1,0 +1,68 @@
+name: CI
+# Mod: build, datagen drift check and gametests. Pack: packwiz index check.
+# Docs-only changes skip both jobs.
+#
+# Runners: vars.RUNNER selects them (JSON, e.g. ["self-hosted","foundry"]);
+# unset means ubuntu-latest. Self-hosted jobs run as `lab` without sudo, so no
+# step may install system packages. Java comes from setup-java (Temurin 21,
+# matching .sdkmanrc); packwiz is built by tools/install-packwiz.sh.
+# Integration-test mods (KubeJS, JEI, ...) are disabled here so CI tests
+# Remission on its own and does not depend on Modrinth/FTB Maven uptime.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**']
+  pull_request:
+    paths-ignore: ['**/*.md', 'docs/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  mod:
+    runs-on: ${{ fromJSON(vars.RUNNER || '"ubuntu-latest"') }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mod
+    env:
+      ORG_GRADLE_PROJECT_dev_runtime_mods: 'false'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew build --console=plain
+      - run: ./gradlew runData --console=plain
+      - name: Check generated resources are committed
+        working-directory: .
+        run: |
+          git diff --exit-code -- mod/src/generated
+          untracked="$(git ls-files --others --exclude-standard -- mod/src/generated)"
+          if [ -n "$untracked" ]; then
+            echo "$untracked"
+            echo "::error::runData produced uncommitted files; run it locally and commit them"
+            exit 1
+          fi
+      - run: ./gradlew runGameTestServer --console=plain
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: remission-jar
+          path: mod/build/libs/*.jar
+          if-no-files-found: ignore
+
+  pack:
+    runs-on: ${{ fromJSON(vars.RUNNER || '"ubuntu-latest"') }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install packwiz
+        run: |
+          PACKWIZ_BIN_DIR="$RUNNER_TEMP/bin" tools/install-packwiz.sh
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - run: tools/pack.sh check

@@ -1,0 +1,38 @@
+name: Release pack
+# Tag pack-v<version> (matching version in pack/pack.toml) to check the
+# packwiz index, export Modrinth and CurseForge files and attach them to a
+# draft GitHub release. Platform uploads are not wired yet (roadmap phase 11).
+on:
+  push:
+    tags: ['pack-v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ${{ fromJSON(vars.RUNNER || '"ubuntu-latest"') }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check tag matches pack version
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' pack/pack.toml)"
+          if [ "${GITHUB_REF_NAME}" != "pack-v${version}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match pack version ${version}"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - name: Install packwiz
+        run: |
+          PACKWIZ_BIN_DIR="$RUNNER_TEMP/bin" tools/install-packwiz.sh
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - run: tools/pack.sh check
+      - run: tools/pack.sh export
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            ".local/dist/counterstrain-${VERSION}.mrpack" \
+            ".local/dist/counterstrain-${VERSION}.zip" \
+            --draft --title "Counterstrain ${VERSION}" \
+            --notes "Counterstrain ${VERSION} for Minecraft 1.21.1 (NeoForge). See CHANGELOG."
