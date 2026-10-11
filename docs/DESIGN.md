@@ -22,7 +22,8 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Infected mobs | **hosts** | "a host cow"; the bestiary lists host types |
 | Mobs the Strain cannot take | **immune** | tag `#remission:immune` (bosses by default); "the wither is immune" |
 | How far the Strain has taken a host | **Strain level** (0–100) and **host stage** | config `hosts.stageThresholds`; `CorruptionState` fields `level`, `stage` |
-| Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone`, biome `remission:fester` |
+| Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone`, biome `remission:fester`; data map `remission:festers_into` |
+| The fester biome a particular source biome turns into | **fester variant** | data map `remission:fester_variant`; "plains festers into `remission:fester`, a pack's lavender field into its own fester variant" |
 | Boundary between festering land and reclaimed land | **frontier** | "hold the frontier" |
 | Periodic spread bursts | **surges** | "the nidus surges at the season change" |
 | Extracted resource | **miasma** | fluid `remission:miasma`; Mekanism chemical `remission:miasma` when Mekanism is present |
@@ -39,7 +40,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Research records made by the scanner | **scans**: **host scans** and **block scans** | item `remission:scanner`; data items `remission:host_scan`, `remission:block_scan`; data component `remission:scan_data` |
 | A player's record of host types, filled by host scans | **bestiary** | player attachment `remission:bestiary`; key mapping `key.remission.bestiary`; "12 of 79 host types scanned" |
 
-"Variant" always means a resistant mutation of the Strain, never a kind of host: scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
+"Variant" on its own always means a resistant mutation of the Strain, never a kind of host (a **fester variant** is a biome and is always called that in full): scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
 
 ### Naming rule
 

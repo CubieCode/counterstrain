@@ -6,6 +6,7 @@ import com.cubiecode.remission.corruption.CorruptionState;
 import com.cubiecode.remission.research.Bestiary;
 import com.cubiecode.remission.research.BestiaryProgress;
 import com.cubiecode.remission.world.ChunkCorruption;
+import com.mojang.serialization.Codec;
 import java.util.function.Supplier;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -53,6 +54,16 @@ public final class RemissionAttachments {
                     .serialize(BestiaryProgress.CODEC, progress -> !progress.isEmpty())
                     .copyOnDeath()
                     .sync(Bestiary::syncsTo, BestiaryProgress.STREAM_CODEC)
+                    .build());
+
+    /**
+     * The highest festering stage whose block transformations (and, at the last stage, biome flip) have been applied to a
+     * chunk (P4.2). Saved with the chunk (never at 0) and server-only, so a stage interrupted by an unload or a restart
+     * is finished when the chunk loads again.
+     */
+    public static final Supplier<AttachmentType<Integer>> FESTERED_STAGE = ATTACHMENT_TYPES.register("festered_stage",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.intRange(0, Integer.MAX_VALUE), stage -> stage > 0)
                     .build());
 
     private RemissionAttachments() {

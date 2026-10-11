@@ -1,0 +1,19 @@
+{
+  "values": {
+    "#minecraft:base_stone_overworld": {
+      "block": "remission:festered_stone",
+      "stage": 3
+    },
+    "#minecraft:leaves": {
+      "block": "remission:festering_leaves",
+      "stage": 2
+    },
+    "#minecraft:logs": {
+      "block": "remission:festering_log",
+      "stage": 2
+    },
+    "minecraft:grass_block": {
+      "block": "remission:festering_grass"
+    }
+  }
+}

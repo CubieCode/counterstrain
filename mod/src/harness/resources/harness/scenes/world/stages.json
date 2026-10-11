@@ -1,0 +1,112 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "fill 9 -61 4 13 -59 8 minecraft:stone",
+    "fill 3 -57 7 7 -55 11 minecraft:oak_leaves[persistent=true]",
+    "fill 4 -54 8 6 -54 10 minecraft:oak_leaves[persistent=true]",
+    "fill 5 -60 9 5 -55 9 minecraft:oak_log",
+    "fill 1 -60 1 1 -59 1 minecraft:oak_log[axis=x]",
+    "fill 25 -61 4 29 -59 8 minecraft:stone",
+    "fill 19 -57 7 23 -55 11 minecraft:oak_leaves[persistent=true]",
+    "fill 20 -54 8 22 -54 10 minecraft:oak_leaves[persistent=true]",
+    "fill 21 -60 9 21 -55 9 minecraft:oak_log",
+    "fill 17 -60 1 17 -59 1 minecraft:oak_log[axis=x]",
+    "fill 41 -61 4 45 -59 8 minecraft:stone",
+    "fill 35 -57 7 39 -55 11 minecraft:oak_leaves[persistent=true]",
+    "fill 36 -54 8 38 -54 10 minecraft:oak_leaves[persistent=true]",
+    "fill 37 -60 9 37 -55 9 minecraft:oak_log",
+    "fill 33 -60 1 33 -59 1 minecraft:oak_log[axis=x]",
+    "fill 57 -61 4 61 -59 8 minecraft:stone",
+    "fill 51 -57 7 55 -55 11 minecraft:oak_leaves[persistent=true]",
+    "fill 52 -54 8 54 -54 10 minecraft:oak_leaves[persistent=true]",
+    "fill 53 -60 9 53 -55 9 minecraft:oak_log",
+    "fill 49 -60 1 49 -59 1 minecraft:oak_log[axis=x]",
+    "fill 73 -61 4 77 -59 8 minecraft:stone",
+    "fill 67 -57 7 71 -55 11 minecraft:oak_leaves[persistent=true]",
+    "fill 68 -54 8 70 -54 10 minecraft:oak_leaves[persistent=true]",
+    "fill 69 -60 9 69 -55 9 minecraft:oak_log",
+    "fill 65 -60 1 65 -59 1 minecraft:oak_log[axis=x]",
+    "harness fester 16 -60 0 31 -60 15 10",
+    "harness fester 32 -60 0 47 -60 15 30",
+    "harness fester 48 -60 0 63 -60 15 60",
+    "harness fester 64 -60 0 79 -60 15 90"
+  ],
+  "shots": [
+    {
+      "name": "overview",
+      "camera": {
+        "pos": [
+          40.0,
+          -38.0,
+          46.0
+        ],
+        "yaw": 180.0,
+        "pitch": 28.0
+      },
+      "commands": [
+        "harness resend 0 -60 0 79 -60 15"
+      ]
+    },
+    {
+      "name": "stage_0",
+      "camera": {
+        "pos": [
+          8.0,
+          -52.0,
+          27.0
+        ],
+        "yaw": 180.0,
+        "pitch": 24.0
+      }
+    },
+    {
+      "name": "stage_1",
+      "camera": {
+        "pos": [
+          24.0,
+          -52.0,
+          27.0
+        ],
+        "yaw": 180.0,
+        "pitch": 24.0
+      }
+    },
+    {
+      "name": "stage_2",
+      "camera": {
+        "pos": [
+          40.0,
+          -52.0,
+          27.0
+        ],
+        "yaw": 180.0,
+        "pitch": 24.0
+      }
+    },
+    {
+      "name": "stage_3",
+      "camera": {
+        "pos": [
+          56.0,
+          -52.0,
+          27.0
+        ],
+        "yaw": 180.0,
+        "pitch": 24.0
+      }
+    },
+    {
+      "name": "stage_4",
+      "camera": {
+        "pos": [
+          72.0,
+          -52.0,
+          27.0
+        ],
+        "yaw": 180.0,
+        "pitch": 24.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "bottom": "minecraft:block/dirt",
+    "side": "remission:block/festering_grass_side",
+    "top": "remission:block/festering_grass_top"
+  }
+}
