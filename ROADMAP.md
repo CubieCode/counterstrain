@@ -327,9 +327,9 @@ Goals: the Strain becomes a resource processed by machines into tools for the fi
 
 ### P7.1: Miasma and samples
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p7.1-miasma-samples
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/36
 - Depends on: P3.3
 - Scope: `remission:miasma` fluid (and Mekanism chemical `remission:miasma` via optional integration in `integration/mekanism/`), `remission:host_tissue`, `remission:nidus_core` and `remission:festered_soil` sample items and their loot.
 - Acceptance: Fluid renders and flows; Mekanism integration loads only when Mekanism is present. Ledger updated; placeholders marked.
