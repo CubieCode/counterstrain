@@ -143,9 +143,11 @@ public final class HostFallbackTests {
     @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 200)
     public static void hostBreezeAttacksIronGolem(GameTestHelper helper) {
         // A breeze only ever attacks players and iron golems (Breeze#canAttackType), so the prey is a golem; its wind
-        // charges are owned by the breeze, so the golem is hurt by it.
+        // charges are owned by the breeze, so the golem is hurt by it. The golem is 1.4 wide, so at the usual prey corner
+        // (5, 5) its box already overlaps the glass; a sliding breeze can shove it further in until glass blocks the
+        // breeze's line of sight, and the breeze drops the target and never sees it again. At (4, 4) it clears the walls.
         assertAttacks(helper, helper.spawn(EntityType.BREEZE, 1, 2, 1),
-                helper.spawnWithNoFreeWill(EntityType.IRON_GOLEM, 5, 2, 5));
+                helper.spawnWithNoFreeWill(EntityType.IRON_GOLEM, 4, 2, 4));
     }
 
     @GameTest(template = "empty", batch = BATCH)
