@@ -6,7 +6,6 @@ import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.tags.EntityTypeTagsProvider;
-import net.minecraft.world.entity.EntityType;
 import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
@@ -18,7 +17,8 @@ public final class RemissionEntityTypeTagsProvider extends EntityTypeTagsProvide
 
     @Override
     protected void addTags(HolderLookup.Provider provider) {
-        // Bosses and the player never become hosts; players carry viral load instead (P5.1).
-        tag(Corruption.IMMUNE).addTag(Tags.EntityTypes.BOSSES).add(EntityType.PLAYER);
+        // Bosses never become hosts. Players are not immune: they can carry the Strain (rendered, scannable), but
+        // infection on kill only takes mobs.
+        tag(Corruption.IMMUNE).addTag(Tags.EntityTypes.BOSSES);
     }
 }

@@ -3,7 +3,6 @@ package com.cubiecode.remission.gametest;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.behaviour.MobProfile;
 import com.cubiecode.remission.corruption.Corruption;
-import com.cubiecode.remission.corruption.CorruptionState;
 import com.cubiecode.remission.infection.HostAttributes;
 import com.cubiecode.remission.infection.Infection;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -92,10 +91,10 @@ public final class InfectionTests {
 
     @GameTest(template = "empty")
     public static void immuneNeverInfected(GameTestHelper helper) {
+        // Players are not immune by default: commands and future sources may infect them.
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        helper.assertTrue(Corruption.isImmune(player), "player is not immune");
-        helper.assertValueEqual(Corruption.set(player, 50), CorruptionState.NONE, "player infected");
-        helper.assertFalse(Corruption.isHost(player), "player is a host");
+        helper.assertFalse(Corruption.isImmune(player), "player is immune");
+        helper.assertTrue(Corruption.set(player, 50).isHost(), "player cannot carry the Strain");
 
         WitherBoss wither = EntityType.WITHER.create(helper.getLevel());
         helper.assertTrue(wither != null && Corruption.isImmune(wither), "wither (#c:bosses) is not immune");

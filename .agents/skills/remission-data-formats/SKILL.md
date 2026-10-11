@@ -74,7 +74,7 @@ Festering land: `Infection.canInfectFromFesteringLand(Mob)` (not immune, not a h
 
 ## Entity tag `#remission:immune` (built, P3.3)
 
-`data/<ns>/tags/entity_type/immune.json`, standard tag JSON (`{"replace": false, "values": ["minecraft:wither", "#c:bosses", {"id": "othermod:x", "required": false}]}`); Java `Corruption.IMMUNE`. An immune entity never becomes a host by any route: `Corruption.set` ignores levels above 0, infection on kill and `convert_to` skip it, and `/remission infect` skips it. A type added to the tag after it already carries the Strain keeps its state until cleansed. Remission ships `#c:bosses` (ender dragon, wither, and whatever other mods tag) and `minecraft:player` (players carry viral load instead, P5.1); the pack extends it.
+`data/<ns>/tags/entity_type/immune.json`, standard tag JSON (`{"replace": false, "values": ["minecraft:wither", "#c:bosses", {"id": "othermod:x", "required": false}]}`); Java `Corruption.IMMUNE`. An immune entity never becomes a host by any route: `Corruption.set` ignores levels above 0, infection on kill and `convert_to` skip it, and `/remission infect` skips it. A type added to the tag after it already carries the Strain keeps its state until cleansed. Remission ships only `#c:bosses` (ender dragon, wither, and whatever other mods tag); the pack extends it. Players are deliberately not immune: they can carry the Strain (`/remission infect`, rendered by the host overlay, scannable), but infection on kill never takes them because it only converts `Mob`s.
 
 ## Mob profile (built, P3.3)
 
