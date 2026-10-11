@@ -212,9 +212,10 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.2: Festering stages and biome conversion
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p4.2-festering-stages
 - PR: https://github.com/CubieCode/counterstrain/pull/41
+- Validation: PR #41; four festering blocks, `festers_into` and `fester_variant` data maps, biome flip to `remission:fester` via vanilla biome resend, `BlockFesteredEvent`; 101/101 gametests; GPU scenes `world/stages` and `world/biome_flip` (RTX 4070) reviewed and deterministic; about 0.12 ms per tick at 64 columns; CI and gpu-smoke green.
 - Depends on: P4.1, P4.4
 - Scope: `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone` (blocks + placeholder textures + datagen), staged transformation, biome flip to `remission:fester` with client resend, and a data-driven per-source-biome fester variant (contract in remission-data-formats) so modded biomes can fester into their own variant. Emits the block festered and chunk stage changed events.
 - Acceptance: Harness scenes `world/stages` (one chunk per stage) and `world/biome_flip`, reviewed; no lighting or chunk-border artefacts. Ledger updated; placeholders marked.
