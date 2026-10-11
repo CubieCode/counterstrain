@@ -20,7 +20,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 /**
  * {@code /remission} debug commands (permission level 2): {@code infect <targets> <level>}, {@code cleanse <targets>} and
  * {@code inspect <target>}. They read and write host state only through {@link Corruption}; {@code infect} skips
- * {@linkplain Corruption#isImmune immune} targets.
+ * {@linkplain Corruption#isImmune immune} targets. {@code surge} is {@link SurgeCommands}.
  */
 public final class RemissionCommands {
     public static final int PERMISSION_LEVEL = 2;
@@ -51,7 +51,8 @@ public final class RemissionCommands {
                 .then(Commands.literal("inspect")
                         .then(Commands.argument("target", EntityArgument.entity())
                                 .executes(context -> inspect(context.getSource(),
-                                        EntityArgument.getEntity(context, "target"))))));
+                                        EntityArgument.getEntity(context, "target")))))
+                .then(SurgeCommands.node()));
     }
 
     /** Sets every living, non-immune target to {@code level}; returns the number of targets changed. */

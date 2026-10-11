@@ -3,6 +3,7 @@ package com.cubiecode.remission.data;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.research.Bestiary;
+import com.cubiecode.remission.surge.SurgeHosts;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
@@ -25,5 +26,7 @@ public final class RemissionEntityTypeTagsProvider extends EntityTypeTagsProvide
         // Living types survival players cannot normally meet as hosts: no natural spawn (giant, illusioner) or not a
         // creature (armour stand). They stay out of the bestiary list and total.
         tag(Bestiary.HIDDEN).add(EntityType.GIANT, EntityType.ILLUSIONER, EntityType.ARMOR_STAND);
+        // What surges spawn as hosts: common overworld mobs, hostile and passive.
+        tag(SurgeHosts.SURGE_HOSTS).add(EntityType.ZOMBIE, EntityType.SPIDER, EntityType.COW, EntityType.PIG, EntityType.SHEEP);
     }
 }

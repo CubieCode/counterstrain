@@ -2,6 +2,8 @@ package com.cubiecode.remission.world;
 
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionBlocks;
+import com.cubiecode.remission.surge.SurgeController;
+import com.cubiecode.remission.surge.Surges;
 import java.util.List;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
@@ -10,6 +12,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 /** {@link SpreadEngine.Land} over a server level: loaded chunks only, the {@code chunk_corruption} attachment, the saved index. */
 final class ServerLand implements SpreadEngine.Land {
     private final ServerLevel level;
+    private SurgeController surges;
 
     ServerLand(ServerLevel level) {
         this.level = level;
@@ -67,5 +70,13 @@ final class ServerLand implements SpreadEngine.Land {
             SpreadHooks.nidusDestroyed(level, nidus.pos());
         }
         return false;
+    }
+
+    @Override
+    public int surgeFactor(Nidus nidus) {
+        if (surges == null) {
+            surges = Surges.controller(level);
+        }
+        return surges.spreadFactor(nidus);
     }
 }

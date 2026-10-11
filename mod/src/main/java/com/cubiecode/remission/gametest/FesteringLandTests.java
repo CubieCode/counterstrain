@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.LongPredicate;
+import java.util.function.ToIntFunction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -46,6 +47,8 @@ public final class FesteringLandTests {
         final Set<Long> unloaded = new HashSet<>();
         final int half;
         LongPredicate blocked = chunk -> false;
+        /** Surge factor per nidus (P4.3); 1 means no surge. */
+        ToIntFunction<Nidus> surge = nidus -> 1;
 
         MapLand(int half) {
             this.half = half;
@@ -75,6 +78,11 @@ public final class FesteringLandTests {
         @Override
         public List<Nidus> nidi() {
             return List.copyOf(nidi);
+        }
+
+        @Override
+        public int surgeFactor(Nidus nidus) {
+            return surge.applyAsInt(nidus);
         }
 
         @Override

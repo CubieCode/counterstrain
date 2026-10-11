@@ -23,6 +23,8 @@ public final class RemissionStats {
     public static final Supplier<ResourceLocation> HOSTS_SCANNED = register("hosts_scanned");
     /** Block scans a player took with the scanner (P8.1). */
     public static final Supplier<ResourceLocation> BLOCKS_SCANNED = register("blocks_scanned");
+    /** Surges a player survived (P4.3). */
+    public static final Supplier<ResourceLocation> SURGES_SURVIVED = register("surges_survived");
 
     private RemissionStats() {
     }

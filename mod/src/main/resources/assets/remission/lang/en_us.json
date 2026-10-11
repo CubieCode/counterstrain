@@ -59,5 +59,22 @@
   "block.remission.festering_leaves": "Festering Leaves",
   "block.remission.festered_stone": "Festered Stone",
   "block.remission.festered_deepslate": "Festered Deepslate",
-  "biome.remission.fester": "Fester"
+  "biome.remission.fester": "Fester",
+  "entity.remission.miasma_cloud": "Miasma Cloud",
+  "stat.remission.surges_survived": "Surges Survived",
+  "event.remission.surge.warning.title": "The Strain stirs",
+  "event.remission.surge.warning.subtitle": "A surge is coming",
+  "event.remission.surge.started": "The surge breaks: hosts rise from the festering ground",
+  "event.remission.surge.ended": "The surge subsides",
+  "event.remission.surge.bar.warning": "Surge incoming",
+  "event.remission.surge.bar.active": "Surge",
+  "commands.remission.surge.start.success": "Surge warning from the nidus at %s, %s, %s (intensity %s); it starts in %s ticks",
+  "commands.remission.surge.stop.success": "Stopped the surge",
+  "commands.remission.surge.status.none": "No surge; the next is due in %s ticks",
+  "commands.remission.surge.status.unscheduled": "No surge, and none is scheduled",
+  "commands.remission.surge.status.warning": "Surge warning from the nidus at %s, %s, %s (intensity %s); it starts in %s ticks",
+  "commands.remission.surge.status.running": "Surge from the nidus at %s, %s, %s (intensity %s); it ends in %s ticks",
+  "commands.remission.surge.failed.running": "A surge is already under way in this dimension",
+  "commands.remission.surge.failed.no_nidus": "No nidus reaches that position",
+  "commands.remission.surge.failed.none": "No surge is under way in this dimension"
 }
