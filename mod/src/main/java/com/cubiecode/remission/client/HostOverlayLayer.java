@@ -30,8 +30,8 @@ public final class HostOverlayLayer<T extends LivingEntity, M extends EntityMode
             Remission.id("textures/entity/host/stage_3.png"),
     };
     /** Full-bright veins drawn on top from {@link #GLOW_STAGE}. */
-    private static final ResourceLocation GLOW_PATTERN = Remission.id("textures/entity/host/veins_glow.png");
-    private static final int GLOW_STAGE = 3;
+    static final ResourceLocation GLOW_PATTERN = Remission.id("textures/entity/host/veins_glow.png");
+    static final int GLOW_STAGE = 3;
 
     private HostOverlayLayer(RenderLayerParent<T, M> parent) {
         super(parent);
@@ -66,22 +66,35 @@ public final class HostOverlayLayer<T extends LivingEntity, M extends EntityMode
         return false;
     }
 
+    /**
+     * The vertex colour for a host overlay on {@code entity} (white, alpha from {@code hosts.overlayIntensity}), or 0
+     * when nothing should be drawn: not a host, invisible, overlay turned off or the shader not loaded yet.
+     */
+    static int overlayColor(LivingEntity entity, CorruptionState state) {
+        if (!state.isHost() || entity.isInvisible() || !HostRenderTypes.ready()) {
+            return 0;
+        }
+        double intensity = RemissionClientConfig.HOST_OVERLAY_INTENSITY.get();
+        return intensity <= 0.0 ? 0 : FastColor.ARGB32.colorFromFloat((float) intensity, 1.0F, 1.0F, 1.0F);
+    }
+
+    /** The pattern for a host at {@code stage} (1 or more). */
+    static ResourceLocation stagePattern(int stage) {
+        return STAGE_PATTERNS[Math.min(stage, STAGE_PATTERNS.length) - 1];
+    }
+
     @Override
     public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, T entity, float limbSwing,
                        float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
         CorruptionState state = Corruption.get(entity);
-        if (!state.isHost() || entity.isInvisible() || !HostRenderTypes.ready()) {
-            return;
-        }
-        double intensity = RemissionClientConfig.HOST_OVERLAY_INTENSITY.get();
+        int color = overlayColor(entity, state);
         M model = getParentModel();
         ResourceLocation texture = getTextureLocation(entity);
-        if (intensity <= 0.0 || model == null || texture == null) {
+        if (color == 0 || model == null || texture == null) {
             return;
         }
-        int color = FastColor.ARGB32.colorFromFloat((float) intensity, 1.0F, 1.0F, 1.0F);
         int overlay = LivingEntityRenderer.getOverlayCoords(entity, 0.0F);
-        ResourceLocation pattern = STAGE_PATTERNS[Math.min(state.stage(), STAGE_PATTERNS.length) - 1];
+        ResourceLocation pattern = stagePattern(state.stage());
         // Re-run the frame's animation before each pass: some models keep per-draw state and clear it after
         // drawing (Mekanism's robit drops its entity), and for the rest setupAnim is idempotent.
         model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);

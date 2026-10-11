@@ -6,7 +6,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderStateShard;
@@ -26,26 +26,31 @@ final class HostRenderTypes {
 
     private static ShaderInstance shader;
 
-    private static final BiFunction<ResourceLocation, ResourceLocation, RenderType> HOST_OVERLAY =
-            Util.memoize((mobTexture, pattern) -> RenderType.create(
-                    Remission.MOD_ID + "_host_overlay",
-                    DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 1536, true, true,
-                    RenderType.CompositeState.builder()
-                            .setShaderState(new RenderStateShard.ShaderStateShard(() -> shader))
-                            .setTextureState(new RenderStateShard.EmptyTextureStateShard(() -> {
-                                var textures = Minecraft.getInstance().getTextureManager();
-                                textures.getTexture(mobTexture).setFilter(false, false);
-                                textures.getTexture(pattern).setFilter(false, false);
-                                RenderSystem.setShaderTexture(0, mobTexture);
-                                RenderSystem.setShaderTexture(PATTERN_SAMPLER, pattern);
-                            }, () -> {
-                            }))
-                            .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
-                            .setCullState(RenderStateShard.NO_CULL)
-                            .setLightmapState(RenderStateShard.LIGHTMAP)
-                            .setOverlayState(RenderStateShard.OVERLAY)
-                            .setWriteMaskState(RenderStateShard.COLOR_WRITE)
-                            .createCompositeState(false)));
+    /** Bounded by the loaded mob textures x patterns x layering states in use. */
+    private static final Function<Key, RenderType> HOST_OVERLAY = Util.memoize(key -> RenderType.create(
+            Remission.MOD_ID + "_host_overlay",
+            DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 1536, true, true,
+            RenderType.CompositeState.builder()
+                    .setShaderState(new RenderStateShard.ShaderStateShard(() -> shader))
+                    .setTextureState(new RenderStateShard.EmptyTextureStateShard(() -> {
+                        var textures = Minecraft.getInstance().getTextureManager();
+                        textures.getTexture(key.mobTexture()).setFilter(false, false);
+                        textures.getTexture(key.pattern()).setFilter(false, false);
+                        RenderSystem.setShaderTexture(0, key.mobTexture());
+                        RenderSystem.setShaderTexture(PATTERN_SAMPLER, key.pattern());
+                    }, () -> {
+                    }))
+                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .setCullState(RenderStateShard.NO_CULL)
+                    .setLightmapState(RenderStateShard.LIGHTMAP)
+                    .setOverlayState(RenderStateShard.OVERLAY)
+                    .setLayeringState(key.layering())
+                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                    .createCompositeState(false)));
+
+    private record Key(ResourceLocation mobTexture, ResourceLocation pattern,
+                       RenderStateShard.LayeringStateShard layering) {
+    }
 
     private HostRenderTypes() {
     }
@@ -66,6 +71,15 @@ final class HostRenderTypes {
 
     /** The overlay for a mob drawn with {@code mobTexture}, patterned with {@code pattern}. */
     static RenderType hostOverlay(ResourceLocation mobTexture, ResourceLocation pattern) {
-        return HOST_OVERLAY.apply(mobTexture, pattern);
+        return hostOverlay(mobTexture, pattern, RenderStateShard.NO_LAYERING);
+    }
+
+    /**
+     * The same, with the layering of the draw it covers: armour is drawn with {@code VIEW_OFFSET_Z_LAYERING}, nudged
+     * towards the camera, and an overlay without that offset would lose the depth test against it.
+     */
+    static RenderType hostOverlay(ResourceLocation mobTexture, ResourceLocation pattern,
+                                  RenderStateShard.LayeringStateShard layering) {
+        return HOST_OVERLAY.apply(new Key(mobTexture, pattern, layering));
     }
 }

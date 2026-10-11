@@ -140,9 +140,9 @@ Goals: any living entity can become a host: its corruption state is saved, synce
 
 ### P2.4: Host overlay on separately modelled layers
 
-- Status: `todo`
-- Owner:
-- PR:
+- Status: `review`
+- Owner: feat/p2.4-layer-overlay
+- PR: https://github.com/CubieCode/counterstrain/pull/27
 - Depends on: P2.2
 - Scope: Extend the Strain overlay to render layers that draw their own model or texture over the body, which P2.2's layer cannot reach: humanoid armour (players, zombies, skeletons, armour stands), sheep wool, slime outer gel, the drowned's outer layer, horse and wolf armour, and the same vanilla layer helpers when modded renderers use them. Emissive and eye layers (spider and enderman eyes) stay untouched. Prefer wrapping or re-registering those layers from `EntityRenderersEvent.AddLayers` without mixins; if a mixin turns out to be necessary, report it first, since adding a mixin config changes the mod metadata and build files (serialization gates). Reuse P2.2's render type, patterns and `hosts.overlayIntensity`; no new art unless a layer needs it. GeckoLib-style and other non-`LivingEntityRenderer` renderers remain out of scope.
 - Acceptance: At stages 1–3, armoured zombies and players, sheep, slimes, drowned and an armour stand show the overlay on those layers, following each layer's own texture cutout. Eye layers are unchanged, non-hosts render exactly as before (`smoke/mob_lineup` still matches its reference) and nothing crashes with modded layers in the dev runtime. New harness scene `corruption/stages_layers` with reviewed references. `corruption/stages_vanilla` and `stages_modded` references are updated only for intended changes, explained in the PR. Ledger updated if new art is added; placeholders marked.

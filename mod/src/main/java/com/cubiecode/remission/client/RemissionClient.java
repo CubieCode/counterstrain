@@ -3,6 +3,7 @@ package com.cubiecode.remission.client;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.config.RemissionClientConfig;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -19,5 +20,7 @@ public final class RemissionClient {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         modBus.addListener(HostRenderTypes::registerShaders);
         modBus.addListener((EntityRenderersEvent.AddLayers event) -> HostOverlayLayer.addLayers(event));
+        modBus.addListener(EventPriority.LOWEST,
+                (EntityRenderersEvent.AddLayers event) -> HostLayerOverlay.addLayers(event));
     }
 }
