@@ -159,7 +159,7 @@ Remission exposes generic hooks in `com.cubiecode.remission.api` so integrations
 
 - **Events** (NeoForge events on `NeoForge.EVENT_BUS`, server side): host corrupted, host cleansed, block festered, block purified, chunk stage changed, chunk entered remission, nidus destroyed, surge started, surge ended, viral load changed, and a cancellable Strain spread attempt (chunk to chunk, with a rate multiplier) so firebreaks, seasons and wards can slow or stop spread without patching the engine.
 - **Queries:** corruption stage at a position or chunk, whether an entity is a host, a player's viral load.
-- **Teams:** a team query (are two players teammates?) answered through an event a pack or integration fills in (planned, P4.12). Remission has no teams of its own; with none defined, every player is on their own.
+- **Teams:** a team query (are two players teammates?) answered through an event a pack or integration fills in (built, P4.12: `TeamQueries` and `TeamLookupEvent`; Remission answers it from FTB Teams when present). Remission has no teams of its own; with none defined, every player is on their own.
 - Types may use "corruption" (naming rule above), for example `HostCorruptedEvent`, `ChunkStageChangedEvent`.
 
 Integrations prefer pack-side KubeJS and datapacks built on these hooks (KubeJS bindings: P8.3). Mod-side integration code lives only in `integration/<modid>/`, uses `compileOnly` APIs and is guarded by `ModList`, the pattern P8.2 uses for JourneyMap. Remission never hard-depends on an integrated mod.

@@ -41,3 +41,11 @@ description='''${mod_description}'''
     versionRange="[19.51,)"
     ordering="NONE"
     side="CLIENT"
+
+# The team query's FTB Teams source (integration/ftbteams/, P4.12) is built against FTB Teams 2101.1.
+[[dependencies.${mod_id}]]
+    modId="ftbteams"
+    type="optional"
+    versionRange="[2101.1,)"
+    ordering="NONE"
+    side="BOTH"

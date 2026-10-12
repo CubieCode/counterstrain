@@ -143,6 +143,11 @@ dependencies {
     compileOnly "maven.modrinth:mekanism:${mekanism_version}"
     // Recipe viewer (integration/jei/, P7.2): a JEI plugin, which EMI also shows through its JEI compatibility.
     compileOnly "maven.modrinth:jei:${jei_version}"
+    // Team query source (integration/ftbteams/, P4.12). FTB Teams' events are Architectury events; FTB Library holds
+    // types in its API signatures. Same versions as the dev runtime entries below.
+    compileOnly("dev.ftb.mods:ftb-teams-neoforge:${ftb_teams_version}") { transitive = false }
+    compileOnly("dev.ftb.mods:ftb-library-neoforge:${ftb_library_version}") { transitive = false }
+    compileOnly "maven.modrinth:architectury-api:${architectury_version}"
     // The harness opens recipe categories in EMI's own screen (tech/recipe_viewer scenes).
     harnessCompileOnly "maven.modrinth:emi:${emi_version}"
 

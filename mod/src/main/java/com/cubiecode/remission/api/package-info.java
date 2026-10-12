@@ -15,7 +15,8 @@
  *   events. {@link ViralLoadChangedEvent} extends NeoForge's {@code PlayerEvent} directly.</li>
  * </ul>
  *
- * <p>Queries live in {@link CorruptionQueries}. Field-level contract: the remission-data-formats skill, "Public API
+ * <p>Queries live in {@link CorruptionQueries}; the team query (are two players teammates?) in {@link TeamQueries},
+ * answered through {@link TeamLookupEvent}. Field-level contract: the remission-data-formats skill, "Public API
  * events and queries".
  */
 package com.cubiecode.remission.api;
