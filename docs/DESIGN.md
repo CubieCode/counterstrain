@@ -45,6 +45,12 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | The Counterstrain's deployable carrier | **dispersal payload** | block `remission:dispersal_payload`; can also ride a moving Create contraption through the optional integration |
 | Research records made by the scanner | **scans**: **host scans** and **block scans** | item `remission:scanner`; data items `remission:host_scan`, `remission:block_scan`; data component `remission:scan_data` |
 | A player who died to the Strain, risen as a host carrying their items | **revenant** | entity `remission:revenant`; item `remission:revenant_tracker` (planned, P5.3 and P5.4); "kill your revenant to get your gear back" |
+| Hand-built places between nidi: pieces of the survey ship, survivor camps, caches | **wreck sites** | pack structures (P11.4); "the lab wreck site" |
+| Found story items that unlock field journal entries | **lab logs** | pack items (P11.4); "find the lab log in the wreck site" |
+| The surviving part of the survey ship in orbit that answers supply requests (working concept, P11.1) | **the relay** | "call the relay" |
+| A crate of supplies called from the relay | **supply drop** | pack feature (P11.5); "the supply drop is coming in" |
+| How much the relay trusts the player or team; spent on supply drops, earned by progress | **standing** | per-team score (P11.5); "standing with the relay is low" |
+| One of several start locations of different difficulty | **crash sites** | harness scene `start/crash_site`; "the hard crash site starts next to a nidus" |
 | A player's record of host types, filled by host scans | **bestiary** | player attachment `remission:bestiary`; key mapping `key.remission.bestiary`; "12 of 79 host types scanned" |
 
 "Variant" on its own always means a resistant mutation of the Strain, never a kind of host (a **fester variant** is a biome and is always called that in full): scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
@@ -126,11 +132,23 @@ Integrations prefer pack-side KubeJS and datapacks built on these hooks (KubeJS 
 
 ## Counterstrain pack
 
-- **Story:** crash landing, locate the first nidus, learn what the Strain is, engineer the Counterstrain ([lore](LORE.md)).
+- **Story:** crash landing, locate the first nidus, learn what the Strain is, engineer the Counterstrain ([lore](LORE.md)). The story deepens as the player explores: quests raise questions that lab logs found at wreck sites answer.
 - **Quest loop per region:** locate the nidus → research → gear up → destroy the nidus → purify → next region; the last region ends in the Counterstrain deployment.
-- **Start:** a crash-site map/structure with a guided first chapter.
+- **Exploration:** wreck sites, survivor camps and host-guarded caches between nidi, with loot and lab logs (P11.4), so travel between objectives has its own rewards.
+- **Supply drops and standing:** the relay sends supply drops on request, each costing standing; progress earns standing back, and standing changes some quest text and the ending (P11.5). Asking for help is always possible and always a trade-off.
+- **Start:** a choice of crash sites of different difficulty, each a map/structure with a guided first chapter.
 - **Progression:** KubeJS recipe gating through Mekanism, AE2, Create and Ars Nouveau tiers and the integration gates below, using Remission samples and data items as keys.
 - **Worldgen:** datapack and KubeJS tweaks for nidus placement, festering and pacing.
+
+### Open decision: pressure to reclaim
+
+The world is generated and endless, so a player could walk away from the Strain until they find clean land and ignore it, which undercuts the "progress is reclaimed ground" pillar. Counterstrain needs a rule that keeps the Strain in the player's way. Options, which can be combined:
+
+- **The world starts mostly festered:** nidi are dense enough that clean land outside the crash site's ward is rare from the first day.
+- **Density rises with distance:** nidi and festering grow denser away from the crash site, so travelling away makes things harder, not easier.
+- **Remission zones are where resources work:** key resources (ores at full yield, breeding, crop growth, certain structures' loot) only appear or work in remission zones, so reclaimed land is worth more than distant clean land.
+
+Settled before P11.2 starts and recorded here, replacing this section.
 
 ## Pack integrations
 

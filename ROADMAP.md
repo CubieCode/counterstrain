@@ -33,7 +33,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - I: P10.1 alone (owns `pack/pack.toml`, `pack/mods/` and the build-file entries for every mod-side integration).
 - J: P10.2 + P10.3 + P10.4 + P10.5, after P10.1. Each owns its `integration/<modid>/` packages and its pack scripts (`pack/kubejs/**/integrations/<modid>.js`); one remission-data-formats owner per wave (P10.2); none touches build files or `pack/mods/`.
 - K: P10.6 + P10.7. P10.6 extends `integration/create/` after P10.2 has merged.
-- L: P11.1 → P11.2 → P11.3 serially (one pack-content owner).
+- L: P11.1 → P11.4 → P11.5 → P11.2 → P11.3 serially (one pack-content owner). P11.4 and P11.5 were added after the phase was planned, so their numbers do not follow the run order.
 - M: P12.1 + P12.2, then P12.3.
 
 ## Phase 0: Scaffold
@@ -596,8 +596,8 @@ Goals: Counterstrain becomes a playable pack.
 - Owner:
 - PR:
 - Depends on: P8.1, P10.7
-- Scope: Lore, chapters (locate the nidus → research → gear up → destroy the nidus → purify → next region → Counterstrain), field journal text.
-- Acceptance: Full quest line completable in a playtest. Ledger updated for every quest, lore and journal text block (status `draft`).
+- Scope: Lore, chapters (locate the nidus → research → gear up → destroy the nidus → purify → next region → Counterstrain), field journal text. Answer LORE's open questions (who built the payload and why, whether anyone else survived, how the story splits between quest text and found items) and record the answers in LORE. The story deepens as the player explores: chapters set up questions that lab logs found at wreck sites (P11.4) answer, so not every revelation sits in a quest. Write the beats and log texts P11.4 places, and the relay's part in the story and the standing branches P11.5 implements (some quest text and the ending change with standing). The relay is a working concept; renaming it updates the glossary.
+- Acceptance: Full quest line completable in a playtest; LORE has no open questions left about the premise; every lab log and standing branch has its text. Ledger updated for every quest, lore and journal text block (status `draft`).
 - Skills: ftb-quests-authoring, playtesting, content-provenance
 
 ### P11.2: Crash-site start, recipe gating and worldgen
@@ -605,9 +605,9 @@ Goals: Counterstrain becomes a playable pack.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P11.1, P10.2, P10.3, P10.4, P10.5, P10.6
-- Scope: Starting structure/map (the crash site holds a working quarantine pylon, so the player starts inside a warded radius), KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
-- Acceptance: New world starts at the crash site; gated recipes verified in EMI; each DESIGN integration gate is enforced in a playtest; harness scene `start/crash_site`. Ledger updated; placeholders marked.
+- Depends on: P11.1, P11.4, P11.5, P10.2, P10.3, P10.4, P10.5, P10.6
+- Scope: Starting structure/map (the crash site holds a working quarantine pylon, so the player starts inside a warded radius). A choice of crash sites: several starts that differ in difficulty (distance to the first nidus, festering around the site, salvage), chosen when a world is created or on first join, with one default for servers and quick starts. The pressure to reclaim decided in DESIGN ([open decision](docs/DESIGN.md#open-decision-pressure-to-reclaim), settled before this item starts) is built into worldgen and gating, so walking away from the Strain is never the easy way to clean land. KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
+- Acceptance: New world starts at the chosen crash site, and each crash site is playable to the first nidus; the pressure-to-reclaim rule holds in a playtest that heads away from the crash site; gated recipes verified in EMI; each DESIGN integration gate is enforced in a playtest; harness scene `start/crash_site` for each crash site. Ledger updated; placeholders marked.
 - Skills: kubejs-scripting, minecraft-datapack, minecraft-world-generation, playtesting, visual-checks, content-provenance
 
 ### P11.3: Balancing pass
@@ -616,9 +616,29 @@ Goals: Counterstrain becomes a playable pack.
 - Owner:
 - PR:
 - Depends on: P11.2
-- Scope: Spread rates, viral load, recipe costs, quest rewards, integration gate costs.
+- Scope: Spread rates, viral load, recipe costs, quest rewards, integration gate costs, wreck site loot, supply drop costs and standing, crash site difficulty.
 - Acceptance: A documented playtest from start to Counterstrain.
 - Skills: playtesting
+
+### P11.4: Wreck sites and lab logs
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P11.1, P10.7
+- Scope: Hand-built places worth exploring between nidi, as structures in the pack datapack: wreck sites (pieces of the survey ship scattered by the crash, including the ship's lab), survivor camps and caches guarded by hosts, at least one per region and some placed inside or next to festering land. Each has its own loot table (salvage, samples and items that shortcut early gates, tuned in P11.3) and carries lab logs: found items with P11.1's text that unlock field journal entries (P10.7) and, where a chapter needs them, quest tasks. Structures fester and grow veins like any other build unless warded. Pack-side only: Remission gains no structure or log code.
+- Acceptance: Every structure generates in a fresh world and is reachable; `/locate structure` finds each type; every lab log is obtainable and unlocks its journal entry; loot tables pass `tools/pack.sh check`; harness scene `explore/wreck_sites` (each structure type, clean and festering), reviewed. Ledger updated; placeholders marked.
+- Skills: minecraft-world-generation, minecraft-datapack, kubejs-scripting, ftb-quests-authoring, visual-checks, content-provenance
+
+### P11.5: Supply drops and standing
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P11.1, P8.1
+- Scope: The relay (a surviving piece of the survey ship in orbit, per P11.1) answers supply requests: the player spends a quest reward choice or a crafted beacon to call a supply drop, a crate that lands near them after a delay, telegraphed like a surge and drawing nearby hosts. Each request costs standing with the relay; completing chapters, sending scans and reclaiming land earn it back. Standing is a per-team KubeJS scoreboard value (FTB Teams), shown in the quest book, and sets the stages that switch P11.1's standing branches (some quest text and the ending). Pack-side only.
+- Acceptance: Requesting a drop spends standing and delivers its crate in a playtest; standing rises from each earning source; each standing branch is reachable in a playtest or by setting the score; crate contents from loot tables pass `tools/pack.sh check`; harness scene `explore/supply_drop`, reviewed. Ledger updated; placeholders marked.
+- Skills: kubejs-scripting, ftb-quests-authoring, minecraft-datapack, playtesting, visual-checks, content-provenance
 
 Exit criteria: complete playthrough recorded; screenshots of each chapter milestone reviewed.
 
