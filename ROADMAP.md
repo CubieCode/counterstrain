@@ -356,7 +356,7 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 - Status: `review`
 - Owner: feat/p4.11-fester-atmosphere
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/82
 - Depends on: P4.2
 - Scope: Festering land should feel wrong to stand in, not just look it. The `remission:fester` biome gets its effects (datagen): fog, sky and water fog colours, an ambient loop, mood sounds (as cave sounds), occasional additions sounds (wet, organic noises) and its own music, all clearly unlike the Deep Dark. Client side, fog thickens with the festering stage of the player's chunk (from the biome and blocks the client already has; no new payload), with a client config option to turn it down or off for accessibility. Fester variants (data) inherit nothing automatically, so remission-data-formats documents what a pack sets on its own variant biomes. Sounds are placeholders in the ledger until P12.2.
 - Acceptance: In a dev run, walking from clean land into a stage 4 chunk changes sky, fog, ambience and music, and the fog option works; no new payload. Harness scene `world/atmosphere` (the same view from clean land, a stage 2 chunk and a stage 4 chunk), reviewed. Ledger updated (sounds and music recorded); placeholders marked.
