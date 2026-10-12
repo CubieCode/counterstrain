@@ -1,0 +1,20 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamemode creative @a",
+    "fill -4 -61 -6 4 -61 0 minecraft:smooth_stone",
+    "fill -4 -60 -6 4 -57 -6 minecraft:white_concrete",
+    "setblock -2 -60 -4 remission:nidus",
+    "setblock 2 -60 -4 remission:nidus",
+    {"spawn": "minecraft:cow", "pos": [0.5, -60.0, -4.0], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"scanned\"]}"},
+    {"corrupt": "@e[tag=scanned]", "level": 50},
+    "harness player scan_block -2 -60 -4",
+    "harness player scan_host @e[tag=scanned]",
+    "harness player break 2 -60 -4",
+    "tick step 40"
+  ],
+  "shots": [
+    {"name": "after_actions", "camera": {"pos": [0.5, -59.0, 1.5], "yaw": 180.0, "pitch": 20.0}}
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamemode creative @a",
+    "fill -6 -61 -6 6 -61 6 minecraft:smooth_stone",
+    "fill -7 -60 -7 7 -60 7 minecraft:smooth_stone_slab",
+    "fill -6 -60 -6 6 -60 6 minecraft:air",
+    "setblock -3 -60 0 remission:miasma[level=6]",
+    "setblock -2 -60 -1 remission:miasma[level=6]",
+    "setblock -2 -60 0 remission:miasma[level=4]",
+    "setblock -2 -60 1 remission:miasma[level=6]",
+    "setblock -1 -60 -2 remission:miasma[level=6]",
+    "setblock -1 -60 -1 remission:miasma[level=4]",
+    "setblock -1 -60 0 remission:miasma[level=2]",
+    "setblock -1 -60 1 remission:miasma[level=4]",
+    "setblock -1 -60 2 remission:miasma[level=6]",
+    "setblock 0 -60 -3 remission:miasma[level=6]",
+    "setblock 0 -60 -2 remission:miasma[level=4]",
+    "setblock 0 -60 -1 remission:miasma[level=2]",
+    "setblock 0 -60 0 remission:miasma[level=0]",
+    "setblock 0 -60 1 remission:miasma[level=2]",
+    "setblock 0 -60 2 remission:miasma[level=4]",
+    "setblock 0 -60 3 remission:miasma[level=6]",
+    "setblock 1 -60 -2 remission:miasma[level=6]",
+    "setblock 1 -60 -1 remission:miasma[level=4]",
+    "setblock 1 -60 0 remission:miasma[level=2]",
+    "setblock 1 -60 1 remission:miasma[level=4]",
+    "setblock 1 -60 2 remission:miasma[level=6]",
+    "setblock 2 -60 -1 remission:miasma[level=6]",
+    "setblock 2 -60 0 remission:miasma[level=4]",
+    "setblock 2 -60 1 remission:miasma[level=6]",
+    "setblock 3 -60 0 remission:miasma[level=6]",
+    "fill 16 -61 -6 26 -61 0 minecraft:smooth_stone",
+    "fill 16 -60 -6 26 -57 -6 minecraft:white_concrete",
+    "summon minecraft:item_frame 18 -59 -5 {Facing:3b,Fixed:1b,Item:{id:\"remission:miasma_bucket\",count:1}}",
+    "summon minecraft:item_frame 20 -59 -5 {Facing:3b,Fixed:1b,Item:{id:\"remission:host_tissue\",count:1}}",
+    "summon minecraft:item_frame 22 -59 -5 {Facing:3b,Fixed:1b,Item:{id:\"remission:nidus_core\",count:1}}",
+    "summon minecraft:item_frame 24 -59 -5 {Facing:3b,Fixed:1b,Item:{id:\"remission:festered_soil\",count:1}}"
+  ],
+  "shots": [
+    {
+      "name": "flow",
+      "camera": {
+        "pos": [
+          0.5,
+          -57.0,
+          7.5
+        ],
+        "yaw": 180.0,
+        "pitch": 35.0
+      }
+    },
+    {
+      "name": "items",
+      "camera": {
+        "pos": [
+          21.5,
+          -60.0,
+          -2.0
+        ],
+        "yaw": 180.0,
+        "pitch": 6.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "fill 0 0 0 15 20 15 minecraft:stone",
+    "fill 4 2 4 11 7 15 minecraft:cave_air",
+    "setblock 3 3 8 minecraft:coal_ore",
+    "setblock 3 4 11 minecraft:iron_ore",
+    "setblock 12 5 9 minecraft:coal_ore",
+    "setblock 9 8 7 minecraft:iron_ore",
+    "fill 6 1 11 8 1 13 minecraft:tuff",
+    "setblock 7 4 6 minecraft:light[level=15]",
+    "setblock 7 4 10 minecraft:light[level=15]",
+    "setblock 7 4 14 minecraft:light[level=15]",
+    "fill 16 0 0 31 20 15 minecraft:stone",
+    "fill 20 2 4 27 7 15 minecraft:cave_air",
+    "setblock 19 3 8 minecraft:coal_ore",
+    "setblock 19 4 11 minecraft:iron_ore",
+    "setblock 28 5 9 minecraft:coal_ore",
+    "setblock 25 8 7 minecraft:iron_ore",
+    "fill 22 1 11 24 1 13 minecraft:tuff",
+    "setblock 23 4 6 minecraft:light[level=15]",
+    "setblock 23 4 10 minecraft:light[level=15]",
+    "setblock 23 4 14 minecraft:light[level=15]",
+    "fill 32 0 0 47 20 15 minecraft:stone",
+    "fill 36 2 4 43 7 15 minecraft:cave_air",
+    "setblock 35 3 8 minecraft:coal_ore",
+    "setblock 35 4 11 minecraft:iron_ore",
+    "setblock 44 5 9 minecraft:coal_ore",
+    "setblock 41 8 7 minecraft:iron_ore",
+    "fill 38 1 11 40 1 13 minecraft:tuff",
+    "setblock 39 4 6 minecraft:light[level=15]",
+    "setblock 39 4 10 minecraft:light[level=15]",
+    "setblock 39 4 14 minecraft:light[level=15]",
+    "fill 48 0 0 63 20 15 minecraft:stone",
+    "fill 52 2 4 59 7 15 minecraft:cave_air",
+    "setblock 51 3 8 minecraft:coal_ore",
+    "setblock 51 4 11 minecraft:iron_ore",
+    "setblock 60 5 9 minecraft:coal_ore",
+    "setblock 57 8 7 minecraft:iron_ore",
+    "fill 54 1 11 56 1 13 minecraft:tuff",
+    "setblock 55 4 6 minecraft:light[level=15]",
+    "setblock 55 4 10 minecraft:light[level=15]",
+    "setblock 55 4 14 minecraft:light[level=15]",
+    "fill 64 0 0 79 20 15 minecraft:stone",
+    "fill 68 2 4 75 7 15 minecraft:cave_air",
+    "setblock 67 3 8 minecraft:coal_ore",
+    "setblock 67 4 11 minecraft:iron_ore",
+    "setblock 76 5 9 minecraft:coal_ore",
+    "setblock 73 8 7 minecraft:iron_ore",
+    "fill 70 1 11 72 1 13 minecraft:tuff",
+    "setblock 71 4 6 minecraft:light[level=15]",
+    "setblock 71 4 10 minecraft:light[level=15]",
+    "setblock 71 4 14 minecraft:light[level=15]",
+    "fill 80 0 0 95 20 15 minecraft:deepslate",
+    "fill 84 2 4 91 7 15 minecraft:cave_air",
+    "setblock 83 3 8 minecraft:deepslate_coal_ore",
+    "setblock 83 4 11 minecraft:deepslate_iron_ore",
+    "setblock 92 5 9 minecraft:deepslate_coal_ore",
+    "setblock 89 8 7 minecraft:deepslate_iron_ore",
+    "fill 85 1 6 88 1 13 minecraft:sculk",
+    "fill 92 2 5 92 4 9 minecraft:sculk",
+    "setblock 86 2 9 minecraft:sculk_sensor",
+    "setblock 89 2 11 minecraft:sculk_shrieker",
+    "setblock 87 4 6 minecraft:light[level=15]",
+    "setblock 87 4 10 minecraft:light[level=15]",
+    "setblock 87 4 14 minecraft:light[level=15]",
+    "fill 96 -44 0 111 -24 15 minecraft:deepslate",
+    "fill 100 -42 4 107 -37 15 minecraft:cave_air",
+    "setblock 99 -41 8 minecraft:deepslate_coal_ore",
+    "setblock 99 -40 11 minecraft:deepslate_iron_ore",
+    "setblock 108 -39 9 minecraft:deepslate_coal_ore",
+    "setblock 105 -36 7 minecraft:deepslate_iron_ore",
+    "fill 101 -43 6 104 -43 13 minecraft:sculk",
+    "fill 108 -42 5 108 -40 9 minecraft:sculk",
+    "setblock 102 -42 9 minecraft:sculk_sensor",
+    "setblock 105 -42 11 minecraft:sculk_shrieker",
+    "setblock 103 -40 6 minecraft:light[level=15]",
+    "setblock 103 -40 10 minecraft:light[level=15]",
+    "setblock 103 -40 14 minecraft:light[level=15]",
+    "harness fester 16 0 0 31 0 15 10",
+    "harness fester 32 0 0 47 0 15 30",
+    "harness fester 48 0 0 63 0 15 60",
+    "harness fester 64 0 0 79 0 15 90",
+    "harness fester 80 0 0 111 0 15 90"
+  ],
+  "shots": [
+    {
+      "name": "overview",
+      "camera": {
+        "pos": [
+          56.0,
+          14.0,
+          58.0
+        ],
+        "yaw": 180.0,
+        "pitch": 12.0
+      },
+      "commands": [
+        "harness resend 0 -64 0 111 20 15"
+      ]
+    },
+    {
+      "name": "stage_0",
+      "camera": {
+        "pos": [
+          8.0,
+          3.0,
+          19.5
+        ],
+        "yaw": 180.0,
+        "pitch": 4.0
+      }
+    },
+    {
+      "name": "stage_1",
+      "camera": {
+        "pos": [
+          24.0,
+          3.0,
+          19.5
+        ],
+        "yaw": 180.0,
+        "pitch": 4.0
+      }
+    },
+    {
+      "name": "stage_2",
+      "camera": {
+        "pos": [
+          40.0,
+          3.0,
+          19.5
+        ],
+        "yaw": 180.0,
+        "pitch": 4.0
+      }
+    },
+    {
+      "name": "stage_3",
+      "camera": {
+        "pos": [
+          56.0,
+          3.0,
+          19.5
+        ],
+        "yaw": 180.0,
+        "pitch": 4.0
+      }
+    },
+    {
+      "name": "stage_4",
+      "camera": {
+        "pos": [
+          72.0,
+          3.0,
+          19.5
+        ],
+        "yaw": 180.0,
+        "pitch": 4.0
+      }
+    },
+    {
+      "name": "deepslate_sculk",
+      "camera": {
+        "pos": [
+          88.0,
+          3.0,
+          19.5
+        ],
+        "yaw": 180.0,
+        "pitch": 4.0
+      }
+    },
+    {
+      "name": "deep_sparse",
+      "camera": {
+        "pos": [
+          104.0,
+          -41.0,
+          19.5
+        ],
+        "yaw": 180.0,
+        "pitch": 4.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamemode creative @a",
+    "fill -6 -61 2 6 -61 6 minecraft:smooth_stone",
+    {"spawn": "minecraft:cow", "pos": [-4.5, -60.0, 4.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"stage_1\"]}"},
+    {"spawn": "minecraft:zombie", "pos": [-1.5, -60.0, 4.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"stage_2\"]}"},
+    {"spawn": "minecraft:villager", "pos": [1.5, -60.0, 4.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"stage_3\"]}"},
+    {"spawn": "mekanism:robit", "pos": [4.5, -60.0, 4.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"stage_2\"]}", "requires_mod": "mekanism"},
+    {"spawn": "minecraft:pig", "pos": [0.5, -60.0, 6.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"unscanned\"]}"},
+    {"corrupt": "@e[tag=stage_1]", "level": 30},
+    {"corrupt": "@e[tag=stage_2]", "level": 50},
+    {"corrupt": "@e[tag=stage_3]", "level": 90},
+    {"corrupt": "@e[tag=unscanned]", "level": 90},
+    "harness scan @e[tag=!unscanned,type=!minecraft:player]"
+  ],
+  "shots": [
+    {"name": "hosts", "camera": {"pos": [0.5, -60.0, -2.0], "yaw": 0.0, "pitch": 10.0}},
+    {"name": "list", "camera": {"pos": [0.5, -60.0, -2.0], "yaw": 0.0, "pitch": 10.0}, "press": "key.remission.bestiary"}
+  ]
+}

@@ -9,6 +9,8 @@ A playtest uses the real pack, not the mod's dev runtime. Two setups:
 
 **Dev-runtime quick test** (mod plus a subset of pack mods): `tools/run-client-headless.sh` runs `runClient` with KubeJS, FTB Quests, EMI + JEI, Mekanism and AE2 already present. To try pack scripts there, copy or symlink `pack/kubejs` and `pack/config/ftbquests` into `mod/run/client/` (gitignored), then remove them afterwards. Good for Remission ↔ KubeJS/FTB integration, not for balance.
 
+**Human playtest on a PC:** `tools/pack.sh serve` on foundry plus `tools/pack-sync.sh` as the Prism pre-launch command on the PC keeps an instance in sync with `pack/` and the latest Remission jar on every launch (docs/DEV-ENVIRONMENT.md, Playing the pack from a PC). Agents use the full pack instance below instead.
+
 **Full pack instance:**
 1. `tools/pack.sh export`, then install `.local/dist/counterstrain-<version>.mrpack` into an instance directory, e.g. `.local/instance/`. Without a launcher, unzip the mrpack, download the files listed in `modrinth.index.json` into the instance, and copy `overrides/` over it. Install the NeoForge 21.1.259 client or server into that instance with the NeoForge installer jar, run as `lab` (no root).
 2. `tools/build-mod.sh .local/instance` builds Remission and replaces `mods/remission-*.jar`.

@@ -59,6 +59,8 @@ DOCS = [p for p in FILES if p.endswith(".md") and not p.startswith(".agents/skil
 JAVA = [p for p in FILES if p.startswith("mod/src/") and p.endswith(".java")]
 CLASSES = {os.path.basename(p)[:-5] for p in JAVA}
 GRADLE = props("mod/gradle.properties")
+# Optional -P properties the build reads without a gradle.properties default.
+OPTIONAL_GRADLE = set(re.findall(r"findProperty\(['\"](\w+)['\"]\)", read("mod/build.gradle")))
 SKILLS = sorted(d for d in os.listdir(os.path.join(ROOT, ".agents/skills"))
                 if os.path.isfile(os.path.join(ROOT, ".agents/skills", d, "SKILL.md")))
 PROJECT_SKILLS = [s for s in SKILLS if not s.startswith("minecraft-")]
@@ -172,7 +174,7 @@ def check_links_and_paths():
                         fail(f"{doc}:{line_no}", f"class {cls} not found in mod/src")
                 # Gradle properties passed as -Pname or named directly.
                 for prop in re.findall(r"(?<!\w)-P(\w+)", token) + re.findall(r"^(dev_\w+|mod_\w+|neo_version)$", token):
-                    if prop not in GRADLE and prop not in ("client_width", "client_height"):
+                    if prop not in GRADLE and prop not in OPTIONAL_GRADLE:
                         fail(f"{doc}:{line_no}", f"Gradle property {prop} not in mod/gradle.properties")
                 # Workflows by file name.
                 for wf in re.findall(r"\b([\w-]+\.yml)\b", token):

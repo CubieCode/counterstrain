@@ -39,5 +39,8 @@ public final class RemissionDataGenerators {
         generator.addProvider(event.includeServer(), new LootTableProvider(output, Set.of(),
                 List.of(new LootTableProvider.SubProviderEntry(RemissionBlockLootProvider::new, LootContextParamSets.BLOCK)), lookup));
         generator.addProvider(event.includeServer(), new RemissionLootModifierProvider(output, lookup));
+        generator.addProvider(event.includeServer(), new RemissionMobProfileProvider(output, lookup));
+        generator.addProvider(event.includeServer(), new RemissionBiomeProvider(output, lookup));
+        generator.addProvider(event.includeServer(), new RemissionDataMapProvider(output, lookup));
     }
 }

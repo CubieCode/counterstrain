@@ -14,9 +14,11 @@ Chapter layout follows DESIGN: one group per region, each chapter structured loc
 Quest text is player-facing content: add its lang keys to docs/CONTENT-PROVENANCE.md (status `draft` for AI-written text) in the same PR, per the content-provenance skill.
 
 Gating on Remission (formats in remission-data-formats, built in P8):
-- Advancement tasks on `remission:*` advancements whose criteria use Remission triggers (`nidus_destroyed`, `region_cleansed` with `min_percent`, `host_scanned`, `surge_survived`, `viral_load`). The pack defines those advancements in `kubejs/data/counterstrain/advancement/`; the mod only provides triggers.
-- Stat tasks on `remission:nidi_destroyed`, `chunks_cleansed`, `hosts_scanned`, `surges_survived`.
+- Advancement tasks (`type: "advancement"`) on advancements whose criteria use Remission triggers: `remission:nidus_destroyed`, `remission:host_scanned` (`entity`, `stage`, `bestiary_types`) and `remission:block_scanned` (`location`, e.g. a scanned nidus for "locate the nidus"); schemas in remission-data-formats. The pack defines those advancements in `kubejs/data/counterstrain/advancement/`; the mod only provides triggers.
+- Stat tasks (`type: "stat"`, `stat`, `value`) on `remission:nidi_destroyed`, `remission:hosts_scanned`, `remission:blocks_scanned`.
+- Region cleansing and viral load have no triggers or stats until their systems exist (P5.2, P5.1); gate those steps with a `TODO` note, not a fake gate. Surges have `remission:surge_survived` and the stat `remission:surges_survived` (P4.3).
+- Verified in a dev run (P8.1): harness scene `quest/triggers` with advancement and stat tasks in the run directory's `config/ftbquests/quests/` and the advancements in its `kubejs/data/`; each task completes and its auto-claimed command reward logs.
 - Item tasks on samples and data items; observation tasks for scanning moments.
-- Command rewards for quest-fired events (`/remission surge start ...`, `/remission nidus seed ...`) once P8.2 documents them; run as server, never as player op.
+- Command rewards for quest-fired events: `/remission surge start [pos] [intensity]` (P4.3, in remission-data-formats), and `/remission nidus seed ...` once P8.2 documents it; run as server, never as player op.
 
-Until P8 lands, quests may only use vanilla/companion-mod tasks; leave a `TODO(P8.1)` note in the quest description instead of faking Remission gates. Test every gate in a playtest: complete the action, confirm the task ticks, confirm rewards fire once.
+Use only the Remission gates listed above; for anything else leave a `TODO(<item>)` note in the quest description instead of faking a gate. Test every gate in a playtest: complete the action, confirm the task ticks, confirm rewards fire once.

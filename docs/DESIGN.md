@@ -20,10 +20,12 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | The corruption | **the Strain** | prose: "Strain-infected", "the Strain spreads" |
 | Spread sources | **nidus** (plural **nidi**) | block `remission:nidus`, item `remission:nidus_core` |
 | Infected mobs | **hosts** | "a host cow"; the bestiary lists host types |
+| Mobs the Strain cannot take | **immune** | tag `#remission:immune` (bosses by default); "the wither is immune" |
 | How far the Strain has taken a host | **Strain level** (0–100) and **host stage** | config `hosts.stageThresholds`; `CorruptionState` fields `level`, `stage` |
-| Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone`, biome `remission:fester` |
+| Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone`, `remission:festered_deepslate`, biome `remission:fester`; data map `remission:festers_into` |
+| The fester biome a particular source biome turns into | **fester variant** | data map `remission:fester_variant`; "plains festers into `remission:fester`, a pack's lavender field into its own fester variant" |
 | Boundary between festering land and reclaimed land | **frontier** | "hold the frontier" |
-| Periodic spread bursts | **surges** | "the nidus surges at the season change" |
+| Periodic spread bursts from one nidus, telegraphed by a warning | **surges** | config `[surges]`; trigger `remission:surge_survived`, stat `remission:surges_survived`; `/remission surge start`; entity tag `#remission:surge_hosts`; "the nidus surges at the season change", "survive the surge" |
 | Extracted resource | **miasma** | fluid `remission:miasma`; Mekanism chemical `remission:miasma` when Mekanism is present |
 | Player exposure meter | **viral load** | player attachment `viral_load` |
 | Radius wards | **quarantine pylons** | `remission:quarantine_pylon` |
@@ -33,10 +35,13 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Endgame cure | **the Counterstrain** | "unstable Counterstrain prototypes", "the final deployment" |
 | Samples | host tissue, **nidus cores**, festered soil | `remission:host_tissue`, `remission:nidus_core`, `remission:festered_soil` |
 | Items carried through festering land | **contaminated** (verb: decontaminate) | data component `remission:contaminated` (planned, P10.6) |
-| Drifting airborne Strain | **miasma clouds** | spawned by surges above festering land; add viral load to anything flying through |
+| Drifting airborne Strain | **miasma clouds** | entity `remission:miasma_cloud`; released by surges, drifting above festering land; viral load for anything inside arrives with P5.1 |
 | The Counterstrain's deployable carrier | **dispersal payload** | block `remission:dispersal_payload`; can also ride a moving Create contraption through the optional integration |
+| Research records made by the scanner | **scans**: **host scans** and **block scans** | item `remission:scanner`; data items `remission:host_scan`, `remission:block_scan`; data component `remission:scan_data` |
+| A player who died to the Strain, risen as a host carrying their items | **revenant** | entity `remission:revenant`; item `remission:revenant_tracker` (planned, P5.3 and P5.4); "kill your revenant to get your gear back" |
+| A player's record of host types, filled by host scans | **bestiary** | player attachment `remission:bestiary`; key mapping `key.remission.bestiary`; "12 of 79 host types scanned" |
 
-"Variant" always means a resistant mutation of the Strain, never a kind of host: scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
+"Variant" on its own always means a resistant mutation of the Strain, never a kind of host (a **fester variant** is a biome and is always called that in full): scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
 
 ### Naming rule
 
@@ -65,20 +70,22 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 ### Festering land
 
 - Per-chunk corruption level (chunk Data Attachment) driving visible festering stages: festering grass, festering trees and foliage, festered stone, and finally a biome flip to `remission:fester` (or a per-biome fester variant set by data, so modded biomes fester too).
+- **Underground:** a festering chunk is festering at every height. From a late stage its caves fester too, as a skin on the blocks facing cave air (rock inside the ground and ores are left alone, so mining stays viable), looking clearly different from sculk. Caves and underground bases are no refuge.
 - The Strain spreads from **nidi** (blocks or structures). Destroying a nidus stops its spread but does not cleanse land.
 - **Catch-up:** unloaded chunks record a timestamp; on load they fast-forward deterministically, bounded per tick.
-- **Surges:** periodic events that accelerate spread, spawn hosts and release miasma clouds that drift above festering land, telegraphed to players.
+- **Surges:** periodic events that accelerate spread, spawn hosts (in caves under festering land as well as on the surface) and release miasma clouds that drift above festering land, telegraphed to players.
 
 ### Viral load and purification
 
-- **Viral load:** a player attachment that rises in festering chunks, with escalating debuffs; serums and gear reduce it. Drinking water from, or swimming in, water in festering chunks also adds viral load, and so does flying through a miasma cloud. Gain from festering land falls off with height above the ground (config: on/off and the falloff curve), so anything airborne, from elytra to airships, can cross festering zones above the worst of it. There are no climate mods: viral load is the only exposure system.
+- **Viral load:** a player attachment that rises in festering chunks, with escalating debuffs; serums and gear reduce it. Drinking water from, or swimming in, water in festering chunks also adds viral load, and so does flying through a miasma cloud. Gain from festering land falls off with height above the ground (config: on/off and the falloff curve), so anything airborne, from elytra to airships, can cross festering zones above the worst of it. Below the ground there is no falloff: caves and tunnels under a festering chunk count in full. There are no climate mods: viral load is the only exposure system.
 - **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot.
 - **Remission zones:** purified chunks enter remission and grant bonuses (spawn safety, growth, resource yields; tunable).
+- **Revenants:** a player who dies to the Strain (killed by a host or revenant, by viral load, or anywhere in a festering chunk) rises as a revenant: a host with their skin, wearing their armour and holding their weapon, that keeps their items and experience and stays near where they fell. Other deaths drop items as usual, and `keepInventory` turns revenants off. Anyone can fight a revenant, but its items can be picked up only by its owner, and by their team where the pack defines one (Counterstrain uses FTB Teams), until a timeout frees them. A craftable **revenant tracker**, worn in a Curios slot or carried anywhere in the inventory, shows your revenants as JourneyMap waypoints, or as a HUD pointer without JourneyMap.
 
 ### Research
 
-- A scanner turns hosts, blocks and samples into data items.
-- A bestiary of host types that grows with installed mods, because host forms are derived from entity types at runtime.
+- A scanner turns hosts and blocks into data items (host scans and block scans, built in P6.1). Scanning samples is not assigned to a roadmap item yet: the samples exist since P7.1, and the analyzer (P7.2) is planned to turn them into data.
+- A bestiary of host types that grows with installed mods, because host forms are derived from entity types at runtime (built in P6.2): each host scan records the type and its highest scanned host stage for that player, and a key (default M) opens the list.
 
 ### Tech chain
 

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "remission:block/festered_deepslate_top",
+    "side": "remission:block/festered_deepslate"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "remission:block/festering_log_top",
+    "side": "remission:block/festering_log"
+  }
+}

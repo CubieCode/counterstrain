@@ -1,6 +1,7 @@
 package com.cubiecode.remission.data;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.registry.RemissionItems;
 import net.minecraft.data.PackOutput;
 import net.neoforged.neoforge.client.model.generators.ItemModelProvider;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
@@ -12,5 +13,12 @@ public final class RemissionItemModelProvider extends ItemModelProvider {
 
     @Override
     protected void registerModels() {
+        basicItem(RemissionItems.SCANNER.get());
+        basicItem(RemissionItems.HOST_SCAN.get());
+        basicItem(RemissionItems.BLOCK_SCAN.get());
+        basicItem(RemissionItems.HOST_TISSUE.get());
+        basicItem(RemissionItems.MIASMA_BUCKET.get());
+        basicItem(RemissionItems.NIDUS_CORE.get());
+        basicItem(RemissionItems.FESTERED_SOIL.get());
     }
 }
