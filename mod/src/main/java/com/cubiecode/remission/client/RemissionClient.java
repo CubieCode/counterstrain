@@ -26,6 +26,8 @@ public final class RemissionClient {
         modBus.addListener(MiasmaClientExtensions::register);
         modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
                 event.registerEntityRenderer(RemissionEntityTypes.MIASMA_CLOUD.get(), MiasmaCloudRenderer::new));
+        modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
+                event.registerEntityRenderer(RemissionEntityTypes.REVENANT.get(), RevenantRenderer::new));
         modBus.addListener(ViralLoadHud::register);
     }
 }

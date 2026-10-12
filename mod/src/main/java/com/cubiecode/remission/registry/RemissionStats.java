@@ -25,6 +25,8 @@ public final class RemissionStats {
     public static final Supplier<ResourceLocation> BLOCKS_SCANNED = register("blocks_scanned");
     /** Surges a player survived (P4.3). */
     public static final Supplier<ResourceLocation> SURGES_SURVIVED = register("surges_survived");
+    /** Revenants a player reclaimed: slew a revenant whose items they may pick up (P5.3). */
+    public static final Supplier<ResourceLocation> REVENANTS_RECLAIMED = register("revenants_reclaimed");
 
     /** Chunks that entered remission near a player (P5.2). */
     public static final Supplier<ResourceLocation> CHUNKS_CLEANSED = register("chunks_cleansed");

@@ -17,6 +17,8 @@ public enum CorruptionCause {
     CONTACT,
     /** Cleansed with a handheld purifier (purification). */
     PURIFICATION,
+    /** Rose as a revenant from a player who died to the Strain. */
+    REVENANT,
     /** Any other caller, including other mods using Remission's internals. */
     OTHER
 }
