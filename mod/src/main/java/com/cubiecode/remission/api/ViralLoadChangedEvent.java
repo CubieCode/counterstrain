@@ -18,6 +18,8 @@ public class ViralLoadChangedEvent extends PlayerEvent {
         DRINK,
         /** It fell off while nothing added to it. */
         DECAY,
+        /** A nidus under attack lashed the player (P4.10). */
+        NIDUS,
         /** Anything else: commands, the harness, other mods through Remission's internals. */
         OTHER
     }

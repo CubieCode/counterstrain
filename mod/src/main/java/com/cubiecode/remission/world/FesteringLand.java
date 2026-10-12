@@ -3,16 +3,20 @@ package com.cubiecode.remission.world;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import org.jetbrains.annotations.Nullable;
 
 /** Runs one {@link SpreadEngine} per server level and owns the nidus index entry points. */
 @EventBusSubscriber(modid = Remission.MOD_ID)
@@ -41,8 +45,16 @@ public final class FesteringLand {
 
     /** Drops a removed nidus from the index. Its land keeps its level; only further spread from it stops. */
     public static void nidusRemoved(ServerLevel level, BlockPos pos) {
+        nidusRemoved(level, pos, null, List.of());
+    }
+
+    /**
+     * Drops a nidus a player destroyed from the index (P4.10): the destroyed event carries {@code player} and its
+     * {@code contributors}.
+     */
+    public static void nidusRemoved(ServerLevel level, BlockPos pos, @Nullable ServerPlayer player, List<UUID> contributors) {
         if (NidusIndex.get(level).remove(pos)) {
-            SpreadHooks.nidusDestroyed(level, pos);
+            SpreadHooks.nidusDestroyed(level, pos, player, contributors);
         }
     }
 

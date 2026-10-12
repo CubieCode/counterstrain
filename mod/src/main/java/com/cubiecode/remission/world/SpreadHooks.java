@@ -5,10 +5,14 @@ import com.cubiecode.remission.api.CorruptionQueries;
 import com.cubiecode.remission.api.NidusDestroyedEvent;
 import com.cubiecode.remission.api.StrainSpreadAttemptEvent;
 import it.unimi.dsi.fastutil.HashCommon;
+import java.util.List;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.neoforged.neoforge.common.NeoForge;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Internal points where the public festering-land events ({@code com.cubiecode.remission.api}) are posted on
@@ -69,6 +73,11 @@ final class SpreadHooks {
 
     /** After a nidus left the index because its block was removed. Posts {@link NidusDestroyedEvent}. */
     static void nidusDestroyed(ServerLevel level, BlockPos pos) {
-        NeoForge.EVENT_BUS.post(new NidusDestroyedEvent(level, pos));
+        nidusDestroyed(level, pos, null, List.of());
+    }
+
+    /** As {@link #nidusDestroyed(ServerLevel, BlockPos)}, for a nidus a player destroyed with these contributors. */
+    static void nidusDestroyed(ServerLevel level, BlockPos pos, @Nullable ServerPlayer player, List<UUID> contributors) {
+        NeoForge.EVENT_BUS.post(new NidusDestroyedEvent(level, pos, player, contributors));
     }
 }

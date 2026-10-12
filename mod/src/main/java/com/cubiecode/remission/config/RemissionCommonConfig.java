@@ -67,6 +67,23 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.DoubleValue REMISSION_YIELD_CHANCE;
     public static final ModConfigSpec.IntValue REVENANT_PICKUP_TIMEOUT_TICKS;
     public static final ModConfigSpec.EnumValue<BlockHazardMode> COUNTERMEASURES_BLOCK_HAZARDS;
+    public static final ModConfigSpec.DoubleValue NIDUS_VITALITY;
+    public static final ModConfigSpec.IntValue NIDUS_GROWTH_TICKS;
+    public static final ModConfigSpec.DoubleValue NIDUS_GROWTH_BONUS;
+    public static final ModConfigSpec.IntValue NIDUS_RADIUS;
+    public static final ModConfigSpec.DoubleValue NIDUS_PLAYER_FACTOR;
+    public static final ModConfigSpec.IntValue NIDUS_PLAYER_CAP;
+    public static final ModConfigSpec.DoubleValue NIDUS_DISTANCE_FACTOR;
+    public static final ModConfigSpec.DoubleValue NIDUS_DISTANCE_MAX_BONUS;
+    public static final ModConfigSpec.IntValue NIDUS_CONTRIBUTOR_WINDOW_TICKS;
+    public static final ModConfigSpec.IntValue NIDUS_REGEN_DELAY_TICKS;
+    public static final ModConfigSpec.DoubleValue NIDUS_REGEN_RATE;
+    public static final ModConfigSpec.ConfigValue<List<? extends Integer>> NIDUS_THRESHOLDS;
+    public static final ModConfigSpec.DoubleValue NIDUS_PROJECTILE_FRACTION;
+    public static final ModConfigSpec.DoubleValue NIDUS_EXPLOSION_FRACTION;
+    public static final ModConfigSpec.DoubleValue NIDUS_LASH_RADIUS;
+    public static final ModConfigSpec.DoubleValue NIDUS_LASH_VIRAL_LOAD;
+    public static final ModConfigSpec.DoubleValue NIDUS_LASH_KNOCKBACK;
 
     static {
         BUILDER.push("hosts");
@@ -297,6 +314,67 @@ public final class RemissionCommonConfig {
                         "dimension, or ALWAYS. A block with no known placer is treated as PLAYER_NEARBY (any player), so chunk",
                         "loaders and idle servers never break a base while nobody is there.")
                 .defineEnum("blockHazards", BlockHazardMode.TEAM_ONLINE, EnumGetMethod.NAME_IGNORECASE);
+        BUILDER.pop();
+
+        BUILDER.push("nidi");
+        NIDUS_VITALITY = BUILDER
+                .comment("Nidus vitality of a newly placed nidus fought by one player: the damage it takes before it is destroyed.",
+                        "A nidus cannot be mined while this is above 0; players strike it down instead. 0 restores plain mining.")
+                .defineInRange("vitality", 250.0, 0.0, 1000000.0);
+        NIDUS_GROWTH_TICKS = BUILDER
+                .comment("Game ticks a nidus takes to grow to full strength after it is placed (or first indexed).")
+                .defineInRange("growthTicks", 24000, 1, 2400000);
+        NIDUS_GROWTH_BONUS = BUILDER
+                .comment("Extra vitality of a full-grown nidus as a fraction of vitality (1 = twice as much), reached linearly over growthTicks.")
+                .defineInRange("growthBonus", 1.0, 0.0, 100.0);
+        NIDUS_RADIUS = BUILDER
+                .comment("Blocks from a nidus within which players count toward its fight and see its boss bar.")
+                .defineInRange("radius", 24, 1, 128);
+        NIDUS_PLAYER_FACTOR = BUILDER
+                .comment("Extra vitality and surge intensity per player in the fight beyond the first, as a fraction (0.5 = +50% each).",
+                        "Counted when the fight starts and raised as players join; never lowered while the fight lasts.")
+                .defineInRange("playerFactor", 0.5, 0.0, 10.0);
+        NIDUS_PLAYER_CAP = BUILDER
+                .comment("Most players counted for playerFactor.")
+                .defineInRange("playerCap", 4, 1, 64);
+        NIDUS_DISTANCE_FACTOR = BUILDER
+                .comment("Extra vitality per 1000 blocks (horizontal) between a nidus and the world spawn, as a fraction of vitality.",
+                        "0 turns distance scaling off.")
+                .defineInRange("distanceFactor", 0.0, 0.0, 100.0);
+        NIDUS_DISTANCE_MAX_BONUS = BUILDER
+                .comment("Most extra vitality distance scaling adds, as a fraction of vitality.")
+                .defineInRange("distanceMaxBonus", 2.0, 0.0, 100.0);
+        NIDUS_CONTRIBUTOR_WINDOW_TICKS = BUILDER
+                .comment("Game ticks before a nidus is destroyed within which a player must have damaged it (struck it, shot it or blown",
+                        "it up) to share the credit for destroying it.")
+                .defineInRange("contributorWindowTicks", 2400, 0, 72000);
+        NIDUS_REGEN_DELAY_TICKS = BUILDER
+                .comment("Game ticks without damage after which a nidus starts to regenerate its vitality.")
+                .defineInRange("regenDelayTicks", 300, 0, 72000);
+        NIDUS_REGEN_RATE = BUILDER
+                .comment("Fraction of its full vitality a regenerating nidus regains per second. Once whole, its fight is over.")
+                .defineInRange("regenRate", 0.05, 0.0, 1.0);
+        NIDUS_THRESHOLDS = BUILDER
+                .comment("Vitality left (percent of full) at which a nidus fights back, once each per fight: it starts a surge from",
+                        "itself at once with no warning, its intensity rising with each threshold passed, and lashes nearby players.")
+                .defineList(List.of("thresholds"), () -> List.of(75, 50, 25), () -> 50,
+                        value -> value instanceof Integer i && i >= 1 && i <= 99, ModConfigSpec.Range.of(0, 10));
+        NIDUS_PROJECTILE_FRACTION = BUILDER
+                .comment("Fraction of an arrow's or trident's damage a nidus takes from it. Projectiles never destroy a nidus.")
+                .defineInRange("projectileFraction", 0.5, 0.0, 1.0);
+        NIDUS_EXPLOSION_FRACTION = BUILDER
+                .comment("Fraction of the damage an explosion would deal a mob at the same spot that a nidus takes from it.",
+                        "Explosions never destroy a nidus.")
+                .defineInRange("explosionFraction", 0.25, 0.0, 1.0);
+        NIDUS_LASH_RADIUS = BUILDER
+                .comment("Blocks from a nidus within which its lash at each threshold reaches players.")
+                .defineInRange("lashRadius", 8.0, 0.0, 64.0);
+        NIDUS_LASH_VIRAL_LOAD = BUILDER
+                .comment("Viral load a lash adds to each player it reaches (while [viral_load] is enabled).")
+                .defineInRange("lashViralLoad", 15.0, 0.0, 100.0);
+        NIDUS_LASH_KNOCKBACK = BUILDER
+                .comment("Knockback strength of a lash, away from the nidus (a strong mob hit is about 1).")
+                .defineInRange("lashKnockback", 1.5, 0.0, 10.0);
         BUILDER.pop();
     }
 

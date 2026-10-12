@@ -23,7 +23,11 @@ public final class LocationTrigger extends SimpleCriterionTrigger<LocationTrigge
     }
 
     public void trigger(ServerPlayer player, BlockPos pos) {
-        ServerLevel level = player.serverLevel();
+        trigger(player, player.serverLevel(), pos);
+    }
+
+    /** Fires for a position in {@code level}, which need not be the player's level. */
+    public void trigger(ServerPlayer player, ServerLevel level, BlockPos pos) {
         trigger(player, instance -> instance.matches(level, pos));
     }
 
