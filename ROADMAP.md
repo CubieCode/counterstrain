@@ -354,8 +354,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.11: Festering land atmosphere
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p4.11-fester-atmosphere
 - PR:
 - Depends on: P4.2
 - Scope: Festering land should feel wrong to stand in, not just look it. The `remission:fester` biome gets its effects (datagen): fog, sky and water fog colours, an ambient loop, mood sounds (as cave sounds), occasional additions sounds (wet, organic noises) and its own music, all clearly unlike the Deep Dark. Client side, fog thickens with the festering stage of the player's chunk (from the biome and blocks the client already has; no new payload), with a client config option to turn it down or off for accessibility. Fester variants (data) inherit nothing automatically, so remission-data-formats documents what a pack sets on its own variant biomes. Sounds are placeholders in the ledger until P12.2.
