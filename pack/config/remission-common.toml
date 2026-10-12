@@ -1,0 +1,94 @@
+[hosts]
+	#Strain levels (1-100) at which a host reaches each stage.
+	#A host's stage is the number of thresholds its level meets; one entry per stage.
+	#Applied when a level is set, so existing hosts keep their stage until their level next changes.
+	stageThresholds = [1, 34, 67]
+
+[spread]
+	#Game ticks between spread passes. Unloaded land catches up by the passes it missed when it loads.
+	# Default: 400
+	# Range: 20 ~ 72000
+	intervalTicks = 200
+	#Strain level the chunk holding a nidus gains per pass, up to 100.
+	# Default: 5
+	# Range: 1 ~ 100
+	nidusGrowth = 5
+	#Strain level any other chunk in reach of a nidus gains per pass from its neighbour toward the nidus.
+	# Default: 2
+	# Range: 1 ~ 100
+	spreadStep = 4
+	#How much lower the highest reachable level is per chunk of distance from the nidus.
+	#With the defaults a nidus reaches 7 chunks (Manhattan distance).
+	# Default: 10
+	# Range: 1 ~ 100
+	falloff = 10
+	#Strain level a chunk needs before it passes the Strain on to the next chunk outward.
+	# Default: 40
+	# Range: 1 ~ 100
+	spreadThreshold = 40
+	#Chunks the spread pass visits per server tick and level; a pass that needs more continues next tick.
+	# Default: 256
+	# Range: 1 ~ 65536
+	chunkBudget = 256
+	#Loaded chunks fast-forwarded per server tick and level; the rest wait for later ticks.
+	# Default: 32
+	# Range: 1 ~ 4096
+	catchUpBudget = 32
+
+[festering]
+	#Chunk Strain levels (1-100) at which land reaches each festering stage.
+	#A chunk's stage is the number of thresholds its level meets; one entry per stage.
+	#Read whenever a chunk's level changes or a stage is queried.
+	stageThresholds = [1, 25, 50, 75]
+
+[infection]
+	#Whether mobs that stay in festering land become hosts. Exposure is frozen while this is off.
+	festeringLand = true
+	#Lowest festering stage of a chunk that builds up exposure in the mobs inside it, at any height.
+	#Above the number of festering stage thresholds, no land infects.
+	# Default: 2
+	# Range: 1 ~ 8
+	festeringLandMinStage = 1
+	#Game ticks of exposure after which a mob becomes a host. Exposure falls by the same amount
+	#per tick outside such land, and is checked once a second in budgeted batches.
+	# Default: 6000
+	# Range: 20 ~ 1728000
+	festeringLandExposureTicks = 20
+
+[surges]
+	#Whether surges start on their own. Commands and the API start them either way.
+	scheduled = true
+	#Game ticks from the end of one surge until the next comes due in the same level.
+	#A due surge starts once a player (not a spectator) is within a nidus's reach.
+	# Default: 24000
+	# Range: 1200 ~ 2400000
+	intervalTicks = 24000
+	#Game ticks between a surge's warning and its start.
+	# Default: 600
+	# Range: 0 ~ 12000
+	warningTicks = 600
+	#Game ticks a surge lasts once it has started.
+	# Default: 2400
+	# Range: 200 ~ 72000
+	durationTicks = 2400
+	#During a surge, spread from its nidus gains this many times its usual step per pass, times the intensity.
+	# Default: 4
+	# Range: 1 ~ 100
+	spreadMultiplier = 4
+	#Hosts a surge tries to spawn near each player inside its reach every 10 seconds, times the intensity.
+	#None spawn on Peaceful.
+	# Default: 2
+	# Range: 0 ~ 32
+	hostsPerWave = 2
+	#Strain level of the hosts a surge spawns.
+	# Default: 50
+	# Range: 1 ~ 100
+	hostLevel = 50
+	#Most hosts one surge keeps alive at once; waves spawn none while it has this many.
+	# Default: 16
+	# Range: 0 ~ 256
+	maxHosts = 16
+	#Miasma clouds a surge releases above festering land when it starts, times the intensity (at most 32).
+	# Default: 3
+	# Range: 0 ~ 32
+	clouds = 3
