@@ -653,9 +653,10 @@ Goals: quests and scripts can observe and drive Remission.
 
 ### P8.2: Quest-fired events and map overlay
 
-- Status: `review`
+- Status: `done`
 - Owner: `feat/p8.2-quest-events-map-overlay`
 - PR: https://github.com/CubieCode/counterstrain/pull/71
+- Validation: PR #71; 192 gametests incl. QuestEventTests (nidus seed, region advance with stage clamp, festering_map wire format and protocol 3, sent and watched chunk states); an FTB Quests reward fired seed, advance and surge in a GPU dev run; `quest/map_overlay` reviewed, gpu-smoke run 38252834776 green.
 - Depends on: P8.1, P4.3
 - Scope: Commands for quests and scripts to start surges, seed nidi (`/remission nidus seed <pos>`) or advance regions; optional JourneyMap overlay of festering chunks and remission zones via its polygon overlay API (`integration/journeymap/`, `compileOnly` API, guarded by `ModList`).
 - Acceptance: A quest reward fires an event in a dev run; overlay screenshot reviewed (harness scene `quest/map_overlay`). Ledger updated; placeholders marked.
