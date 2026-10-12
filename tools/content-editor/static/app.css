@@ -103,7 +103,8 @@ kbd { font: 11px var(--mono); padding: 0 5px; border: 1px solid var(--bd); borde
 .rail { flex: 1 1 220px; max-width: 250px; padding: 16px; border-right: 1px solid var(--bd); background: var(--sf);
   display: flex; flex-direction: column; gap: 18px; }
 .content { flex: 999 1 640px; min-width: 0; padding: 18px 24px 24px; display: flex; flex-direction: column; gap: 14px; }
-.row-flex { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.row-flex { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; }
+.row-flex > .ellipsis { max-width: 100%; }
 .stack { display: flex; flex-direction: column; gap: 8px; }
 .card { border: 1px solid var(--bd); border-radius: 10px; background: var(--sf); }
 .card.pad { padding: 14px 16px; }
@@ -197,8 +198,8 @@ canvas.gl.tall { height: 300px; width: 100%; min-width: 200px; }
 .change { display: flex; gap: 14px; padding: 14px; border-bottom: 1px solid var(--bd); }
 .change:last-child { border-bottom: 0; }
 .strings { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 6px; background: var(--sk); font-size: 13px; }
-pre.out { margin: 0 0 0 28px; padding: 8px 10px; border-radius: 6px; background: var(--erb); color: var(--fg); font: 12px/1.6 var(--mono); white-space: pre-wrap; }
-pre.body { margin: 0; padding: 10px 12px; border: 1px solid var(--bd); border-radius: 6px; background: var(--sk); font: 12px/1.6 var(--mono); white-space: pre-wrap; color: var(--f2); }
+pre.out { overflow-wrap: anywhere; margin: 0 0 0 28px; padding: 8px 10px; border-radius: 6px; background: var(--erb); color: var(--fg); font: 12px/1.6 var(--mono); white-space: pre-wrap; }
+pre.body { margin: 0; padding: 10px 12px; border: 1px solid var(--bd); border-radius: 6px; background: var(--sk); font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--f2); }
 .filerow { display: flex; gap: 12px; align-items: baseline; font: 12px var(--mono); }
 
 dialog { border: 1px solid var(--bd); border-radius: 10px; background: var(--sf); color: var(--fg); padding: 18px; width: min(520px, calc(100vw - 32px)); }
