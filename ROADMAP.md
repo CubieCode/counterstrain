@@ -305,7 +305,7 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.8: Festering veins and contact infection
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p4.8-festering-veins
 - PR:
 - Depends on: P4.2, P4.6, P4.7
