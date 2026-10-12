@@ -35,7 +35,7 @@ public class RevenantSlainEvent extends RevenantEvent {
         return killer;
     }
 
-    /** Whether the killer may pick up its items (its owner, or allowed by {@link RevenantPickupEvent}): a reclaim. */
+    /** Whether the killer may pick up its items (its owner, or the owner's teammate by {@link TeamQueries}): a reclaim. */
     public boolean isReclaimed() {
         return reclaimed;
     }

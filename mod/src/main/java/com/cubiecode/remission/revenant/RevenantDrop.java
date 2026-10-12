@@ -7,7 +7,7 @@ import net.minecraft.core.UUIDUtil;
 
 /**
  * Pickup restriction on an item a slain revenant dropped (attachment {@code remission:revenant_drop}): only its owner,
- * and players {@code RevenantPickupEvent} allows, may pick it up from {@code droppedAt + Revenants.PICKUP_DELAY_TICKS}
+ * and the owner's teammates ({@code TeamQueries}), may pick it up from {@code droppedAt + Revenants.PICKUP_DELAY_TICKS}
  * until {@code freeAt}, when it is freed for anyone. Game times, so time spent unloaded counts.
  */
 public record RevenantDrop(UUID owner, long droppedAt, long freeAt) {

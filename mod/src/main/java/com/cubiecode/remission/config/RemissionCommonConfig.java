@@ -281,8 +281,8 @@ public final class RemissionCommonConfig {
 
         BUILDER.push("revenants");
         REVENANT_PICKUP_TIMEOUT_TICKS = BUILDER
-                .comment("Game ticks after a slain revenant drops its items during which only its owner (and players the",
-                        "RevenantPickupEvent allows, such as a pack's teammates) can pick them up. After that anyone can, and the",
+                .comment("Game ticks after a slain revenant drops its items during which only its owner and the owner's",
+                        "teammates (the team query, such as FTB Teams parties) can pick them up. After that anyone can, and the",
                         "items despawn like other dropped items. Until then they never despawn and mobs and players cannot take them.")
                 .defineInRange("pickupTimeoutTicks", 12000, 0, 1728000);
         BUILDER.pop();

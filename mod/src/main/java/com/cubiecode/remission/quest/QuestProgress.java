@@ -76,8 +76,8 @@ public final class QuestProgress {
     }
 
     /**
-     * The player slew a revenant whose items they may pick up: their own ({@code own}) or one {@code RevenantPickupEvent}
-     * allows them to collect.
+     * The player slew a revenant whose items they may pick up: their own ({@code own}) or a teammate's (the team query,
+     * {@code TeamQueries}).
      */
     public static void revenantReclaimed(ServerPlayer player, boolean own) {
         if (player instanceof FakePlayer) {

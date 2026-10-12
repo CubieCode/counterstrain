@@ -3,9 +3,9 @@ package com.cubiecode.remission.revenant;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.api.CorruptionCause;
 import com.cubiecode.remission.api.CorruptionQueries;
-import com.cubiecode.remission.api.RevenantPickupEvent;
 import com.cubiecode.remission.api.RevenantRisenEvent;
 import com.cubiecode.remission.api.RevenantSlainEvent;
+import com.cubiecode.remission.api.TeamQueries;
 import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
@@ -272,7 +272,7 @@ public final class Revenants {
             return;
         }
         ServerPlayer killer = source.getEntity() instanceof ServerPlayer player ? player : null;
-        boolean reclaimed = killer != null && mayReclaim(killer, owner, null);
+        boolean reclaimed = killer != null && mayReclaim(killer, owner);
         if (reclaimed) {
             QuestProgress.revenantReclaimed(killer, killer.getUUID().equals(owner));
         }
@@ -281,9 +281,12 @@ public final class Revenants {
 
     // ---- pickup ------------------------------------------------------------------------------------------------------
 
-    /** Whether {@code player} may collect what a revenant of {@code owner} holds ({@link RevenantPickupEvent}). */
-    public static boolean mayReclaim(Player player, UUID owner, @Nullable ItemEntity item) {
-        return NeoForge.EVENT_BUS.post(new RevenantPickupEvent(player, owner, item)).isAllowed();
+    /**
+     * Whether {@code player} may collect what a revenant of {@code owner} holds: the owner and the owner's teammates
+     * ({@link TeamQueries}, P4.12; the owner may be offline).
+     */
+    public static boolean mayReclaim(Player player, UUID owner) {
+        return TeamQueries.areTeammates(player, owner);
     }
 
     /** Restricts a dropped item to {@code owner} until the pickup timeout; mobs never pick it up, and it never despawns. */
@@ -319,7 +322,7 @@ public final class Revenants {
             free(item);
             return;
         }
-        boolean allowed = now - drop.droppedAt() >= PICKUP_DELAY_TICKS && mayReclaim(event.getPlayer(), drop.owner(), item);
+        boolean allowed = now - drop.droppedAt() >= PICKUP_DELAY_TICKS && mayReclaim(event.getPlayer(), drop.owner());
         event.setCanPickup(allowed ? TriState.TRUE : TriState.FALSE);
     }
 

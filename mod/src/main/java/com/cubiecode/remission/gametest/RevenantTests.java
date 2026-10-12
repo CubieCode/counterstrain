@@ -4,7 +4,8 @@ import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.api.CorruptionCause;
 import com.cubiecode.remission.api.CorruptionQueries;
 import com.cubiecode.remission.api.HostCorruptedEvent;
-import com.cubiecode.remission.api.RevenantPickupEvent;
+import com.cubiecode.remission.api.TeamLookupEvent;
+import com.cubiecode.remission.api.TeamQueries;
 import com.cubiecode.remission.api.RevenantRisenEvent;
 import com.cubiecode.remission.api.RevenantSlainEvent;
 import com.cubiecode.remission.api.ViralLoadChangedEvent;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.advancements.Advancement;
@@ -80,7 +82,7 @@ import org.jetbrains.annotations.Nullable;
  * Revenants (P5.3): Strain deaths (killed by a host or a revenant, viral load, festering land) raise a revenant holding
  * exactly the dropped items (Curios slots included when Curios is loaded) and experience; other deaths and
  * {@code keepInventory} drop as vanilla; damage only from players; void return; save, reload and despawn rules; the
- * leash; owner-only pickup, its widening by {@link RevenantPickupEvent} and its timeout; the reclaim trigger and stat;
+ * leash; owner-only pickup, its widening to the owner's teammates by the team query and its timeout; the reclaim trigger and stat;
  * and the index on rise, move and death. Each test runs alone in its own batch, because several change chunk levels,
  * game rules or difficulty, and players are never added to the level.
  */
@@ -567,36 +569,42 @@ public final class RevenantTests {
         });
     }
 
-    /** A {@link RevenantPickupEvent} listener lets a teammate collect and reclaim (own = false), as the pack's FTB Teams script does. */
-    @GameTest(template = "empty", batch = "revenant_pickup_event")
-    public static void pickupEventWidensPickup(GameTestHelper helper) {
+    /**
+     * The owner's teammates (the team query, P4.12; here a test {@link TeamLookupEvent} listener) collect and reclaim
+     * (own = false); a stranger still cannot.
+     */
+    @GameTest(template = "empty", batch = "revenant_teammates")
+    public static void teammatesCollectAndReclaim(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         ServerPlayer owner = player(helper, new BlockPos(1, 1, 1));
         ServerPlayer friend = player(helper, new BlockPos(0, 1, 1));
+        ServerPlayer stranger = player(helper, new BlockPos(1, 1, 0));
         AdvancementHolder notOwn = gate(helper, friend, "{\"trigger\":\"remission:revenant_reclaimed\",\"conditions\":{\"own\":false}}");
         AdvancementHolder own = gate(helper, friend, "{\"trigger\":\"remission:revenant_reclaimed\",\"conditions\":{\"own\":true}}");
-        List<RevenantPickupEvent> asked = new ArrayList<>();
-        Consumer<RevenantPickupEvent> team = event -> {
-            asked.add(event);
-            if (event.getOwner().equals(owner.getUUID()) && event.getEntity() == friend) {
-                event.setAllowed(true);
+        Set<UUID> team = Set.of(owner.getUUID(), friend.getUUID());
+        Consumer<TeamLookupEvent> teams = event -> {
+            if (team.contains(event.getFirst()) && team.contains(event.getSecond())) {
+                event.setTeammates(true);
             }
         };
-        NeoForge.EVENT_BUS.addListener(team);
-        Revenant revenant = rise(helper, owner, List.of(new ItemStack(Items.EMERALD, 4)), 0);
+        TeamQueries.invalidateAll();
+        NeoForge.EVENT_BUS.addListener(teams);
+        Revenant revenant = rise(helper, owner, List.of(new ItemStack(Items.EMERALD, 4), new ItemStack(Items.GOLD_INGOT, 2)), 0);
         revenant.hurt(level.damageSources().playerAttack(friend), 1000.0F);
-        helper.assertTrue(done(friend, notOwn), "friend's kill did not fire revenant_reclaimed own=false");
-        helper.assertFalse(done(friend, own), "friend's kill fired own=true");
-        helper.assertValueEqual(stat(friend), 1, "friend's stat");
-        helper.assertTrue(asked.stream().anyMatch(event -> event.getItem() == null && !event.isOwner()), "kill asked the event");
+        helper.assertTrue(done(friend, notOwn), "teammate's kill did not fire revenant_reclaimed own=false");
+        helper.assertFalse(done(friend, own), "teammate's kill fired own=true");
+        helper.assertValueEqual(stat(friend), 1, "teammate's stat");
         List<ItemEntity> drops = drops(helper);
         helper.runAfterDelay(Revenants.PICKUP_DELAY_TICKS + 1, () -> {
             try {
+                drops.forEach(drop -> drop.playerTouch(stranger));
+                helper.assertTrue(stranger.getInventory().isEmpty(), "a stranger took a teammate-restricted drop");
                 drops.forEach(drop -> drop.playerTouch(friend));
-                helper.assertValueEqual(friend.getInventory().countItem(Items.EMERALD), 4, "friend's emeralds");
-                helper.assertTrue(asked.stream().anyMatch(event -> event.getItem() != null), "pickup asked the event");
+                helper.assertValueEqual(friend.getInventory().countItem(Items.EMERALD), 4, "teammate's emeralds");
+                helper.assertValueEqual(friend.getInventory().countItem(Items.GOLD_INGOT), 2, "teammate's gold");
             } finally {
-                NeoForge.EVENT_BUS.unregister(team);
+                NeoForge.EVENT_BUS.unregister(teams);
+                TeamQueries.invalidateAll();
                 clear(helper);
             }
             helper.succeed();
