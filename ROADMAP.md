@@ -422,7 +422,7 @@ Goals: the Strain becomes a resource processed by machines into tools for the fi
 
 ### P7.2: Analyzer, sequencer and synthesizer
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p7.2-machines
 - PR:
 - Depends on: P7.1
