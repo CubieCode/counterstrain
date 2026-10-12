@@ -422,9 +422,10 @@ Goals: the Strain becomes a resource processed by machines into tools for the fi
 
 ### P7.2: Analyzer, sequencer and synthesizer
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p7.2-machines
 - PR: https://github.com/CubieCode/counterstrain/pull/65
+- Validation: PR #65; 154 gametests incl. MachineTests (each machine crafts); recipe schemas in remission-data-formats; `tech/machines` and `tech/recipe_viewer` scenes from the RTX 4070 reviewed (EMI with JEI, JEI alone), gpu-smoke green.
 - Depends on: P7.1
 - Scope: Three machines with recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing`, energy, standard item and fluid capabilities (so storage networks can feed them), recipe viewer categories (a JEI plugin, shown in EMI through its JEI compatibility; native EMI plugin only if needed), default recipes via datagen.
 - Acceptance: Recipe schemas documented; EMI (with JEI installed) and JEI alone both show them; gametests run each machine. Ledger updated; placeholders marked.
