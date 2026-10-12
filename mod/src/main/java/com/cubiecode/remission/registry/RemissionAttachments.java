@@ -75,6 +75,15 @@ public final class RemissionAttachments {
                     .serialize(Codec.intRange(0, Integer.MAX_VALUE), ticks -> ticks > 0)
                     .build());
 
+    /**
+     * A mob's contact with infectious blocks or festering water in ticks (P4.8): rises while it touches them and falls by
+     * the same amount without contact. Saved with the mob (never at 0) and server-only.
+     */
+    public static final Supplier<AttachmentType<Integer>> CONTACT_EXPOSURE = ATTACHMENT_TYPES.register("contact_exposure",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.intRange(0, Integer.MAX_VALUE), ticks -> ticks > 0)
+                    .build());
+
     private RemissionAttachments() {
     }
 }

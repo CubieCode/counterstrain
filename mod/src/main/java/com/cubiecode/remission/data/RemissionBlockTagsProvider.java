@@ -1,8 +1,10 @@
 package com.cubiecode.remission.data;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.infection.Contact;
 import com.cubiecode.remission.loot.IsFesteringCondition;
 import com.cubiecode.remission.registry.RemissionBlocks;
+import com.cubiecode.remission.world.FesteringVeins;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
@@ -27,5 +29,12 @@ public final class RemissionBlockTagsProvider extends BlockTagsProvider {
         tag(BlockTags.DIRT).add(RemissionBlocks.FESTERING_GRASS.get());
         tag(BlockTags.LOGS).add(RemissionBlocks.FESTERING_LOG.get());
         tag(BlockTags.LEAVES).add(RemissionBlocks.FESTERING_LEAVES.get());
+        // Festering veins and contact infection (P4.8): veins grow on any solid face unless a pack lists the block as
+        // resistant (empty by default); the festering blocks and veins infect mobs that touch them.
+        tag(BlockTags.MINEABLE_WITH_HOE).add(RemissionBlocks.FESTERING_VEIN.get());
+        tag(FesteringVeins.VEIN_RESISTANT);
+        tag(Contact.INFECTIOUS).add(RemissionBlocks.FESTERING_GRASS.get(), RemissionBlocks.FESTERING_LOG.get(),
+                RemissionBlocks.FESTERING_LEAVES.get(), RemissionBlocks.FESTERED_STONE.get(),
+                RemissionBlocks.FESTERED_DEEPSLATE.get(), RemissionBlocks.FESTERING_VEIN.get());
     }
 }

@@ -13,6 +13,8 @@ public enum CorruptionCause {
     FESTERING_LAND,
     /** Spawned as a host by a surge. */
     SURGE,
+    /** Touching an infectious block or swimming in water in festering land (contact infection). */
+    CONTACT,
     /** Any other caller, including other mods using Remission's internals. */
     OTHER
 }

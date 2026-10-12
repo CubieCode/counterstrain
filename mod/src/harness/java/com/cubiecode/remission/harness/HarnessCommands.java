@@ -11,6 +11,7 @@ import com.cubiecode.remission.surge.SurgeController;
 import com.cubiecode.remission.surge.SurgeHosts;
 import com.cubiecode.remission.world.ChunkCorruption;
 import com.cubiecode.remission.world.FesteringStages;
+import com.cubiecode.remission.world.FesteringVeins;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -120,7 +121,12 @@ final class HarnessCommands {
                                         .executes(context -> fester(context.getSource().getLevel(),
                                                 BlockPosArgument.getBlockPos(context, "from"),
                                                 BlockPosArgument.getBlockPos(context, "to"),
-                                                IntegerArgumentType.getInteger(context, "level"))))))));
+                                                IntegerArgumentType.getInteger(context, "level")))))))
+                .then(Commands.literal("veins").then(Commands.argument("from", BlockPosArgument.blockPos())
+                        .then(Commands.argument("to", BlockPosArgument.blockPos())
+                                .executes(context -> veins(context.getSource().getLevel(),
+                                        BlockPosArgument.getBlockPos(context, "from"),
+                                        BlockPosArgument.getBlockPos(context, "to")))))));
     }
 
     private static int eachPlayer(CommandContext<CommandSourceStack> context, Consumer<ServerPlayer> action) {
@@ -175,6 +181,22 @@ final class HarnessCommands {
             }
         }
         return chunks;
+    }
+
+    /**
+     * Grows the festering veins of every loaded chunk the box overlaps at once, at each chunk's current stage, as the
+     * budgeted vein pass would over a few ticks (P4.8). Run it after {@code harness fester} has set the stages. Returns
+     * the number of blocks changed.
+     */
+    private static int veins(ServerLevel level, BlockPos from, BlockPos to) {
+        int changed = 0;
+        for (ChunkPos pos : ChunkPos.rangeClosed(new ChunkPos(from), new ChunkPos(to)).toList()) {
+            LevelChunk chunk = level.getChunkSource().getChunkNow(pos.x, pos.z);
+            if (chunk != null) {
+                changed += FesteringVeins.growNow(level, chunk);
+            }
+        }
+        return changed;
     }
 
     /**

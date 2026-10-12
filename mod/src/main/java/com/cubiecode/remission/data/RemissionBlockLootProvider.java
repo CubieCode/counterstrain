@@ -43,6 +43,8 @@ public final class RemissionBlockLootProvider extends BlockLootSubProvider {
                                 LEAVES_STICK_CHANCES))));
         dropSelf(RemissionBlocks.FESTERED_STONE.get());
         dropSelf(RemissionBlocks.FESTERED_DEEPSLATE.get());
+        // Festering veins (P4.8): one vein per face, with silk touch only, as sculk veins.
+        add(RemissionBlocks.FESTERING_VEIN.get(), block -> createMultifaceBlockDrops(block, hasSilkTouch()));
     }
 
     // Every Remission block must have a loot table; datagen fails if one is missing.

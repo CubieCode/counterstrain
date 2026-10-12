@@ -41,6 +41,9 @@ public final class RemissionItems {
     public static final DeferredItem<BlockItem> FESTERED_STONE = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERED_STONE);
     public static final DeferredItem<BlockItem> FESTERED_DEEPSLATE = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERED_DEEPSLATE);
 
+    // Festering veins (P4.8)
+    public static final DeferredItem<BlockItem> FESTERING_VEIN = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_VEIN);
+
     private RemissionItems() {
     }
 }

@@ -1,6 +1,8 @@
 package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.world.FesteringVeinBlock;
+import com.cubiecode.remission.world.FesteringVeins;
 import com.cubiecode.remission.world.NidusBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.Block;
@@ -60,6 +62,19 @@ public final class RemissionBlocks {
     /** Deepslate facing cave air at festering stage 3 (P4.6); a pillar with {@code axis} like deepslate. */
     public static final DeferredBlock<RotatedPillarBlock> FESTERED_DEEPSLATE = BLOCKS.registerBlock("festered_deepslate",
             RotatedPillarBlock::new, BlockBehaviour.Properties.ofFullCopy(Blocks.DEEPSLATE).mapColor(MapColor.TERRACOTTA_PURPLE));
+
+    /**
+     * Festering veins (P4.8): a multiface growth on the solid faces of blocks in festering chunks, grown by
+     * {@link FesteringVeins}. No collision and replaceable, like glow lichen; drops only with silk touch.
+     */
+    public static final DeferredBlock<FesteringVeinBlock> FESTERING_VEIN = BLOCKS.registerBlock("festering_vein",
+            FesteringVeinBlock::new, BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_RED)
+                    .replaceable()
+                    .noCollission()
+                    .strength(0.2F)
+                    .sound(SoundType.GLOW_LICHEN)
+                    .pushReaction(PushReaction.DESTROY));
 
     private RemissionBlocks() {
     }

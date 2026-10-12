@@ -36,6 +36,14 @@ public record ExposureSettings(boolean enabled, int minStage, int exposureTicks,
      * {@link Integer#MAX_VALUE} when there are fewer stages than that.
      */
     public int minLevel() {
+        return levelForStage(minStage);
+    }
+
+    /**
+     * The lowest chunk Strain level at festering stage {@code minStage} under the current festering stage thresholds, or
+     * {@link Integer#MAX_VALUE} when there are fewer stages than that.
+     */
+    public static int levelForStage(int minStage) {
         List<Integer> thresholds = new ArrayList<>(RemissionCommonConfig.FESTERING_STAGE_THRESHOLDS.get());
         if (minStage > thresholds.size()) {
             return Integer.MAX_VALUE;
