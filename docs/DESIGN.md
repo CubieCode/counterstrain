@@ -26,6 +26,9 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | The fester biome a particular source biome turns into | **fester variant** | data map `remission:fester_variant`; "plains festers into `remission:fester`, a pack's lavender field into its own fester variant" |
 | Growth that creeps over the faces of blocks in festering land, player builds included | **festering veins** | block `remission:festering_vein`; block tag `#remission:vein_resistant`; config `[festering] veins`, `veinMinStage`; "veins are creeping up the wall" |
 | How much punishment a nidus takes before it is destroyed; it fights back as it falls | **nidus vitality** | config `[nidi]` (planned, P4.10); `NidusDamagedEvent`; "the nidus is at half vitality" |
+| Hosts in a nidus's land converging on it while it is under attack | **rallying** | config `[nidi]` (planned, P4.13); "the hosts are rallying to the nidus" |
+| A surge started by a nidus because a nearby nidus is under attack | **sympathetic surge** | config `[nidi]` (planned, P4.13); cause on the surge started event; "striking the east nidus set off a sympathetic surge in the valley" |
+| A nidus left alone long enough seeding a daughter nidus at the edge of its festering land | **budding** (a **daughter nidus**) | config `[nidi]` (planned, P4.14); `NidusBuddedEvent` (planned); "the nidus has budded" |
 | Large powered purifier that drains a wide area while fed energy and fuel | **reclaimer** | block `remission:reclaimer` (planned, P7.4); "run a reclaimer over the valley" |
 | Wreck site loot that opens only once its chunk is in remission | **sealed caches** | pack feature (P11.4); "reclaim the valley to open the sealed cache" |
 | Festering a new chunk starts with, from world generation | **initial festering** | config `[spread]` (planned, P4.9); "initial festering is off by default" |
@@ -34,6 +37,9 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Periodic spread bursts from one nidus, telegraphed by a warning | **surges** | config `[surges]`; trigger `remission:surge_survived`, stat `remission:surges_survived`; `/remission surge start`; entity tag `#remission:surge_hosts`; "the nidus surges at the season change", "survive the surge" |
 | Extracted resource | **miasma** | fluid `remission:miasma`; Mekanism chemical `remission:miasma` when Mekanism is present |
 | Player exposure meter | **viral load** | player attachment `viral_load`; config `[viral_load]` (including `contact`, `contactGain`: touching an infectious block); trigger `remission:viral_load_changed`; damage type `remission:viral_load` (death message "succumbed to the Strain"); "viral load is at 60", "the viral load meter" |
+| A player with high viral load passing viral load to players near them | **shedding** | config `[viral_load]` `shedding` (planned, P5.6); "you're shedding, keep your distance" |
+| The downed state before a death to the Strain, when another player can still save the player | **succumbing**; saving them is to **stabilise** | config `[succumbing]` (planned, P7.6); triggers `remission:player_stabilised` (planned); "they're succumbing, stabilise them" |
+| Item that applies a serum to another player, or to yourself | **injector** | item `remission:injector` (planned, P7.6); "load the injector and stabilise them" |
 | Turning festered land, blocks or hosts back | **cleanse** / **purify** (noun **purification**) | data map `remission:cleanses_into`; event `BlockPurifiedEvent`; config `[purification]`; "cleanse the grove", "purify the chunk" |
 | Handheld cleansing tool | **handheld purifier** | item `remission:handheld_purifier`; "use the purifier on the veins" |
 | Radius wards | **quarantine pylons** | block `remission:quarantine_pylon`; its **ward** (the chunks it protects; config `pylonRadius`); "the base is inside the pylon's ward" |
@@ -43,6 +49,8 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Endgame cure | **the Counterstrain** | "unstable Counterstrain prototypes", "the final deployment" |
 | Samples | host tissue, **nidus cores**, festered soil | `remission:host_tissue`, `remission:nidus_core`, `remission:festered_soil` |
 | Machines that process the Strain | **analyzer**, **sequencer**, **synthesizer** | blocks `remission:analyzer`, `remission:sequencer`, `remission:synthesizer`; recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing`; "analyze the sample, sequence the Strain, synthesize the serum" |
+| A machine in festering land that the Strain has got into, working slowly until cleansed | **fouled** (verb: foul) | block tag `#remission:foulable` (planned, P7.7); "the crusher is fouled, cleanse it" |
+| Live samples kept outside containment festering the block they are stored in | **containment breach**; the safe storage is **containment** | item tag `#remission:live_samples`, block `remission:containment_locker` (planned, P7.8); "a containment breach in the lab" |
 | A sequenced record of the Strain, made by the sequencer from a scan and host tissue | **strain sequence** | item `remission:strain_sequence`; the synthesizer's input, from which serums are made (P7.3) |
 | Items carried through festering land | **contaminated** (verb: decontaminate) | data component `remission:contaminated` (planned, P10.6) |
 | Drifting airborne Strain | **miasma clouds** | entity `remission:miasma_cloud`; released by surges, drifting above festering land; players inside gain viral load |
@@ -89,7 +97,9 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - **Underground:** a festering chunk is festering at every height. From a late stage its caves fester too, as a skin on the blocks facing cave air (rock inside the ground and ores are left alone, so mining stays viable), looking clearly different from sculk. Caves and underground bases are no refuge.
 - **Festering veins** creep over the faces of blocks in festering chunks without replacing them, player builds included, so a base inside festering land is overgrown unless it is warded by a quarantine pylon or cleansed.
 - The Strain spreads from **nidi** (blocks or structures). Destroying a nidus stops its spread but does not cleanse land.
-- **Nidus encounters** (P4.10): a nidus cannot be mined. Players wear down its **nidus vitality** by striking it, and it fights back as it falls, starting surges from itself and lashing nearby players, so destroying one is the climax of a region.
+- **Nidus encounters** (P4.10): a nidus cannot be mined. Players wear down its **nidus vitality** by striking it, and it fights back as it falls, starting surges from itself and lashing nearby players, so destroying one is the climax of a region. Every player who struck it recently shares the credit, and its vitality and surges scale with the number of players fighting it, so a group neither melts it nor leaves a solo player facing a fight tuned for four.
+- **Nidus defence** (P4.13): hosts in a nidus's land **rally** to it while it is under attack, so a fight builds as they arrive, and nidi near a nidus under attack start **sympathetic surges**. Pressing one front opens another, so a group has to choose who holds the base and who keeps attacking.
+- **Budding** (P4.14): a nidus left alone long enough seeds a **daughter nidus** at the edge of its festering land during a surge, so ignoring a region has a long-term cost. Budding is capped per nidus and stays inside festering land, so a world with a border stays finishable.
 - **Initial festering** (optional, off by default; P4.9): new chunks start at a configured level, rising with distance from world spawn, outside a safe radius. Land with no nidus in reach holds its level until purified; a live nidus takes purified land back, so nidi must still be destroyed.
 - **Catch-up:** unloaded chunks record a timestamp; on load they fast-forward deterministically, bounded per tick.
 - **Atmosphere** (P4.11): festering land has its own fog, sky, ambience and music, and fog thickens with the stage, so standing in it feels wrong.
@@ -99,9 +109,11 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 
 - **Viral load:** a player attachment that rises in festering chunks, with escalating debuffs; serums and gear reduce it. Drinking water from, or swimming in, water in festering chunks also adds viral load, and so does flying through a miasma cloud. Gain from festering land falls off with height above the ground (config: on/off and the falloff curve), so anything airborne, from elytra to airships, can cross festering zones above the worst of it. Below the ground there is no falloff: caves and tunnels under a festering chunk count in full. There are no climate mods: viral load is the only exposure system.
 - **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot. A quarantine pylon is the base ward: inside its radius the Strain does not spread, fester, grow veins or infect by contact, festered blocks and veins are cleansed and the land drains into remission, and the crash-site start is built around one (built in P5.2). The large powered purifier is the **reclaimer** (P7.4): it drains a wide area while fed energy and fuel, but does not ward, so a live nidus fights it.
+- **Shedding** (P5.6): above a configured viral load, a player sheds the Strain, visibly and audibly, and slowly passes viral load to players near them. Keeping a sick teammate at a distance, or dosing them first, becomes part of an expedition. Server-configurable; it never affects a player alone.
+- **Succumbing** (P7.6): a death to the Strain (the same causes that make a revenant) first leaves the player succumbing for a short time: down, slowed, unable to fight. Another player can stabilise them with a serum from an **injector**; if nobody does, they die and rise as a revenant. Injectors also apply serums to their user, so the same item serves a solo player. With succumbing off (or with no other player nearby, if the server sets that), a Strain death is immediate, as before.
 - **Contact:** touching festered blocks or veins (standing on, in or against them) adds viral load as well, so walking a festering cave is worse than flying over it (P5.2).
 - **Remission zones:** purified chunks enter remission and grant bonuses (spawn safety, growth, resource yields; tunable). Built in P5.2. Reclaimed land visibly comes back to life: passive wildlife returns and cleansed surfaces regrow plants (planned, P5.5).
-- **Revenants:** a player who dies to the Strain (killed by a host or revenant, by viral load, or anywhere in a festering chunk) rises as a revenant: a host with their skin, wearing their armour and holding their weapon, that keeps their items and experience and stays near where they fell. Other deaths drop items as usual, and `keepInventory` turns revenants off. Anyone can fight a revenant, but its items can be picked up only by its owner, and by their team where the pack defines one (Counterstrain uses FTB Teams), until a timeout frees them. A craftable **revenant tracker**, worn in a Curios slot or carried anywhere in the inventory, shows your revenants as JourneyMap waypoints, or as a HUD pointer without JourneyMap.
+- **Revenants:** a player who dies to the Strain (killed by a host or revenant, by viral load, or anywhere in a festering chunk) rises as a revenant: a host with their skin, wearing their armour and holding their weapon, that keeps their items and experience and stays near where they fell. Other deaths drop items as usual, and `keepInventory` turns revenants off. Anyone can fight a revenant, but its items can be picked up only by its owner, and by their teammates (the team query, P4.12; Counterstrain uses FTB Teams), until a timeout frees them. A craftable **revenant tracker**, worn in a Curios slot or carried anywhere in the inventory, shows your revenants as JourneyMap waypoints, or as a HUD pointer without JourneyMap.
 
 ### Research
 
@@ -113,7 +125,9 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - Miasma as a fluid (and Mekanism chemical when Mekanism is present).
 - Samples: host tissue, nidus cores, festered soil.
 - Machines: analyzer (samples into miasma and scans), sequencer (a scan and host tissue in miasma into a strain sequence), synthesizer (strain sequences into products), each a recipe type packs and KubeJS can edit, fed by hand or through standard item, fluid and energy capabilities (built in P7.2).
-- Products: personal serums, purifier fuel, unstable Counterstrain prototypes.
+- Products: personal serums (applied by drinking or with an injector, P7.6), purifier fuel, unstable Counterstrain prototypes.
+- **Fouled machinery** (P7.7): machines (any block in `#remission:foulable`, with defaults for blocks that expose item, fluid or energy capabilities) in festering chunks become fouled and work slowly until cleansed, so a base inside festering land needs a pylon's ward or regular cleansing. This is the generic form of the "infected machinery" region twist in the [lore](LORE.md); the AE2 cable and Create track tie-ins stay as they are.
+- **Containment breaches** (P7.8): live samples (`#remission:live_samples`: nidus cores and host tissue by default) kept in ordinary storage occasionally fester the block they are stored in and its neighbours, even inside a pylon's ward. Containment storage keeps them safe, so working with the Strain carries some of its own risk.
 - **Variants** (P7.5): the Strain adapts to the methods used against it near each nidus, becoming resistant to an overused tool or damage type. Scanning and sequencing a variant lets the synthesizer make the serum or fuel that beats it, so research is a loop that returns every region.
 
 ### Endgame: the Counterstrain
@@ -121,6 +135,17 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - The Counterstrain uses the same chunk spread engine in reverse.
 - The Strain adapts to the Counterstrain too: prototypes meet variants that resist them (P7.5's system) until the final formula.
 - A final deployment defence event, after which the world visibly heals. The Counterstrain is deployed from a **dispersal payload**: a placed block is enough to finish the game. Its API treats the payload as a dispersal source with a position, so a moving holder (a Create contraption or Aeronautics airship, through the optional integration) can carry it instead.
+
+### Teams and multiplayer
+
+Remission is played alone or together, and nothing it adds may make a solo game worse. Rules (decided 2026-10-13):
+
+- **Teams come from the pack.** Remission asks one team query (P4.12) wherever a rule involves teammates. Counterstrain answers it from FTB Teams. With no team source, each player is their own team.
+- **Research and progress are shared by a team; exposure is personal.** Bestiary progress, scan credit, standing and quest progress belong to the team (P6.4; FTB Quests already tracks quests per team). Viral load, succumbing, revenants and their owners belong to one player, though teammates can reclaim a revenant's items.
+- **Credit goes to everyone who took part.** Group achievements, starting with destroying a nidus, credit every player who contributed, not only the player who acted last (P4.10).
+- **Fights scale with the group.** Nidus vitality and the surges it starts scale with the number of players fighting it (P4.10).
+- **Some mechanics need other players.** Shedding (P5.6), stabilising a succumbing player and injecting someone else (P7.6) need a second player. Each is server-configurable and defined so that a solo player is never worse off.
+- **The finale on a server with several teams** is an open decision, made and recorded here in P9.2: either the final deployment is one server-wide event that every team can defend, or it needs payloads deployed at several sites at once. Either way, one team cannot end the game for the others without warning.
 
 ### Quest hooks
 
@@ -134,6 +159,7 @@ Remission exposes generic hooks in `com.cubiecode.remission.api` so integrations
 
 - **Events** (NeoForge events on `NeoForge.EVENT_BUS`, server side): host corrupted, host cleansed, block festered, block purified, chunk stage changed, chunk entered remission, nidus destroyed, surge started, surge ended, viral load changed, and a cancellable Strain spread attempt (chunk to chunk, with a rate multiplier) so firebreaks, seasons and wards can slow or stop spread without patching the engine.
 - **Queries:** corruption stage at a position or chunk, whether an entity is a host, a player's viral load.
+- **Teams:** a team query (are two players teammates?) answered through an event a pack or integration fills in (planned, P4.12). Remission has no teams of its own; with none defined, every player is on their own.
 - Types may use "corruption" (naming rule above), for example `HostCorruptedEvent`, `ChunkStageChangedEvent`.
 
 Integrations prefer pack-side KubeJS and datapacks built on these hooks (KubeJS bindings: P8.3). Mod-side integration code lives only in `integration/<modid>/`, uses `compileOnly` APIs and is guarded by `ModList`, the pattern P8.2 uses for JourneyMap. Remission never hard-depends on an integrated mod.
@@ -144,6 +170,7 @@ Integrations prefer pack-side KubeJS and datapacks built on these hooks (KubeJS 
 - **Quest loop per region:** locate the nidus → research → gear up → destroy the nidus → purify → next region; the last region ends in the Counterstrain deployment.
 - **Exploration:** wreck sites, survivor camps and host-guarded caches between nidi, with loot and lab logs (P11.4), so travel between objectives has its own rewards. Sealed caches open only once their land is in remission, and the quest book rewards remission milestones across the world.
 - **Supply drops and standing:** the relay sends supply drops on request, each costing standing; progress earns standing back, and standing changes some quest text and the ending (P11.5). Asking for help is always possible and always a trade-off.
+- **Servers** (P11.6): land claims (FTB Chunks) protect a team's blocks from other players but never ward against the Strain, so a claim is no substitute for a pylon. Placing nidi stays an operator and quest action. Standing can be passed between teams, and a team can call a supply drop for another (P11.5).
 - **Start:** a choice of crash sites of different difficulty, each a map/structure with a guided first chapter.
 - **Progression:** KubeJS recipe gating through Mekanism, AE2, Create and Ars Nouveau tiers and the integration gates below, using Remission samples and data items as keys.
 - **Worldgen:** datapack and KubeJS tweaks for nidus placement, festering and pacing.
@@ -198,6 +225,7 @@ Mods that support a Counterstrain feature without a tie-in of their own: no Remi
 | Naturalist | Wildlife returning to remission zones (P5.5) and a wider bestiary: its animals spawn in the restored biomes and become hosts like any other mob | No tie-in needed; checks that its mobs work as hosts happen in P11.3. |
 | Sound Physics Remastered | Festering land atmosphere (P4.11): echo and muffling in caves and festering land | Client-side; the CurseForge 1.21.1 NeoForge file is 1.4.10 (newer 1.21.1 builds are Modrinth-only alphas). |
 | Artifacts | Wreck site and sealed cache loot (P11.4): unique trinkets rather than more of the same materials | Pack-side loot tables; a 1.21.1 NeoForge build exists, and its CurseForge file is confirmed in P10.1. |
+| FTB Chunks | Server rules (P11.6): teams claim land so other players cannot break their builds or pylons; claims never stop the Strain | Pack-side config; its CurseForge file for 1.21.1 NeoForge is confirmed in P10.1. |
 | YUNG's Better Dungeons (with YUNG's API) | More places to explore beside the pack's own wreck sites; its dungeons fester like any other structure | Optional; wreck sites stay the main exploration content. |
 
 Considered and not added: Apotheosis (on CurseForge for 1.21.1, but it reworks enchanting, gear and mob difficulty across the game; revisit if the P11.3 playtest finds loot dull), Explorer's Compass (no 1.21.1 file confirmed on CurseForge; P8.2's map overlay covers navigation), AmbientSounds (would suit P4.11, but its 1.21.1 NeoForge builds were found only on Modrinth, so the [distribution](#distribution) policy rules it out until a CurseForge file or redistribution permission is confirmed) and Chunky (no 1.21.1 file confirmed on CurseForge; Chunk Pregenerator covers it).
@@ -229,4 +257,4 @@ All AI-generated **player-facing content** is documented and replaceable in a la
 
 ## Out of scope (for now)
 
-Multiplayer team mechanics beyond what FTB Teams provides, custom dimensions, new mob entity types (infection is state), climate and temperature mods, and Fabric or other loaders.
+Team management of Remission's own (it reads teams from the pack through the team query; Counterstrain uses FTB Teams), player-versus-player mechanics, custom dimensions, new mob entity types (infection is state), climate and temperature mods, and Fabric or other loaders.
