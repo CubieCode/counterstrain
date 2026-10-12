@@ -59,6 +59,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 /**
  * Drives one scene: fixed superflat world, setup commands with the tick frozen, then for each
@@ -141,6 +143,7 @@ final class SceneRunner {
             }
             case SHOOTING -> {
                 mc.getToasts().clear();
+                mc.gui.getChat().clearMessages(false);
                 // Players keep ticking under /tick freeze; pin the local player's age so its idle
                 // animation (arm bob) is the same in every run when a shot shows it.
                 if (mc.player != null) {
@@ -157,6 +160,17 @@ final class SceneRunner {
             }
             case DONE -> {
             }
+        }
+    }
+
+    /**
+     * HUD shots leave out the camera overlays: the vignette's brightness eases toward its target once per rendered frame,
+     * so it would differ with the number of frames a run happens to render.
+     */
+    @SubscribeEvent
+    public void onRenderGuiLayer(RenderGuiLayerEvent.Pre event) {
+        if (phase == Phase.SHOOTING && VanillaGuiLayers.CAMERA_OVERLAYS.equals(event.getName())) {
+            event.setCanceled(true);
         }
     }
 
@@ -191,6 +205,7 @@ final class SceneRunner {
     /** Pins every option that changes the image, in memory only. */
     private static void applyOptions(Options options) {
         options.hideGui = true;
+        options.guiScale().set(0);
         options.pauseOnLostFocus = false;
         options.tutorialStep = TutorialSteps.NONE;
         options.renderDistance().set(RENDER_DISTANCE);
@@ -202,6 +217,25 @@ final class SceneRunner {
         options.entityShadows().set(true);
         options.bobView().set(false);
         options.biomeBlendRadius().set(2);
+    }
+
+    /**
+     * Turns JourneyMap's minimap off in memory (never saved to its config), when that dev-runtime mod is loaded: it maps
+     * chunks in the background, so its picture would differ between runs of a HUD shot.
+     */
+    private static void hideJourneyMapMinimap() {
+        if (!ModList.get().isLoaded("journeymap")) {
+            return;
+        }
+        try {
+            Class<?> manager = Class.forName("journeymap.client.ui.UIManager");
+            Object minimap = manager.getMethod("getMiniMap").invoke(manager.getField("INSTANCE").get(null));
+            Object properties = minimap.getClass().getMethod("getCurrentMinimapProperties").invoke(minimap);
+            Object enabled = properties.getClass().getField("enabled").get(properties);
+            enabled.getClass().getMethod("set", Boolean.class).invoke(enabled, Boolean.FALSE);
+        } catch (ReflectiveOperationException | LinkageError e) {
+            throw new IllegalStateException("cannot hide the JourneyMap minimap for a HUD shot", e);
+        }
     }
 
     /** Recreates the fixed world every run so no state carries over between runs. */
@@ -360,6 +394,14 @@ final class SceneRunner {
         Scene.Shot shot = scene.shots().get(index);
         Scene.Camera camera = shot.camera();
         mc.options.setCameraType(shot.view());
+        mc.options.hideGui = !shot.hud();
+        if (shot.hud()) {
+            hideJourneyMapMinimap();
+        }
+        if (mc.options.guiScale().get() != shot.guiScale()) {
+            mc.options.guiScale().set(shot.guiScale());
+            mc.resizeDisplay();
+        }
         MinecraftServer server = mc.getSingleplayerServer();
         pending = CompletableFuture.runAsync(() -> {
             ServerPlayer player = server.getPlayerList().getPlayers().getFirst();

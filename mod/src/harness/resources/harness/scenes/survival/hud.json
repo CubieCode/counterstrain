@@ -1,0 +1,114 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamerule sendCommandFeedback false",
+    "fill 26 -61 22 30 -59 26 minecraft:stone",
+    "fill 18 -57 16 22 -55 20 minecraft:oak_leaves[persistent=true]",
+    "fill 19 -54 17 21 -54 19 minecraft:oak_leaves[persistent=true]",
+    "fill 20 -60 18 20 -55 18 minecraft:oak_log",
+    "harness fester 0 -60 0 47 -60 47 60",
+    "gamemode survival @a"
+  ],
+  "shots": [
+    {
+      "name": "none",
+      "camera": {
+        "pos": [
+          8.5,
+          -60.0,
+          8.5
+        ],
+        "yaw": -45.0,
+        "pitch": 8.0
+      },
+      "hud": true,
+      "commands": [
+        "harness resend 0 -60 0 47 -60 47",
+        "harness viral_load @a 0"
+      ]
+    },
+    {
+      "name": "rising",
+      "camera": {
+        "pos": [
+          8.5,
+          -60.0,
+          8.5
+        ],
+        "yaw": -45.0,
+        "pitch": 8.0
+      },
+      "hud": true,
+      "commands": [
+        "harness viral_load @a 20 rising"
+      ]
+    },
+    {
+      "name": "falling",
+      "camera": {
+        "pos": [
+          8.5,
+          -60.0,
+          8.5
+        ],
+        "yaw": -45.0,
+        "pitch": 8.0
+      },
+      "hud": true,
+      "commands": [
+        "harness viral_load @a 85 falling"
+      ]
+    },
+    {
+      "name": "full",
+      "camera": {
+        "pos": [
+          8.5,
+          -60.0,
+          8.5
+        ],
+        "yaw": -45.0,
+        "pitch": 8.0
+      },
+      "hud": true,
+      "commands": [
+        "harness viral_load @a 100"
+      ]
+    },
+    {
+      "name": "scale_2",
+      "camera": {
+        "pos": [
+          8.5,
+          -60.0,
+          8.5
+        ],
+        "yaw": -45.0,
+        "pitch": 8.0
+      },
+      "hud": true,
+      "commands": [
+        "harness viral_load @a 60 rising"
+      ],
+      "gui_scale": 2
+    },
+    {
+      "name": "scale_3",
+      "camera": {
+        "pos": [
+          8.5,
+          -60.0,
+          8.5
+        ],
+        "yaw": -45.0,
+        "pitch": 8.0
+      },
+      "hud": true,
+      "commands": [
+        "harness viral_load @a 60 rising"
+      ],
+      "gui_scale": 3
+    }
+  ]
+}
