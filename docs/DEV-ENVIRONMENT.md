@@ -1,6 +1,6 @@
 # Development environment
 
-All development, builds, tests and visual checks run on the home server `foundry`.
+All development, builds, tests and visual checks run on the home server `foundry`. Hands-on pack testing can also happen on your own PC, synced from foundry (playing the pack from a PC, below).
 
 ## Machine
 
@@ -70,6 +70,32 @@ Scene screenshots are compared with the reviewed references committed in `tools/
 
 Motion clips: `tools/run-client-headless.sh --record [seconds]` (also accepted by `tools/run-scenes.sh`) records the Xvfb display to `capture.mp4` in the run directory with ffmpeg (`x11grab`, H.264, at most 1280 px wide, 30 fps), from the game window's creation until the client exits or the duration ends. It uses foundry's system ffmpeg (`/usr/bin/ffmpeg` 8.0.1 with `x11grab` and `libx264`), installed by the host; the project needs no root and downloads no binaries. `FFMPEG=/path` overrides the binary. Without a usable ffmpeg, `--record` fails before the GPU lock is taken; runs without `--record` never call ffmpeg.
 
+## Playing the pack from a PC
+
+To play the current pack on your own computer with a fast edit loop, serve the pack from foundry and let the launcher sync from it before every launch. The PC needs Prism Launcher, ssh access to foundry, `curl` and `sha256sum`. Tested on Manjaro.
+
+On foundry, leave this running (e.g. in tmux):
+
+```sh
+tools/pack.sh serve          # http://foundry:8080/pack.toml; pass a port or set COUNTERSTRAIN_PACK_PORT
+```
+
+`packwiz serve` refreshes `pack/index.toml` whenever the pack is requested, so edits under `pack/` are live at once. Commit the refreshed index with them, as usual.
+
+On the PC (Manjaro):
+
+1. `sudo pacman -S prismlauncher` (the native package: the Flatpak sandbox cannot run host scripts with your ssh keys). Make sure `ssh foundry` works without a password prompt (key auth), because the hook runs non-interactively.
+2. Get `tools/pack-sync.sh`: clone the repository, or copy just that file (`scp lab@foundry:development/CubieCode/counterstrain/tools/pack-sync.sh ~/bin/`). It is self-contained.
+3. In Prism: Add Instance → Minecraft 1.21.1, then Edit → Version → Install Loader → NeoForge 21.1.259 (match `pack/pack.toml`). Under Edit → Settings → Custom commands, set the pre-launch command to `~/bin/pack-sync.sh` (or the path inside your clone).
+
+Each launch then runs `tools/pack-sync.sh`, which:
+- runs packwiz-installer (the bootstrap jar is pinned by SHA-256 and cached in `~/.cache/counterstrain/`) against the served `pack.toml`: changed mods, configs, KubeJS scripts and quests are downloaded, removed ones deleted, files it did not install left alone. Its window asks once about optional mods (ProbeJS) and asks you to download any mod CurseForge will not serve to it.
+- copies `mod/build/libs/remission-<mod_version>.jar` from the foundry checkout into `mods/` over ssh, replacing older `remission-*.jar`. With `--build` it first runs `tools/build-mod.sh` there (into `.local/pack-sync/`). If foundry is unreachable, it only warns, so you can still play with the jar you have.
+
+Options: `--url` (or `COUNTERSTRAIN_PACK_URL`), `--remote HOST:PATH` (or `COUNTERSTRAIN_REMOTE`; default `lab@foundry:development/CubieCode/counterstrain`, point it at a lane worktree to test a branch), `--build`, `--no-jar`, `--no-gui`. A failed pack sync exits non-zero, which makes Prism abort the launch. If port 8080 is not reachable from the PC, tunnel it (`ssh -fNL 8080:localhost:8080 foundry`) and pass `--url http://localhost:8080/pack.toml`.
+
+Inner loop: most pack edits need no relaunch. `/reload` applies recipes, tags, loot, `pack/kubejs/data/` and `server_scripts`; `/kubejs reload client_scripts` applies client scripts; `startup_scripts`, mod list changes and a new Remission jar need a relaunch (which syncs). Quests edited in game land in the instance's `config/ftbquests/`; copy them back into `pack/config/ftbquests/` before committing. For edit-and-`/reload` without the round trip, mount the checkout (`sshfs lab@foundry:development/CubieCode/counterstrain ~/cs`) and replace the instance's `kubejs/` and `config/ftbquests/` with symlinks into `~/cs/pack/`. Edits, including in-game quest edits, then write straight into the foundry checkout, so review the diff before committing.
+
 ## Run and output locations
 
 | Path | Contents |
@@ -80,3 +106,4 @@ Motion clips: `tools/run-client-headless.sh --record [seconds]` (also accepted b
 | `.local/compare/<scene>/` | Suggested `--out` for `tools/compare-screenshots.sh`: `<shot>-diff.png`, `compare-result.txt` |
 | `.local/dist/` | Pack exports |
 | `.local/instance/` | Default local test instance for `tools/build-mod.sh` |
+| `.local/pack-sync/` | Throwaway instance target of `tools/pack-sync.sh --build` (only the jar in `mod/build/libs/` is used) |

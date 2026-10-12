@@ -49,6 +49,8 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `tools/check-provenance.sh` | Fail if an image, sound or model lacks a [content provenance](docs/CONTENT-PROVENANCE.md) row or a texture's placeholder marker disagrees with its status; `--self-test` runs the fixtures in `tools/tests/provenance/` |
 | `tools/build-mod.sh [INSTANCE]` | Build and copy the jar into a test instance's `mods/` |
 | `tools/pack.sh refresh` / `check` / `export` | packwiz index refresh, CI drift check, CurseForge zip (release artifact) + `.mrpack` (local testing) to `.local/dist/` |
+| `tools/pack.sh serve [PORT]` | Serve the pack over HTTP (default port 8080) for `tools/pack-sync.sh` |
+| `tools/pack-sync.sh [INSTANCE]` | On your PC, as a Prism pre-launch command: sync the instance from the served pack and copy Remission's jar from foundry ([playing the pack from a PC](docs/DEV-ENVIRONMENT.md#playing-the-pack-from-a-pc)) |
 | `tools/bump-version.sh mod\|pack X.Y.Z` | Set the mod or pack version (independent) |
 
 Dev runs include KubeJS, ProbeJS, FTB Quests, EMI + JEI, Mekanism, AE2 and JourneyMap from Modrinth/FTB Maven for integration testing; disable with `-Pdev_runtime_mods=false`. `-Pdev_jbr=true` runs the client/server on JetBrains Runtime with enhanced hot-swap (opt-in).

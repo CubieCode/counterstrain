@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# Refresh, check or export the Counterstrain packwiz pack.
+# Refresh, check, export or serve the Counterstrain packwiz pack.
 #
 #   tools/pack.sh refresh     rehash and rewrite index.toml
 #   tools/pack.sh check       fail if refresh would change anything (CI)
 #   tools/pack.sh export      write Modrinth (.mrpack) and CurseForge (.zip)
 #                             files to .local/dist/
+#   tools/pack.sh serve [PORT]
+#                             serve the pack over HTTP for packwiz-installer
+#                             (default port $COUNTERSTRAIN_PACK_PORT or 8080);
+#                             a PC syncs from it with tools/pack-sync.sh
 #
 # Remission is never part of the packwiz index; exports do not contain it
 # until it is published and added with `packwiz mr add` / `packwiz cf add`.
@@ -40,8 +44,13 @@ case "$cmd" in
     packwiz curseforge export -o "$dist/counterstrain-$version.zip"
     log "Exported to $dist"
     ;;
+  serve)
+    port="${2:-${COUNTERSTRAIN_PACK_PORT:-8080}}"
+    log "Serving http://$(hostname):$port/pack.toml (index.toml refreshes on each request; Ctrl-C stops)"
+    exec packwiz serve --port "$port"
+    ;;
   *)
-    sed -n '2,10p' "$self" >&2
+    sed -n '2,14p' "$self" >&2
     exit 2
     ;;
 esac
