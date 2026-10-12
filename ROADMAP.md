@@ -34,9 +34,10 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P5.3 → P5.4 serially, after P5.1. P5.3 owns the revenant entity, `integration/curios/` and its build-file entries; P5.4 owns its payload and coordinates `integration/journeymap/` with P8.2 (never in the same wave).
 - G: P7.2 → P7.3 → P7.4 → P7.5 serially (recipe types, KubeJS schemas and the variant registry are contracts), after P8.1 (done; later items append their triggers and stats to its contracts). P7.4 and P7.5 were added after the phase was planned.
 - H: P8.2 + P9.1, then P8.3 + P9.2. P8.2 owns command syntax; P8.3 owns the KubeJS binding contract.
+- P8.4 (playable slice) runs alone after P4.9, P4.10, P4.11, P5.3, P5.5, P7.4, P7.5 and P8.2, and before wave I; it owns `pack/config/remission-common.toml` and may add Mekanism Generators to the pack ahead of P10.1, owning pack membership while it runs.
 - I: P10.1 alone (owns `pack/pack.toml`, `pack/mods/` and the build-file entries for every mod-side integration).
 - J: P10.2 + P10.3 + P10.4 + P10.5, after P10.1. Each owns its `integration/<modid>/` packages and its pack scripts (`pack/kubejs/**/integrations/<modid>.js`); one remission-data-formats owner per wave (P10.2); none touches build files or `pack/mods/`.
-- K: P10.6 + P10.7. P10.6 extends `integration/create/` after P10.2 has merged.
+- K: P10.6 + P10.7 + P10.8. P10.6 extends `integration/create/` after P10.2 has merged; P10.8 owns `integration/ballistix/`.
 - L: P11.1 → P11.4 → P11.5 → P11.2 → P11.3 serially (one pack-content owner). P11.4 and P11.5 were added after the phase was planned, so their numbers do not follow the run order.
 - M: P12.1 + P12.2, then P12.3.
 
@@ -549,7 +550,17 @@ Goals: quests and scripts can observe and drive Remission.
 - Skills: neoforge-mod-dev, kubejs-scripting, remission-data-formats
 - Parallel: After P8.2 (one contract owner)
 
-Exit criteria: a sample quest chain gates on and fires Remission events; a sample KubeJS script reacts to API events.
+### P8.4: Playable slice of the first region
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.9, P4.10, P4.11, P5.3, P5.5, P7.4, P7.5, P8.2
+- Scope: Find out whether the core loop is fun before phase 10 builds integrations on top of it. Assemble one region end to end from built pieces, with the current pack (vanilla, Mekanism with Mekanism Generators, AE2, Create, JourneyMap, FTB Quests): a fixed-seed world with initial festering on, a quarantine pylon start, one nidus to fight, one hand-placed test structure standing in for a wreck site, purification by hand, pylon and reclaimer, remission zones coming back to life, and one variant. A short draft quest chapter guides it (status `draft` in the ledger; P11.1 replaces it). Play it from start to a cleared region, at least once by a human. Tune the Counterstrain values in `pack/config/remission-common.toml` (spread, initial festering, viral load, nidus vitality, reclaimer, variants) and record each change with its reason. Problems that need more than tuning become roadmap follow-ups, not fixes inside this item.
+- Acceptance: A playtest report in the PR per the playtesting skill: seed, setup, time to each milestone (first shelter, first sample, nidus destroyed, first chunk in remission, region cleared), what was fun, what dragged and what broke, with screenshots reviewed. Tuned config committed with reasons; follow-up items added to the roadmap or reported to the coordinator. Ledger updated; placeholders marked.
+- Skills: playtesting, ftb-quests-authoring, packwiz-pack, headless-client, visual-checks, content-provenance
+
+Exit criteria: a sample quest chain gates on and fires Remission events; a sample KubeJS script reacts to API events. P8.4, added later, is not part of these exit criteria.
 
 ## Phase 9: Endgame cure
 
@@ -587,7 +598,7 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Owner:
 - PR:
 - Depends on: P4.4, P8.3
-- Scope: Add the verified mods from CurseForge with `packwiz cf add` (PneumaticCraft: Repressurized, Occultism, Serene Seasons, Farmer's Delight, Productive Bees, Iron's Spells 'n Spellbooks, Waystones, Immersive Engineering, Mekanism Generators, Oritech, Theurgy, L_Ender's Cataclysm, Mowzie's Mobs, MineColonies with its required mods, Sophisticated Backpacks and Storage, Simple Voice Chat, Create Aeronautics with Sable, the chosen field journal mod, Biomes O' Plenty, Terralith, and DESIGN's supporting mods: Lootr, Artifacts, Chunk Pregenerator, Naturalist, Sound Physics Remastered, YUNG's Better Dungeons with YUNG's API) and their required dependencies; record versions and IDs; note beta-only files. Confirm the CurseForge 1.21.1 NeoForge files for Theurgy and Artifacts, and that every required library of an added mod is on CurseForge; a mod that fails either check is recorded in DESIGN and left out. Re-source the existing Modrinth-sourced pack mods from CurseForge (same files) and drop the separate Better Advanced Tooltips entry (Modrinth-only; KubeJS bundles it), so the CurseForge export embeds no jars it may not redistribute. Add `compileOnly` APIs and dev-runtime entries for every mod-side integration in phase 10 to `mod/build.gradle`/`mod/gradle.properties` and optional dependency entries to the `neoforge.mods.toml` template. Update README stack and the pack changelog.
+- Scope: Add the verified mods from CurseForge with `packwiz cf add` (PneumaticCraft: Repressurized, Occultism, Serene Seasons, Farmer's Delight, Productive Bees, Iron's Spells 'n Spellbooks, Waystones, Immersive Engineering, Mekanism Generators, Oritech, Theurgy, L_Ender's Cataclysm, Mowzie's Mobs, Ballistix with Voltaic, MFFS, MineColonies with its required mods, Sophisticated Backpacks and Storage, Simple Voice Chat, Create Aeronautics with Sable, the chosen field journal mod, Biomes O' Plenty, Terralith, and DESIGN's supporting mods: Lootr, Artifacts, Chunk Pregenerator, Naturalist, Sound Physics Remastered, YUNG's Better Dungeons with YUNG's API) and their required dependencies; record versions and IDs; note beta-only files. Confirm the CurseForge 1.21.1 NeoForge files for Theurgy, Artifacts and MFFS, and that every required library of an added mod is on CurseForge; a mod that fails either check is recorded in DESIGN and left out. Re-source the existing Modrinth-sourced pack mods from CurseForge (same files) and drop the separate Better Advanced Tooltips entry (Modrinth-only; KubeJS bundles it), so the CurseForge export embeds no jars it may not redistribute. Add `compileOnly` APIs and dev-runtime entries for every mod-side integration in phase 10 to `mod/build.gradle`/`mod/gradle.properties` and optional dependency entries to the `neoforge.mods.toml` template. Update README stack and the pack changelog.
 - Acceptance: `tools/pack.sh check` passes; `tools/pack.sh export` adds every mod to the CurseForge manifest and embeds none under `overrides/mods/`; the full pack starts headlessly on foundry (dedicated server and client) with the renderer verified; every new file name says neoforge/1.21.1; `./gradlew build runGameTestServer` passes with and without dev-runtime mods.
 - Skills: packwiz-pack, neoforge-mod-dev, playtesting, headless-client
 - Parallel: Runs alone; owns `pack/pack.toml`, `pack/mods/` and build files for the phase
@@ -651,6 +662,16 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Scope: Simple Voice Chat (mod-side, server-configurable, off by default): hosts are drawn to speaking players in festering zones. Field journal (pack-side; choose Patchouli or Modonomicon and record why): entries unlocked by host scans, found logs and destroyed nidi. Biomes O' Plenty and Terralith (pack-side): per-biome fester variants.
 - Acceptance: Gametest for the voice hook's config gate; journal entries unlock in a dev run; harness scenes `integration/field_journal` and `integration/fester_variants`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, minecraft-world-generation, visual-checks, content-provenance
+
+### P10.8: Defence integrations: Ballistix and MFFS
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P10.1, P4.3, P4.4, P4.10, P5.2
+- Scope: Two throwback mods as the pack's answer to surges and remote nidi. Ballistix: missiles reach remote nidi and clear hosts during surges, but explosions only damage a nidus at P4.10's explosion fraction, so a missile softens a nidus and a player still lands the final blow (Counterstrain sets the fraction). A cleansing warhead that purifies festered blocks and lowers chunk levels where it lands, like a handheld purifier at range (mod-side in `integration/ballistix/` if Ballistix's blast types are Java registrations, otherwise pack-side; record which). Anti-air defences shoot down miasma clouds if they can target them; if not, decide whether a small mod-side hook makes clouds targetable or leave it out, and record why. Recipes gated mid- to late-game; world-destroying explosives (nuclear, antimatter and the like) disabled or gated at the endgame in Counterstrain's config for multiplayer. MFFS (pack-side): force fields as physical base defence, distinct from pylons, which stop the Strain spreading: fields keep hosts, surge waves and miasma clouds out, and field blocks join `#remission:vein_resistant` so veins never creep over them. Recipes gated on mid-game tech.
+- Acceptance: Gametests for any mod-side hook; a dev run softens a nidus with a missile and finishes it by hand, cleanses land with the warhead, holds a surge behind a force field and (if built) shoots down a miasma cloud; disabled explosives cannot be crafted. Harness scenes `integration/ballistix_warhead` and `integration/mffs_surge`, reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, kubejs-scripting, minecraft-datapack, minecraft-testing, visual-checks, content-provenance
 
 Exit criteria: every available integration in DESIGN's table loads, its gate works in a dev run of the full pack, mod-side hooks pass gametests, and the listed scenes are reviewed. Remission still loads with none of these mods installed.
 
