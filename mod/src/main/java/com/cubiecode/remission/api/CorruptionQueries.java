@@ -84,6 +84,15 @@ public final class CorruptionQueries {
     }
 
     /**
+     * Whether a loaded chunk is in remission (P5.2): it was festering, was purified to Strain level 0 and has not
+     * festered again since. False when the chunk never festered, is festering or is not loaded (never loads one).
+     */
+    public static boolean isInRemission(ServerLevel level, ChunkPos chunk) {
+        LevelChunk loaded = level.getChunkSource().getChunkNow(chunk.x, chunk.z);
+        return loaded != null && loaded.hasData(RemissionAttachments.CHUNK_REMISSION);
+    }
+
+    /**
      * A player's viral load, 0 to {@link #MAX_VIRAL_LOAD} (P5.1). On the server, any player; on a client, only the local
      * player's own value is synced, so other players read 0.
      */

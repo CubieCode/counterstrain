@@ -21,7 +21,8 @@ import net.minecraft.world.level.ChunkPos;
  * pass stops after {@code chunkBudget} visits and resumes on the next tick, so the same state and the same ticks always
  * give the same levels. A chunk still queued for catch-up is skipped (it counts as a visit) until it is caught up.
  * While a surge from a nidus runs, its step (and its own chunk's growth) is multiplied by {@link Land#surgeFactor}
- * before the spread attempt, so cancelled and scaled attempts still apply on top.
+ * before the spread attempt, so cancelled and scaled attempts still apply on top. A chunk a quarantine pylon wards
+ * ({@link Land#warded}) gains nothing, live or in catch-up (P5.2).
  *
  * <p>Catch-up: a chunk that loads again is queued; up to {@code catchUpBudget} queued chunks per tick are moved toward
  * each nidus target by the passes they missed since {@code max(last change, nidus indexed)}, in closed form. The land
@@ -53,6 +54,14 @@ public final class SpreadEngine {
 
         /** Checks a nidus whose chunk is loaded still exists, dropping it from the index if not. */
         boolean validate(Nidus nidus);
+
+        /**
+         * Whether a quarantine pylon wards {@code chunk} (P5.2): it gains nothing, live or in catch-up, and a nidus in it
+         * does not grow. Steps past it hold once its purified level is below the threshold.
+         */
+        default boolean warded(long chunk) {
+            return false;
+        }
 
         /**
          * Factor on the live-pass steps from {@code nidus} now, applied before the spread attempt (1 normally; a surge
@@ -238,6 +247,9 @@ public final class SpreadEngine {
      * its level after that catch-up, which converges on the same targets as live spread rather than replaying history.
      */
     public void catchUp(long chunk, long now, SpreadSettings current) {
+        if (land.warded(chunk)) {
+            return;
+        }
         ChunkCorruption state = land.get(chunk);
         int level = state.level();
         int radius = current.radius();
@@ -324,7 +336,7 @@ public final class SpreadEngine {
         int dx = offset[0];
         int dz = offset[1];
         long chunk = ChunkPos.asLong(ChunkPos.getX(origin) + dx, ChunkPos.getZ(origin) + dz);
-        if (!land.isLoaded(chunk) || awaitingCatchUp(chunk)) {
+        if (!land.isLoaded(chunk) || awaitingCatchUp(chunk) || land.warded(chunk)) {
             return;
         }
         int distance = Math.abs(dx) + Math.abs(dz);

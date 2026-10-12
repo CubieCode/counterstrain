@@ -48,6 +48,10 @@ Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in t
 | `mod/src/main/resources/assets/remission/textures/block/sequencer_front.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Sequencer front (P7.2): a display of green and violet bars, a readout of the Strain being sequenced. |
 | `mod/src/main/resources/assets/remission/textures/block/synthesizer_front.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Synthesizer front (P7.2): a glass vial of violet fluid. Should say "makes things from the Strain". |
 | `mod/src/main/resources/assets/remission/textures/item/strain_sequence.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Strain sequence item (P7.2): a dark data card with a violet and green double helix. Should read as recorded Strain data, distinct from the host and block scans. |
+| `mod/src/main/resources/assets/remission/textures/item/handheld_purifier.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel-map script, not kept) | placeholder | Handheld purifier (P5.2): a steel sprayer held diagonally with a glass canister of pale mint cleansing fluid and a bright nozzle. Should read as field lab equipment like the scanner, and its cleansing colour (pale mint and white) as the opposite of the Strain's violet and crimson. |
+| `mod/src/main/resources/assets/remission/textures/block/quarantine_pylon_side.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel-map script, not kept) | placeholder | Quarantine pylon side (P5.2): a dark steel column with a glowing mint-white core strip in bands. The art pass may make it taller than a block or animate the core; keep the cleansing palette shared with the purifier. |
+| `mod/src/main/resources/assets/remission/textures/block/quarantine_pylon_top.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel-map script, not kept) | placeholder | Quarantine pylon top (P5.2): a steel cap with a round glowing mint emitter. |
+| `mod/src/main/resources/assets/remission/textures/block/mendroot.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel-map script, not kept) | placeholder | Mendroot (P5.2), also the item icon: a cross plant of pale green stems with white root tendrils and small pale blue-white flowers on a transparent background. Should read as a healing plant, clearly not a festering one, and sit on grass or festering grass. |
 
 ## Models
 
@@ -86,6 +90,11 @@ Datagen block and item models are `procedural (datagen)` and follow their textur
 | `mod/src/generated/resources/assets/remission/models/block/synthesizer.json` | model | procedural (datagen) | draft | `orientable` model for `remission:synthesizer` (`RemissionBlockStateProvider`, P7.2): machine casing side and top, synthesizer front; the blockstate turns it to face the player who placed it. |
 | `mod/src/generated/resources/assets/remission/models/item/synthesizer.json` | model | procedural (datagen) | draft | Synthesizer block item model, inherits the block model (P7.2). |
 | `mod/src/generated/resources/assets/remission/models/item/strain_sequence.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:strain_sequence` (P7.2). |
+| `mod/src/generated/resources/assets/remission/models/block/quarantine_pylon.json` | model | procedural (datagen) | draft | `cube_column` from the pylon side and top textures; `remission:quarantine_pylon` (P5.2). |
+| `mod/src/generated/resources/assets/remission/models/item/quarantine_pylon.json` | model | procedural (datagen) | draft | Quarantine pylon item model: the block model. |
+| `mod/src/generated/resources/assets/remission/models/block/mendroot.json` | model | procedural (datagen) | draft | Vanilla `cross` from the mendroot texture, `cutout`, offset per position like grass; `remission:mendroot` (P5.2). |
+| `mod/src/generated/resources/assets/remission/models/item/mendroot.json` | model | procedural (datagen) | draft | Mendroot item model: `item/generated` from the block texture (as saplings). |
+| `mod/src/generated/resources/assets/remission/models/item/handheld_purifier.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:handheld_purifier` (P5.2). |
 
 ## GUI art, icons and logos
 
@@ -174,6 +183,10 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:gui.remission.machine.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Machine screen tooltips (P7.2): energy (stored of capacity, FE), input and output tank names, tank contents (fluid, amount of capacity, mB) and "Empty". |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:gui.remission.recipe.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Recipe viewer category titles "Analyzing", "Sequencing", "Synthesizing" and the cost line (FE and seconds per craft) (P7.2). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:tag.item.remission.scans` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Name of the `#remission:scans` item tag, shown by recipe viewers (P7.2). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.handheld_purifier*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Handheld purifier name and tooltip hint (P5.2): cleanse festering ground, weaken the Strain in a host. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.quarantine_pylon` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Quarantine pylon block and item name (P5.2); glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.mendroot` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Mendroot block and item name (P5.2); glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:stat.remission.chunks_cleansed` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Statistics screen name for `remission:chunks_cleansed` (P5.2). |
 
 ## Mod and pack metadata
 

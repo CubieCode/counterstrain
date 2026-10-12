@@ -15,6 +15,8 @@ public enum CorruptionCause {
     SURGE,
     /** Touching an infectious block or swimming in water in festering land (contact infection). */
     CONTACT,
+    /** Cleansed with a handheld purifier (purification). */
+    PURIFICATION,
     /** Any other caller, including other mods using Remission's internals. */
     OTHER
 }

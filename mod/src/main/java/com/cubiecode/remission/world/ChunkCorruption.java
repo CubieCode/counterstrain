@@ -7,7 +7,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 /**
  * Strain level of one chunk of land and the game time the spread engine last changed it.
  *
- * @param level              0 (clean) to {@link #MAX_LEVEL}; levels never fall in phase 4 (purification is phase 5)
+ * @param level              0 (clean) to {@link #MAX_LEVEL}; spread raises it, purification (P5.2) lowers it
  * @param lastUpdateGameTime level game time of the last change, used to fast-forward the chunk when it loads again
  */
 public record ChunkCorruption(int level, long lastUpdateGameTime) {

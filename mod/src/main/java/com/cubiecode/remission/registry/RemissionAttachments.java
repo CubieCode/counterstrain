@@ -95,6 +95,15 @@ public final class RemissionAttachments {
                     .serialize(ViralLoadState.CODEC, state -> state.load() > 0)
                     .build());
 
+    /**
+     * The game time a chunk entered remission (P5.2): it was festering and was purified to Strain level 0. Present only
+     * while the chunk is in remission; removed when its level rises again. Saved with the chunk and server-only.
+     */
+    public static final Supplier<AttachmentType<Long>> CHUNK_REMISSION = ATTACHMENT_TYPES.register("chunk_remission",
+            () -> AttachmentType.builder(() -> 0L)
+                    .serialize(Codec.LONG)
+                    .build());
+
     private RemissionAttachments() {
     }
 }

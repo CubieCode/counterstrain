@@ -1,0 +1,41 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "fill 6 -60 7 6 -56 7 minecraft:oak_log",
+    "fill 4 -56 5 8 -55 9 minecraft:oak_leaves[persistent=true]",
+    "fill 5 -54 6 7 -54 8 minecraft:oak_leaves[persistent=true]",
+    "fill 20 -60 4 25 -58 9 minecraft:stone",
+    "fill 21 -57 5 24 -57 8 minecraft:stone",
+    "fill 27 -60 3 29 -58 12 minecraft:oak_planks",
+    "fill 38 -60 7 38 -56 7 minecraft:oak_log",
+    "fill 36 -56 5 40 -55 9 minecraft:oak_leaves[persistent=true]",
+    "fill 37 -54 6 39 -54 8 minecraft:oak_leaves[persistent=true]",
+    "fill 52 -60 4 57 -58 9 minecraft:stone",
+    "fill 53 -57 5 56 -57 8 minecraft:stone",
+    "fill 59 -60 3 61 -58 12 minecraft:oak_planks",
+    "fill 70 -61 6 74 -61 10 minecraft:smooth_stone",
+    "harness fester 0 -60 0 63 -60 15 90",
+    "harness veins 0 -64 0 63 0 15"
+  ],
+  "shots": [
+    {
+      "name": "before",
+      "camera": {"pos": [36.0, -38.0, 44.0], "yaw": 180.0, "pitch": 30.0},
+      "commands": ["harness resend 0 -64 0 79 0 15"]
+    },
+    {
+      "name": "after",
+      "camera": {"pos": [36.0, -38.0, 44.0], "yaw": 180.0, "pitch": 30.0},
+      "commands": ["setblock 72 -60 8 remission:quarantine_pylon", "harness purify", "harness resend 0 -64 0 79 0 15"]
+    },
+    {
+      "name": "border",
+      "camera": {"pos": [32.0, -52.0, 26.0], "yaw": 180.0, "pitch": 20.0}
+    },
+    {
+      "name": "pylon",
+      "camera": {"pos": [72.5, -58.0, 14.0], "yaw": 180.0, "pitch": 20.0}
+    }
+  ]
+}

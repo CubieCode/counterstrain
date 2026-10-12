@@ -3,8 +3,10 @@ package com.cubiecode.remission.gametest;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.api.CorruptionQueries;
 import com.cubiecode.remission.api.ViralLoadChangedEvent;
+import com.cubiecode.remission.infection.Contact;
 import com.cubiecode.remission.network.RemissionNetwork;
 import com.cubiecode.remission.registry.RemissionAttachments;
+import com.cubiecode.remission.registry.RemissionBlocks;
 import com.cubiecode.remission.surge.MiasmaCloud;
 import com.cubiecode.remission.viralload.ViralLoad;
 import com.cubiecode.remission.viralload.ViralLoadSettings;
@@ -22,6 +24,7 @@ import net.minecraft.advancements.Criterion;
 import net.minecraft.advancements.CriterionTrigger;
 import net.minecraft.advancements.CriterionTriggerInstance;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -37,6 +40,7 @@ import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.MultifaceBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -47,7 +51,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Viral load (P5.1): gain from festering land, water in festering land (swimming and drinking) and miasma clouds; the
+ * Viral load (P5.1): gain from festering land, water in festering land (swimming and drinking) and miasma clouds, and
+ * from contact with infectious blocks (P5.2), never counted again for festering water; the
  * altitude falloff, on and off, and full gain underground; decay; debuffs and damage; the event, trigger, query, save
  * and death reset. Each test runs alone in its own batch with players that are never added to the level (so the
  * level's own updates never touch them), drives {@link ViralLoad#update} itself with explicit settings, and works in
@@ -177,6 +182,73 @@ public final class ViralLoadTests {
         });
     }
 
+    // ---- contact (P5.2) -----------------------------------------------------------------------------------------------
+
+    @GameTest(template = "empty", batch = BATCH + "_contact")
+    public static void contactWithInfectiousBlocks(GameTestHelper helper) {
+        // Clean land, so only contact adds viral load: on, in and against an infectious block, wherever it is.
+        inOwnChunk(helper, 0, land -> {
+            ServerLevel level = helper.getLevel();
+            BlockPos feet = spot(helper);
+            ServerPlayer player = SurgeTests.player(helper, feet);
+            land.place(level, feet.below(), RemissionBlocks.FESTERING_GRASS.get().defaultBlockState());
+            helper.assertValueEqual(Contact.of(player), Contact.Kind.BLOCK, "contact standing on festering grass");
+            update(player, 1);
+            assertLoad(helper, player, gain(10.0), "standing on festering grass");
+
+            land.place(level, feet.below(), Blocks.STONE.defaultBlockState());
+            land.place(level, feet, RemissionBlocks.FESTERING_VEIN.get().defaultBlockState()
+                    .setValue(MultifaceBlock.getFaceProperty(Direction.DOWN), true));
+            helper.assertValueEqual(Contact.of(player), Contact.Kind.BLOCK, "contact inside a vein");
+            update(player, 1);
+            assertLoad(helper, player, 2 * gain(10.0), "inside a festering vein");
+
+            land.place(level, feet, Blocks.AIR.defaultBlockState());
+            land.place(level, feet.east(), RemissionBlocks.FESTERED_STONE.get().defaultBlockState());
+            player.moveTo(feet.getX() + 0.7, feet.getY(), feet.getZ() + 0.5);
+            helper.assertValueEqual(Contact.of(player), Contact.Kind.BLOCK, "contact against festered stone");
+            update(player, 1);
+            assertLoad(helper, player, 3 * gain(10.0), "pressed against festered stone");
+
+            player.moveTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5);
+            helper.assertValueEqual(Contact.of(player), Contact.Kind.NONE, "contact a step away from the stone");
+            update(player, 1);
+            assertLoad(helper, player, 3 * gain(10.0) - gain(5.0), "a step away: decay");
+
+            // Turned off, the same contact adds nothing and viral load decays.
+            player.moveTo(feet.getX() + 0.7, feet.getY(), feet.getZ() + 0.5);
+            float before = ViralLoad.get(player);
+            ViralLoad.update(player, TICKS, withContact(false));
+            assertLoad(helper, player, before - gain(5.0), "contact turned off");
+            helper.assertValueEqual(ViralLoad.gainPerMinute(player, withContact(false)), 0.0, "gain with contact off");
+            helper.assertValueEqual(ViralLoad.gainPerMinute(player, SETTINGS), 10.0, "gain with contact on");
+
+            // In festering land, contact adds to land gain.
+            setStage(land.chunk(), 4);
+            helper.assertValueEqual(ViralLoad.gainPerMinute(player, SETTINGS), 12.0 + 10.0, "land plus contact at stage 4");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", batch = BATCH + "_contact_water")
+    public static void festeringWaterIsNotContact(GameTestHelper helper) {
+        inOwnChunk(helper, 2, land -> {
+            ServerLevel level = helper.getLevel();
+            BlockPos feet = spot(helper);
+            land.place(level, feet.below(), Blocks.STONE.defaultBlockState());
+            land.place(level, feet, Blocks.WATER.defaultBlockState());
+            land.place(level, feet.above(), Blocks.WATER.defaultBlockState());
+            ServerPlayer player = SurgeTests.player(helper, feet);
+            helper.assertValueEqual(Contact.of(player), Contact.Kind.WATER, "contact in festering water");
+            helper.assertValueEqual(ViralLoad.gainPerMinute(player, SETTINGS), 3.0 + 20.0, "land and water gain only");
+            helper.assertValueEqual(ViralLoad.gainPerMinute(player, SETTINGS), ViralLoad.gainPerMinute(player, withContact(false)),
+                    "contact on changes festering water gain");
+            update(player, 1);
+            assertLoad(helper, player, gain(3.0 + 20.0), "one update swimming in festering water");
+            helper.succeed();
+        });
+    }
+
     // ---- altitude --------------------------------------------------------------------------------------------------
 
     @GameTest(template = "empty", batch = BATCH + "_altitude")
@@ -212,7 +284,7 @@ public final class ViralLoadTests {
             ServerLevel level = helper.getLevel();
             // A falloff that leaves nothing a block above the ground, so any reduction would show.
             ViralLoadSettings steep = new ViralLoadSettings(true, List.of(1.0, 3.0, 6.0, 12.0), 20.0, 10.0, 30.0, 5.0,
-                    true, 0.0, 1.0, 0.0, ViralLoadSettings.FalloffCurve.LINEAR, DEBUFFS, 100.0, 1.0);
+                    true, 0.0, 1.0, 0.0, ViralLoadSettings.FalloffCurve.LINEAR, DEBUFFS, 100.0, 1.0, true, 10.0);
             BlockPos cave = cave(helper, land);
             ServerPlayer player = SurgeTests.player(helper, cave);
             helper.assertFalse(level.canSeeSky(cave), "cave pocket sees the sky");
@@ -249,7 +321,7 @@ public final class ViralLoadTests {
             helper.assertFalse(player.hasData(RemissionAttachments.VIRAL_LOAD), "attachment kept at 0");
 
             ViralLoadSettings disabled = new ViralLoadSettings(false, SETTINGS.landGain(), 20.0, 10.0, 30.0, 5.0, true,
-                    4.0, 40.0, 0.1, ViralLoadSettings.FalloffCurve.LINEAR, DEBUFFS, 100.0, 1.0);
+                    4.0, 40.0, 0.1, ViralLoadSettings.FalloffCurve.LINEAR, DEBUFFS, 100.0, 1.0, true, 10.0);
             ViralLoad.set(player, 40.0F, ViralLoadState.Trend.STEADY, ViralLoadChangedEvent.Cause.OTHER);
             ViralLoad.update(player, TICKS, disabled);
             assertLoad(helper, player, 40.0F, "frozen while disabled");
@@ -333,7 +405,13 @@ public final class ViralLoadTests {
 
     private static ViralLoadSettings settings(boolean falloff, double decay) {
         return new ViralLoadSettings(true, List.of(1.0, 3.0, 6.0, 12.0), 20.0, 10.0, 30.0, decay, falloff, 4.0, 40.0, 0.1,
-                ViralLoadSettings.FalloffCurve.LINEAR, DEBUFFS, 100.0, 1.0);
+                ViralLoadSettings.FalloffCurve.LINEAR, DEBUFFS, 100.0, 1.0, true, 10.0);
+    }
+
+    /** The shipped defaults with contact viral load on or off. */
+    private static ViralLoadSettings withContact(boolean contact) {
+        return new ViralLoadSettings(true, List.of(1.0, 3.0, 6.0, 12.0), 20.0, 10.0, 30.0, 5.0, true, 4.0, 40.0, 0.1,
+                ViralLoadSettings.FalloffCurve.LINEAR, DEBUFFS, 100.0, 1.0, contact, 10.0);
     }
 
     /** Viral load one update adds at {@code perMinute}. */

@@ -4,6 +4,7 @@ import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.api.BlockFesteredEvent;
 import com.cubiecode.remission.api.ChunkStageChangedEvent;
 import com.cubiecode.remission.api.CorruptionQueries;
+import com.cubiecode.remission.purification.Purification;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
@@ -139,6 +140,11 @@ public final class FesteringStages {
                 work.step = -1;
                 continue;
             }
+            if (Purification.isWarded(level, work.chunk)) {
+                // Warded by a quarantine pylon since it started (P5.2): it festers no further.
+                work.step = -1;
+                continue;
+            }
             while (work.step < COLUMNS && budget > 0) {
                 festerColumn(level, chunk, work.step & 15, work.step >> 4, work.stage);
                 work.step++;
@@ -178,6 +184,10 @@ public final class FesteringStages {
                 work.step = -1;
                 continue;
             }
+            if (Purification.isWarded(level, work.chunk)) {
+                work.step = -1;
+                continue;
+            }
             int layers = chunk.getHeight();
             while (work.step < layers && budget > 0) {
                 int y = chunk.getMinBuildHeight() + work.step;
@@ -212,7 +222,8 @@ public final class FesteringStages {
             return false;
         }
         int stage = queued > 0 ? queued : CorruptionQueries.chunkStage(level, chunk.getPos());
-        if (stage <= festeredStage(chunk)) {
+        // A chunk a quarantine pylon wards does not fester (P5.2); it is queued again when the ward is removed.
+        if (stage <= festeredStage(chunk) || Purification.isWarded(level, next)) {
             return false;
         }
         work.chunk = next;
@@ -403,7 +414,8 @@ public final class FesteringStages {
         return true;
     }
 
-    private static BlockState copyProperties(BlockState from, BlockState to) {
+    /** {@code to} with every state property it shares with {@code from} set to {@code from}'s value. */
+    public static BlockState copyProperties(BlockState from, BlockState to) {
         for (Property<?> property : from.getProperties()) {
             if (to.hasProperty(property)) {
                 to = copy(from, to, property);

@@ -1,6 +1,7 @@
 package com.cubiecode.remission.world;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.registry.RemissionAttachments;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -43,6 +44,26 @@ public final class FesteringLand {
         if (NidusIndex.get(level).remove(pos)) {
             SpreadHooks.nidusDestroyed(level, pos);
         }
+    }
+
+    /**
+     * Sets a loaded chunk's Strain level outside the spread engine (purification lowers it, P5.2), stamped with the
+     * current game time, and posts the stage event like a spread change; 0 removes the attachment. A positive level
+     * takes the chunk out of remission, as spread does.
+     */
+    public static void setChunkLevel(ServerLevel level, LevelChunk chunk, int value) {
+        ChunkCorruption state = chunk.getExistingDataOrNull(RemissionAttachments.CHUNK_CORRUPTION);
+        int old = state == null ? 0 : state.level();
+        if (old == value) {
+            return;
+        }
+        if (value <= 0) {
+            chunk.removeData(RemissionAttachments.CHUNK_CORRUPTION);
+        } else {
+            chunk.setData(RemissionAttachments.CHUNK_CORRUPTION, new ChunkCorruption(value, level.getGameTime()));
+            chunk.removeData(RemissionAttachments.CHUNK_REMISSION);
+        }
+        SpreadHooks.chunkLevelChanged(level, chunk.getPos(), old, Math.max(0, value));
     }
 
     @SubscribeEvent

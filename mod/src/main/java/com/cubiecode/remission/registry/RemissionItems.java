@@ -1,6 +1,7 @@
 package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.purification.HandheldPurifierItem;
 import com.cubiecode.remission.research.ScanItem;
 import com.cubiecode.remission.research.ScannerItem;
 import net.minecraft.world.item.BlockItem;
@@ -49,6 +50,13 @@ public final class RemissionItems {
     public static final DeferredItem<BlockItem> SYNTHESIZER = ITEMS.registerSimpleBlockItem(RemissionBlocks.SYNTHESIZER);
     /** Sequencer product (P7.2): the synthesizer's input, and what serums are made from (P7.3). */
     public static final DeferredItem<Item> STRAIN_SEQUENCE = ITEMS.registerSimpleItem("strain_sequence");
+
+    // Purification (P5.2)
+    public static final DeferredItem<HandheldPurifierItem> HANDHELD_PURIFIER = ITEMS.registerItem("handheld_purifier",
+            HandheldPurifierItem::new, new Item.Properties().durability(HandheldPurifierItem.DURABILITY));
+    public static final DeferredItem<BlockItem> QUARANTINE_PYLON = ITEMS.registerSimpleBlockItem(RemissionBlocks.QUARANTINE_PYLON);
+    /** Planted like seeds (a block item), so players, dispensers with a pack's behaviour, and automation can place it. */
+    public static final DeferredItem<BlockItem> MENDROOT = ITEMS.registerSimpleBlockItem(RemissionBlocks.MENDROOT);
 
     private RemissionItems() {
     }

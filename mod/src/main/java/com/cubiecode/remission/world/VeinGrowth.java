@@ -1,6 +1,7 @@
 package com.cubiecode.remission.world;
 
 import com.cubiecode.remission.api.CorruptionQueries;
+import com.cubiecode.remission.purification.Purification;
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
@@ -88,6 +89,11 @@ public final class VeinGrowth {
                 step = -1;
                 continue;
             }
+            if (Purification.isWarded(level, chunk)) {
+                // Warded by a quarantine pylon since it started (P5.2): no more veins, and no revisit.
+                step = -1;
+                continue;
+            }
             int layers = target.getHeight();
             while (step < layers && spent < budget) {
                 if ((step & 15) == 0 && FesteringVeins.skipSection(level, target, step >> 4)) {
@@ -118,7 +124,8 @@ public final class VeinGrowth {
             return false;
         }
         int cover = FesteringVeins.coverage(CorruptionQueries.chunkStage(level, loaded.getPos()), current.minStage());
-        if (cover <= 0) {
+        // A chunk a quarantine pylon wards grows no veins (P5.2); it is queued again when the ward is removed.
+        if (cover <= 0 || Purification.isWarded(level, next)) {
             return false;
         }
         chunk = next;

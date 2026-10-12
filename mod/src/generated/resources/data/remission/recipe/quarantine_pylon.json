@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "L": {
+      "item": "minecraft:lightning_rod"
+    },
+    "P": {
+      "item": "remission:handheld_purifier"
+    }
+  },
+  "pattern": [
+    "ILI",
+    "IPI",
+    "III"
+  ],
+  "result": {
+    "count": 1,
+    "id": "remission:quarantine_pylon"
+  }
+}

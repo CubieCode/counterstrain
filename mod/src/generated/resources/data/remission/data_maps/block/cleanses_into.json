@@ -1,0 +1,19 @@
+{
+  "values": {
+    "remission:festered_deepslate": {
+      "block": "minecraft:deepslate"
+    },
+    "remission:festered_stone": {
+      "block": "minecraft:stone"
+    },
+    "remission:festering_grass": {
+      "block": "minecraft:grass_block"
+    },
+    "remission:festering_leaves": {
+      "block": "minecraft:oak_leaves"
+    },
+    "remission:festering_log": {
+      "block": "minecraft:oak_log"
+    }
+  }
+}

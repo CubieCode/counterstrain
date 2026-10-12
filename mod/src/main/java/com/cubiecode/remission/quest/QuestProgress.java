@@ -4,7 +4,9 @@ import com.cubiecode.remission.registry.RemissionStats;
 import com.cubiecode.remission.registry.RemissionTriggers;
 import com.cubiecode.remission.research.Bestiary;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
@@ -51,6 +53,26 @@ public final class QuestProgress {
         }
         player.awardStat(RemissionStats.SURGES_SURVIVED.get());
         RemissionTriggers.SURGE_SURVIVED.get().trigger(player, intensity);
+    }
+
+    /** Chunks (Chebyshev distance) from a chunk entering remission within which players are credited with it. */
+    public static final int REMISSION_CREDIT_RADIUS = 8;
+
+    /**
+     * {@code chunk} entered remission (it is already marked). Every living, non-spectator player in the level whose chunk
+     * is within {@link #REMISSION_CREDIT_RADIUS} of it counts one more chunk cleansed and fires
+     * {@code remission:region_cleansed} for the region around their own chunk.
+     */
+    public static void chunkEnteredRemission(ServerLevel level, ChunkPos chunk) {
+        for (ServerPlayer player : level.players()) {
+            ChunkPos at = player.chunkPosition();
+            if (player instanceof FakePlayer || !player.isAlive() || player.isSpectator()
+                    || Math.max(Math.abs(at.x - chunk.x), Math.abs(at.z - chunk.z)) > REMISSION_CREDIT_RADIUS) {
+                continue;
+            }
+            player.awardStat(RemissionStats.CHUNKS_CLEANSED.get());
+            RemissionTriggers.REGION_CLEANSED.get().trigger(player);
+        }
     }
 
     /** The player's viral load changed to {@code viralLoad}; it is already stored. */

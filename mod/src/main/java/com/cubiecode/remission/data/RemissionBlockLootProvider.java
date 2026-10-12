@@ -49,6 +49,9 @@ public final class RemissionBlockLootProvider extends BlockLootSubProvider {
         dropSelf(RemissionBlocks.ANALYZER.get());
         dropSelf(RemissionBlocks.SEQUENCER.get());
         dropSelf(RemissionBlocks.SYNTHESIZER.get());
+        // Purification (P5.2): both drop themselves, so a pylon can be moved and mendroot replanted.
+        dropSelf(RemissionBlocks.QUARANTINE_PYLON.get());
+        dropSelf(RemissionBlocks.MENDROOT.get());
     }
 
     // Every Remission block must have a loot table; datagen fails if one is missing.
