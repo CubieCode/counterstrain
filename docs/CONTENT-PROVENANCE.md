@@ -56,6 +56,9 @@ Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in t
 | `mod/src/main/resources/assets/remission/textures/block/quarantine_pylon_top.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel-map script, not kept) | placeholder | Quarantine pylon top (P5.2): a steel cap with a round glowing mint emitter. |
 | `mod/src/main/resources/assets/remission/textures/block/mendroot.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel-map script, not kept) | placeholder | Mendroot (P5.2), also the item icon: a cross plant of pale green stems with white root tendrils and small pale blue-white flowers on a transparent background. Should read as a healing plant, clearly not a festering one, and sit on grass or festering grass. |
 | `mod/src/main/resources/assets/remission/textures/item/countermeasure_protocol.png` | texture | ai (Claude Opus 5.5, 2026-10-13; pixel-map script, not kept) | placeholder | Countermeasure protocol (P5.7): a cream protocol sheet with a dark outline, a folded corner, two ruled lines and a mint ward emblem. Should read as a synthesized research document, paired with the strain sequence card, its cleansing mint the opposite of the Strain's violet. |
+| `mod/src/main/resources/assets/remission/textures/item/serum.png` | texture | ai (Claude Opus 5.5, 2026-10-13; pixel-map script, not kept) | placeholder | Serum (P7.3): a corked glass flask of pale mint fluid. Should read as a drinkable lab-made dose, in the cleansing colours (pale mint and white) of the handheld purifier, clearly not a vanilla potion. |
+| `mod/src/main/resources/assets/remission/textures/item/purifier_fuel.png` | texture | ai (Claude Opus 5.5, 2026-10-13; pixel-map script, not kept) | placeholder | Purifier fuel (P7.3): a steel-capped cartridge with a teal, glowing core. Should read as a fuel cell for purification machines (the reclaimer, P7.4), matching the purifier's steel and mint. |
+| `mod/src/main/resources/assets/remission/textures/item/counterstrain_prototype.png` | texture | ai (Claude Opus 5.5, 2026-10-13; pixel-map script, not kept) | placeholder | Unstable Counterstrain prototype (P7.3): a round flask with a brass-sealed stopper, teal cleansing fluid shot through with violet Strain swirls. Should read as volatile and experimental, the cure and the Strain not yet separated. |
 
 ## Models
 
@@ -103,6 +106,9 @@ Datagen block and item models are `procedural (datagen)` and follow their textur
 | `mod/src/generated/resources/assets/remission/models/item/mendroot.json` | model | procedural (datagen) | draft | Mendroot item model: `item/generated` from the block texture (as saplings). |
 | `mod/src/generated/resources/assets/remission/models/item/handheld_purifier.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:handheld_purifier` (P5.2). |
 | `mod/src/generated/resources/assets/remission/models/item/countermeasure_protocol.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:countermeasure_protocol` (P5.7). |
+| `mod/src/generated/resources/assets/remission/models/item/serum.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:serum` (P7.3). |
+| `mod/src/generated/resources/assets/remission/models/item/purifier_fuel.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:purifier_fuel` (P7.3). |
+| `mod/src/generated/resources/assets/remission/models/item/counterstrain_prototype.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:counterstrain_prototype` (P7.3), also drawn for the thrown entity. |
 
 ## GUI art, icons and logos
 
@@ -112,6 +118,7 @@ Placeholders carry a visible "PLACEHOLDER" label. HUD sprites too small for a la
 | --- | --- | --- | --- | --- |
 | `mod/src/main/resources/assets/remission/textures/gui/sprites/hud/viral_load.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Viral load meter icon (P5.1), GUI sprite `remission:hud/viral_load`, 16×16 drawn at 9×9 at the right end of the meter row above the hunger bar: a violet virion with spikes and a sickly-green core, 2×2 marker (about one GUI pixel on screen). The bar beside it is drawn in code (dark frame; fill pale green, yellow, orange, then Strain violet by quarter; a pale chevron while rising or falling), so the art pass may replace both with a sprite set; keep the row 9 pixels tall and 81 wide like vanilla's, and the icon readable on bright and dark ground. |
 | `mod/src/main/resources/assets/remission/textures/gui/machine.png` | gui | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Shared machine screen (P7.2), 176x166 plus sprites to the right: vanilla-style grey panel with an energy bar, input and output tanks with gauge marks, output slots, progress arrow and the player inventory; sprites for input slot frames, the filled arrow, the energy fill and the gauge marks. Magenta "PLACEHOLDER" label top right. The art pass may give each machine its own look but must keep the layout (`MachineMenu`, `MachineScreen`). |
+| `mod/src/main/resources/assets/remission/textures/mob_effect/inoculated.png` | texture | ai (Claude Opus 5.5, 2026-10-13; pixel-map script, not kept) | placeholder | Inoculated effect icon (P7.3), 18×18, shown in the inventory and the HUD's effect list: a pale mint droplet with a white rim. Too small for a label, so it carries the texture marker. |
 
 ## Particles
 
@@ -219,6 +226,11 @@ Sounds carry no audible placeholder marker; these rows are the record (content-p
 | `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.festerFog*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Client config label and tooltip for the festering fog strength, an accessibility option (P4.11). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.nidus.bar` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Boss bar title over a nidus under attack, showing its vitality (P4.10). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.nidus.lash` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Action bar line when a nidus under attack lashes a player at a vitality threshold (P4.10). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.serum*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Serum name and tooltip hint (P7.3): lowers viral load, resist the Strain for a while; glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:effect.remission.inoculated` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Inoculated effect name (P7.3); glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.purifier_fuel` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Purifier fuel name (P7.3); glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.counterstrain_prototype*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Counterstrain prototype name and tooltip hint (P7.3): throw to cleanse, may release miasma; glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:entity.remission.counterstrain_prototype` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Thrown Counterstrain prototype entity name (P7.3). |
 
 ## Mod and pack metadata
 

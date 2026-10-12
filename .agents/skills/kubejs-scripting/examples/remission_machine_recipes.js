@@ -35,11 +35,12 @@ ServerEvents.recipes(event => {
   // remission:synthesizing
   // Remove: every synthesizing recipe that makes host tissue.
   event.remove({ type: 'remission:synthesizing', output: 'remission:host_tissue' })
-  // Replace: serums use honey bottles instead of glass bottles.
+  // Replace: serums use honey bottles instead of glass bottles, and purifier fuel comes out as blaze powder.
   event.replaceInput({ id: 'remission:synthesizing/serum' }, 'minecraft:glass_bottle', 'minecraft:honey_bottle')
+  event.replaceOutput({ id: 'remission:synthesizing/purifier_fuel' }, 'remission:purifier_fuel', 'minecraft:blaze_powder')
   // Add: a cheaper prototype from festered soil, for testing.
   event.recipes.remission.synthesizing(['remission:counterstrain_prototype'], ['remission:strain_sequence', '4x remission:festered_soil'])
-    .fluidIngredient(Fluid.of('remission:miasma', 500))
+    .fluid(Fluid.of('remission:miasma', 500))
     .energy(8000)
     .time(200)
     .id('remission_sample:synthesizing/prototype_from_soil')
@@ -58,6 +59,7 @@ ServerEvents.loaded(event => {
     'remission_sample:sequencing/strain_sequence',
     'remission:synthesizing/host_tissue',
     'remission:synthesizing/serum',
+    'remission:synthesizing/purifier_fuel',
     'remission_sample:synthesizing/prototype_from_soil'
   ]
   ids.forEach(id => {

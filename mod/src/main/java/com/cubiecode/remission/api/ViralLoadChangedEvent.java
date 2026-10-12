@@ -6,8 +6,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 /**
  * A player's viral load changed (P5.1). Posted on the server after the new value is stored, so
  * {@link CorruptionQueries#viralLoad} already returns it, at most once per player per update (once a second) plus once per
- * drink. Viral load is 0 to {@link CorruptionQueries#MAX_VIRAL_LOAD}. Not posted when only the trend changes, nor for the
- * reset to 0 on death (the respawned player starts clean). Not cancellable.
+ * drink or serum dose. Viral load is 0 to {@link CorruptionQueries#MAX_VIRAL_LOAD}. Not posted when only the trend changes,
+ * nor for the reset to 0 on death (the respawned player starts clean). Not cancellable.
  */
 public class ViralLoadChangedEvent extends PlayerEvent {
     /** What changed the viral load. */

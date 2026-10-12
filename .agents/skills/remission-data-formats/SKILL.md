@@ -348,15 +348,53 @@ A recipe needs `results` or a `fluid_result`; fluid amounts are at most the tank
 | `synthesizing/host_tissue` | `remission:strain_sequence`, `remission:host_tissue`, 500 mB miasma | 2 `remission:host_tissue` | 4000 FE, 200 ticks |
 | `synthesizing/countermeasure_protocol_contact` (P5.7) | `remission:strain_sequence`, `remission:festered_soil`, `minecraft:paper`, 1000 mB miasma | `remission:countermeasure_protocol` with `remission:hazard` `remission:contact` | 8000 FE, 400 ticks |
 
-The synthesizing default is a placeholder until serums: no default recipe makes `remission:nidus_core` (cores stay a rare sample). Crafting recipes `remission:analyzer`, `remission:sequencer`, `remission:synthesizer` (iron, glass, redstone around a spyglass, comparator or brewing stand) make the machines from vanilla parts.
+The synthesizing default `host_tissue` stays beside the products added in P7.3 (Synthesizer products, below): no default recipe makes `remission:nidus_core` (cores stay a rare sample). Crafting recipes `remission:analyzer`, `remission:sequencer`, `remission:synthesizer` (iron, glass, redstone around a spyglass, comparator or brewing stand) make the machines from vanilla parts.
 
-**Strain sequence:** item `remission:strain_sequence` (no data components), the sequencer's product and the synthesizer's input. Contract for P7.3: serums and the other Counterstrain products are `remission:synthesizing` recipes that take `remission:strain_sequence`; P7.3 may replace the placeholder default but keeps the item and the schema.
+**Strain sequence:** item `remission:strain_sequence` (no data components), the sequencer's product and the synthesizer's input. Serums and the other products (P7.3) are `remission:synthesizing` recipes that take `remission:strain_sequence`.
 
 **Item tag** `#remission:scans` (`data/<ns>/tags/item/scans.json`): `remission:host_scan` and `remission:block_scan`, for recipes that take any scan.
 
 **Recipe viewers:** a JEI plugin (`integration/jei/RemissionJeiPlugin`) adds one category per type, with the same ids as the recipe types, the machine as catalyst and the machine screen's progress arrow opening it; EMI shows the same categories through its JEI compatibility. Remission does not require JEI or EMI.
 
-**KubeJS schemas (planned, P7.3):** Remission ships `data/remission/kubejs/recipe_schema/<type>.json` (keys with `name`, `role` input/output/other, `type` such as `ingredient`, `item_stack`, `ticks`, `optional`, `function_names`) so KubeJS 2101 can create and edit these recipes without a Java dependency on KubeJS. Model them on KubeJS's own `data/minecraft/kubejs/recipe_schema/cooking.json`. Recipe schema changes are contract changes.
+**KubeJS schemas (built, P7.3):** see "Synthesizer products and KubeJS recipe schemas", below.
+
+## Synthesizer products and KubeJS recipe schemas (built, P7.3)
+
+Items (`RemissionItems`), each made by a default `remission:synthesizing` recipe (datagen, `data/remission/recipe/synthesizing/`; packs override or remove them like any machine recipe):
+
+| Item | Recipe | Effect |
+| --- | --- | --- |
+| `remission:serum` (stacks to 16) | `synthesizing/serum`: `remission:strain_sequence`, 2 `minecraft:glass_bottle`, 250 mB miasma; 2 serums; 4000 FE, 200 ticks | Drunk like a potion (32 ticks; a glass bottle back). One dose (`Serums.apply`): a player loses `[serums] viralLoadDrop` viral load at once (`ViralLoadChangedEvent.Cause.SERUM`; no event at 0) and any living target gets the effect `remission:inoculated` for `inoculationTicks`. |
+| `remission:purifier_fuel` | `synthesizing/purifier_fuel`: `remission:strain_sequence`, 4 `#minecraft:coals`, 250 mB miasma; 4 fuel; 4000 FE, 200 ticks | In item tag `#remission:purifier_fuel`, which repairs a handheld purifier in an anvil. The tag is the reclaimer's fuel (P7.4); packs add their own fuels to it. |
+| `remission:counterstrain_prototype` (stacks to 16) | `synthesizing/counterstrain_prototype`: `remission:strain_sequence`, `remission:nidus_core`, `minecraft:glass_bottle`, 1000 mB miasma; 1 prototype; 12000 FE, 400 ticks | Thrown like a splash potion (entity `remission:counterstrain_prototype`; no dispenser behaviour). Where it hits a block or entity it backfires with chance `[prototypes] backfireChance`, releasing one miasma cloud (`remission:miasma_cloud`, default radius, 1200 ticks; it drifts like a surge's) and cleansing nothing; otherwise it cleanses every festered block and vein in the cube `radius` around the block it landed in and lowers that block's chunk by `step`, both with `PurificationCause.PROTOTYPE`; `ChunkEnteredRemissionEvent.getPlayer()` names the thrower when that finishes the chunk. |
+
+The P7.2 default `synthesizing/host_tissue` is unchanged. Mob effect `remission:inoculated` (beneficial; `RemissionMobEffects.INOCULATED`): while a player has it, every viral load gain (land, water, miasma clouds, contact) is multiplied by `[serums] inoculationFactor`; decay and the drink dose are not. Milk and other effect cures remove it. Packs can give it with `/effect` or any effect source.
+
+Config (`remission-common.toml`):
+
+| Key | Default | Range | Meaning |
+| --- | --- | --- | --- |
+| `[serums] viralLoadDrop` | 40.0 | 0–100 | Viral load a dose takes off at once. |
+| `[serums] inoculationTicks` | 3600 | 0–72000 | Ticks of `remission:inoculated` a dose gives (0 gives none). |
+| `[serums] inoculationFactor` | 0.5 | 0–1 | Fraction of viral load gain an inoculated player still takes. |
+| `[prototypes] radius` | 4 | 0–8 | Cube radius of blocks a prototype cleanses. |
+| `[prototypes] step` | 40 | 0–100 | Strain level the landing chunk loses. |
+| `[prototypes] backfireChance` | 0.25 | 0–1 | Chance a prototype backfires instead. |
+
+Java for later items: `Serums.apply(LivingEntity, SerumSettings)` is the one dose (P7.6's injector); `CounterstrainPrototypes.land(ServerLevel, Vec3, ServerPlayer, PrototypeSettings, RandomSource)` is one landing. Neither is public API in `api/`.
+
+**KubeJS recipe schemas:** `data/remission/kubejs/recipe_schema/analyzing.json`, `sequencing.json` and `synthesizing.json` (in the mod's resources, so any pack with KubeJS 2101 gets typed methods without a Java dependency). Keys, in order, with the same names as the recipe JSON (Machine recipes, above):
+
+| Key | KubeJS component | Role | Optional (default) | Builder method |
+| --- | --- | --- | --- | --- |
+| `ingredients` | list of `flat_sized_ingredient`, 1 to the machine's input slots | input | required | |
+| `results` | list of `item_stack`, 0–2 | output | `[]` | |
+| `fluid_ingredient` | `flat_sized_fluid_ingredient` | input | absent | `fluidIngredient`, `fluid` |
+| `fluid_result` | `fluid_stack` | output | absent | `fluidResult` |
+| `energy` | `non_negative_int` | input | `0` | `energy` |
+| `time` | `ticks` (always written) | input | `200` | `time` |
+
+Constructors: `event.recipes.remission.<type>(results, ingredients)` and `(results, ingredients, fluidIngredient)`; sized ingredients as `'2x minecraft:coal'` or `'#remission:scans'`, fluids as `Fluid.of('remission:miasma', 250)`. `event.remove({type: 'remission:<type>'})`, `{id: ...}`, `{output: ...}`, `replaceInput` and `replaceOutput` work on these recipes. Example and verification: kubejs-scripting. Schema changes are contract changes.
 
 ## Advancement triggers and stats (built, P8.1)
 
@@ -709,7 +747,7 @@ Defaults: `festering_grass` → `minecraft:grass_block`, `festering_log` → `mi
 
 Breaking or removing a pylon ends its ward at once; chunks no longer warded are queued for the stage work and vein growth, which bring them back to their current stage. Festering land exposure (P4.7) and land viral load are not stopped by the ward itself; they stop as the land drains.
 
-**Handheld purifier** `remission:handheld_purifier` (item, 256 uses, 10-tick cooldown; default recipe: glass over a copper ingot between iron ingots). Used on a block: cleanses every festered block and vein in the cube `purifierRadius` around it (cause `PURIFIER`) and lowers that block's chunk by `purifierStep`; `ChunkEnteredRemissionEvent.getPlayer()` names the user when that finishes the chunk. Used on a host: lowers its Strain level by `purifierHostStep` through `Corruption.set` with `CorruptionCause.PURIFICATION`. A use that changes nothing costs no durability.
+**Handheld purifier** `remission:handheld_purifier` (item, 256 uses, 10-tick cooldown; default recipe: glass over a copper ingot between iron ingots). Used on a block: cleanses every festered block and vein in the cube `purifierRadius` around it (cause `PURIFIER`) and lowers that block's chunk by `purifierStep`; `ChunkEnteredRemissionEvent.getPlayer()` names the user when that finishes the chunk. Used on a host: lowers its Strain level by `purifierHostStep` through `Corruption.set` with `CorruptionCause.PURIFICATION`. A use that changes nothing costs no durability. Purifier fuel (`#remission:purifier_fuel`, P7.3) repairs it in an anvil.
 
 **Mendroot** `remission:mendroot` (block and block item; a plant on `#minecraft:dirt` or farmland, festering grass included; no collision, breaks instantly, drops itself; default recipe: wheat seeds, bone meal and glow berries make two). Planting it schedules a block tick (saved with the chunk); every `mendrootIntervalTicks` it cleanses the cube `mendrootRadius` around it (cause `MENDROOT`) and lowers its chunk by `mendrootStep`. Anything that places blocks from an item can plant it.
 
@@ -770,7 +808,7 @@ Conventions, for every event here and every event later items add:
 | `NidusDamagedEvent extends FesteringLandEvent` (P4.10) | `getLevel()`, `getPos()`, `getKind()` (`STRIKE`, `PROJECTILE`, `EXPLOSION`), `getPlayer()` (`Optional<ServerPlayer>`: the striker, the projectile's owner or the player behind the explosion), `getDirectEntity()` (the projectile or the explosion's direct source, or null), `getAmount()`/`setAmount(float)` (vitality lost, after the projectile or explosion fraction; negative or NaN become 0) | Before a nidus takes damage a player is behind (Nidus encounters, above; never for hosts' or unattributed damage, fake players, strikes within the strike cooldown, or while `[nidi] vitality` is 0). Projectile and explosion damage is then capped so it leaves at least 1 vitality. | yes: cancelling (or amount 0) means no damage and no credit for the player |
 | `BlockPurifiedEvent extends FesteringLandEvent` (P5.2) | `getLevel()`, `getPos()`, `getOldState()` (the festered block or vein), `getNewState()` (its `cleanses_into` target, or air for a vein), `getCause()` (`PurificationCause`) | After a block is cleansed (Purification and remission zones, below), once per block: block-scoped, so a chunk's budgeted cleanse posts one per changed block over the ticks it takes. The biome restore posts nothing. Listeners must not set the block at `getPos()` in the listener. | no |
 | `ChunkEnteredRemissionEvent extends FesteringLandEvent` (P5.2) | `getLevel()`, `getChunk()` (`ChunkPos`), `getCause()` (`PurificationCause`), `getPlayer()` (`Optional<ServerPlayer>`: the player whose handheld purifier finished the chunk; empty otherwise) | Once when purification lowers a chunk's Strain level from above 0 to 0, after the level and the remission mark are stored and before its remaining blocks are cleansed. A chunk that festers again leaves remission without an event and can enter it again. | no |
-| `ViralLoadChangedEvent extends PlayerEvent` (P5.1) | `getEntity()` (the `ServerPlayer`), `getOldLoad()`, `getNewLoad()` (floats 0–100), `getCause()` (`EXPOSURE`: land, water or a miasma cloud; `DRINK`; `DECAY`; `NIDUS`: a nidus's lash, P4.10; `OTHER`; treat unknown values as `OTHER`), `isRising()` | After a player's viral load changed and was stored (Viral load, above): at most once per player per update (once a second) plus once per drink. Not when only the trend changed, nor for the reset to 0 on death. | no |
+| `ViralLoadChangedEvent extends PlayerEvent` (P5.1) | `getEntity()` (the `ServerPlayer`), `getOldLoad()`, `getNewLoad()` (floats 0–100), `getCause()` (`EXPOSURE`: land, water or a miasma cloud; `DRINK`; `DECAY`; `NIDUS`: a nidus's lash, P4.10; `SERUM` (P7.3): a serum dose; `PROTOTYPE` (P7.3): a Counterstrain prototype backfiring nearby; `OTHER`; treat unknown values as `OTHER`), `isRising()` | After a player's viral load changed and was stored (Viral load, above): at most once per player per update (once a second) plus once per drink, serum dose or prototype backfire. Not when only the trend changed, nor for the reset to 0 on death. | no |
 | `RevenantRisenEvent extends RevenantEvent` (P5.3) | `getEntity()` (the revenant), `getOwner()`, `getPlayer()` (the dead `ServerPlayer`, not yet respawned), `getSource()` (the killing `DamageSource`), `getDeathPos()`, `getItems()` (copies of the held stacks), `getExperience()` | After a player's Strain death raised a revenant (Revenants, above): it is in the level as a host and in the index. | no |
 | `RevenantSlainEvent extends RevenantEvent` (P5.3) | `getEntity()`, `getOwner()`, `getSource()`, `getKiller()` (the `ServerPlayer`, or null for a command), `isReclaimed()` (the killer may pick its items up: the owner or a teammate by the team query) | After a revenant with an owner died: its items and experience are dropped, it left the index, and a reclaim was awarded. | no |
 | `StrainHazardEvent extends Event` (P5.7) | `getServer()`, `getHazard()`, `getPlayer()` (`Optional<ServerPlayer>`: always present for a player hazard; for a block hazard the placer or an online teammate, or the nearest player for a block with no placer, empty under `ALWAYS` with nobody of the team online), `getLevel()`, `getPos()` (`Optional`s, present for a block hazard), `getPlacer()` (`Optional<UUID>`), `isBlockHazard()` | Before a hazard applies, from `StrainHazards.applies` and `appliesAtBlock`, only when nothing ruled it out already (the team holds no countermeasure; for a block, the presence rule is met). Hazard systems may ask every tick: keep listeners cheap. | yes: cancelling holds the hazard back (`applies` returns false). A listener cannot force a hazard past a countermeasure: it is not asked then |
@@ -783,7 +821,7 @@ Re-entrancy: a host event listener that changes the same entity's level (`Corrup
 
 `CorruptionCause` (enum, `HostEvent.getCause()`): `INFECTION` (killed by a host and infected in place or converted), `COMMAND` (`/remission infect` or `/remission cleanse`), `FESTERING_LAND` (prolonged exposure to festering land, P4.7), `SURGE` (spawned as a host by a surge; P4.3), `CONTACT` (touched an infectious block or swam in festering water; P4.8), `PURIFICATION` (a handheld purifier used on a host; P5.2), `REVENANT` (rose as a revenant; P5.3), `OTHER` (any other caller). Later items insert their causes before `OTHER`, so never persist a cause by ordinal; treat unknown values as `OTHER`.
 
-`PurificationCause` (enum, P5.2, `BlockPurifiedEvent.getCause()` and `ChunkEnteredRemissionEvent.getCause()`): `PURIFIER` (a handheld purifier), `PYLON` (a quarantine pylon's ward), `MENDROOT`, `OTHER` (anything else, including the re-check of a chunk in remission when it loads). Same rules: inserted before `OTHER`, never persisted by ordinal.
+`PurificationCause` (enum, P5.2, `BlockPurifiedEvent.getCause()` and `ChunkEnteredRemissionEvent.getCause()`): `PURIFIER` (a handheld purifier), `PYLON` (a quarantine pylon's ward), `MENDROOT`, `PROTOTYPE` (a Counterstrain prototype landing, P7.3), `OTHER` (anything else, including the re-check of a chunk in remission when it loads). Same rules: inserted before `OTHER`, never persisted by ordinal.
 
 Queries, `CorruptionQueries` (static):
 

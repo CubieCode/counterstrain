@@ -117,7 +117,7 @@ public final class RemissionRecipeProvider extends RecipeProvider {
                 .save(output, "strain_sequence");
     }
 
-    /** Placeholder default until serums (P7.3): a strain sequence cultures host tissue in miasma. */
+    /** A strain sequence cultures host tissue in miasma; kept beside the synthesizer's products (P7.3). */
     private static void synthesizing(RecipeOutput output) {
         MachineRecipeBuilder.of(MachineKind.SYNTHESIZER, 4000, 200)
                 .ingredient(RemissionItems.STRAIN_SEQUENCE.get())
