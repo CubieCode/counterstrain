@@ -12,7 +12,7 @@ import posixpath
 import secrets
 import time
 
-from . import host, lang, markdown, models, png, textures
+from . import glossary, host, lang, llm, markdown, models, png, props, textures
 from .ledger import Ledger, LedgerError, append_note
 from .repo import RepoError, Resolver, Workspace, git, show
 
@@ -40,6 +40,8 @@ def normalize(rel):
 def kind_of(row):
     """What the editor can do with a row: lang, markdown, texture, model, sound, or None (view only)."""
     if row.key is not None:
+        if row.file.endswith(".properties"):
+            return "properties"
         return "lang" if row.file.endswith(".json") and "/lang/" in row.file else None
     if row.file.endswith(".md"):
         return "markdown"
@@ -53,8 +55,9 @@ def kind_of(row):
 
 
 class Editor:
-    def __init__(self, tool_root, worktree=None, reviewer=None, clock=None):
+    def __init__(self, tool_root, worktree=None, reviewer=None, clock=None, llm_reviewer=None):
         self.workspace = Workspace(tool_root, worktree)
+        self.llm = llm_reviewer or llm.Reviewer(enabled=False)
         self.resolver = Resolver(self.workspace)
         self.reviewer = reviewer
         self.clock = clock or datetime.date.today
@@ -148,7 +151,8 @@ class Editor:
         ws = self.workspace
         return {"batch": ws.writable, "branch": ws.branch(), "worktree": ws.worktree, "root": ws.root,
                 "base": ws.base()[:9], "reviewer": self.who(), "batches": ws.batches(),
-                "vanilla": self.resolver.jar() is not None, "today": self.today()}
+                "vanilla": self.resolver.jar() is not None, "today": self.today(),
+                "llm": self.llm.model if self.llm.available() else None}
 
     def rows(self):
         ledger, base = self.ledger(), self.base_ledger()
@@ -213,6 +217,12 @@ class Editor:
         elif kind == "sound":
             data = self.read(row.file)
             detail["bytes"] = len(data) if data is not None else None
+        elif kind == "properties":
+            current = props.PropsFile.load(self.path(row.file))
+            base = self.read(row.file, "base")
+            detail.update(value=current.get(row.key), line=current.lines[row.key] + 1,
+                          base=props.PropsFile(base.decode("utf-8")).values.get(row.key) if base else None,
+                          gate=row.file == "mod/gradle.properties")
         elif kind == "markdown":
             text = (self.read(row.file) or b"").decode("utf-8", "replace")
             base = self.read(row.file, "base")
@@ -374,7 +384,7 @@ class Editor:
         """Accept a whole row (lang or Markdown) unchanged as final, recording the reviewer and date."""
         ledger = self.ledger()
         row = ledger.require(row_id)
-        if kind_of(row) not in ("lang", "markdown"):
+        if kind_of(row) not in ("lang", "markdown", "properties"):
             raise EditorError(f"`{row_id}` is accepted through its upload page, not as text")
         if row.status == "final":
             raise EditorError(f"`{row.key or row.file}` is already final")
@@ -382,6 +392,57 @@ class Editor:
         ledger.set_fields(row, status="final", notes=append_note(row.notes, self.accepted_note()))
         self._save_ledger(ledger)
         return ledger.find(row_id)
+
+    # --- properties ----------------------------------------------------------
+
+    def properties_save(self, row_id, value, status="draft"):
+        """Replace one `file.properties:key` value (e.g. the mod description) in place."""
+        if status not in ("draft", "final"):
+            raise EditorError("replaced text is draft or final")
+        ledger = self.ledger()
+        row = ledger.require(row_id)
+        if kind_of(row) != "properties":
+            raise EditorError(f"`{row_id}` is not a properties row")
+        try:
+            edited = props.PropsFile.load(self.path(row.file)).with_value(row.key, value)
+        except props.PropsError as e:
+            raise EditorError(str(e))
+        target = self._target(row.file, ledger)
+        if edited.values[row.key] == props.PropsFile.load(target).values[row.key]:
+            raise EditorError("nothing changed")
+        edited.save(target)
+        ledger.set_fields(row, origin=self.human_origin(), status=status)
+        self._save_ledger(ledger)
+        return ledger.find(row_id)
+
+    def _changed_property(self, row):
+        try:
+            now = props.PropsFile.load(self.path(row.file)).values.get(row.key)
+        except OSError:
+            return []
+        base = self.read(row.file, "base")
+        before = props.PropsFile(base.decode("utf-8")).values.get(row.key) if base else None
+        return [] if before == now else [{"key": row.key, "before": before, "after": now}]
+
+    # --- vocabulary ------------------------------------------------------------
+
+    def _design(self):
+        return (self.read("docs/DESIGN.md") or b"").decode("utf-8", "replace")
+
+    def vocabulary(self, text):
+        """Avoided words found in `text`, and the glossary terms it uses."""
+        if not isinstance(text, str):
+            raise EditorError("text must be a string")
+        return {"hits": glossary.check(text), "used": glossary.used(text, glossary.terms(self._design()))}
+
+    def review(self, row_id, text):
+        """Problems a local model points out in `text` (advisory; it never writes text)."""
+        row = self.ledger().require(row_id)
+        try:
+            return {"issues": self.llm.review(text, row.type, row.notes, glossary.section(self._design())),
+                    "model": self.llm.model}
+        except RuntimeError as e:
+            raise EditorError(str(e))
 
     # --- uploads -------------------------------------------------------------
 
@@ -503,6 +564,8 @@ class Editor:
                       "before": before.to_dict() if before else None}
             if kind_of(row) == "lang":
                 change["strings"] = self._changed_strings(ledger, row)
+            elif kind_of(row) == "properties":
+                change["strings"] = self._changed_property(row)
             elif kind_of(row) == "markdown":
                 base_text = self.read(row.file, "base")
                 change["diff"] = markdown.diff((base_text or b"").decode("utf-8", "replace"),
@@ -511,7 +574,7 @@ class Editor:
         stats = self.workspace.numstat()
         files = [{"status": s, "path": p, "added": stats.get(p, ("", ""))[0], "deleted": stats.get(p, ("", ""))[1]}
                  for s, p in self.workspace.changed_files()]
-        return {"changes": changes, "files": files, "branch": self.workspace.branch(),
+        return {"changes": changes, "files": files, "branch": self.workspace.branch(), "behind": self.workspace.behind(),
                 "base": self.workspace.base()[:9], "worktree": self.workspace.worktree,
                 "uncommitted": self.workspace.uncommitted(), "commits": self.workspace.commits()}
 
@@ -543,6 +606,10 @@ class Editor:
                 for s in strings:
                     if s["before"] is not None:
                         current = current.with_value(s["key"], s["before"])
+                current.save(self._target(row.file, ledger))
+        elif kind_of(row) == "properties":
+            for s in self._changed_property(row):
+                current = props.PropsFile.load(self.path(row.file)).with_value(row.key, s["before"])
                 current.save(self._target(row.file, ledger))
         elif kind_of(row) in ("texture", "model", "sound", "markdown"):
             for rel in (row.file, row.file + ".mcmeta"):

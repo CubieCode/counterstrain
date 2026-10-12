@@ -22,7 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from contentedit import lang  # noqa: E402
+from contentedit import lang, llm  # noqa: E402
 from contentedit.ledger import LedgerError  # noqa: E402
 from contentedit.png import PngError  # noqa: E402
 from contentedit.repo import RepoError, split_id  # noqa: E402
@@ -232,6 +232,29 @@ class Handler(BaseHTTPRequestHandler):
         self.app.checked = None
         return {"row": row.to_dict()}
 
+    def post_properties_save(self):
+        b = self.body()
+        row = self.app.editor.properties_save(b.get("row", ""), b.get("value"), b.get("status", "draft"))
+        self.app.checked = None
+        return {"row": row.to_dict()}
+
+    def post_vocabulary(self):
+        return self.app.editor.vocabulary(self.body().get("text"))
+
+    def post_review(self):
+        b = self.body()
+        return self.app.editor.review(b.get("row", ""), b.get("text") or "")
+
+    def post_batch_update(self):
+        changed = self.app.editor.workspace.update_from_main()
+        self.app.checked = None
+        return {"changed": changed}
+
+    def post_batch_finish(self):
+        branch, pr = self.app.editor.workspace.finish(self.body().get("discard"))
+        self.app.checked = None
+        return {"branch": branch, "pr": pr}
+
     def post_upload(self):
         b = self.body()
         try:
@@ -284,9 +307,15 @@ def main(argv):
     parser.add_argument("--lan", action="store_true", help="bind every interface (token required on every request)")
     parser.add_argument("--worktree", help="resume an existing content/<date>-<slug> worktree")
     parser.add_argument("--reviewer", help="name recorded in origins and acceptance notes (default: git user.name)")
+    parser.add_argument("--llm-url", default=os.environ.get("CONTENT_EDITOR_LLM_URL", "http://127.0.0.1:11434"),
+                        help="Ollama URL for the optional text review (default: %(default)s)")
+    parser.add_argument("--llm-model", default=os.environ.get("CONTENT_EDITOR_LLM_MODEL", "qwen2.5:14b"),
+                        help="Ollama model for the optional text review (default: %(default)s)")
+    parser.add_argument("--no-llm", action="store_true", help="turn the optional text review off")
     args = parser.parse_args(argv)
 
-    editor = Editor(TOOL_ROOT, worktree=args.worktree, reviewer=args.reviewer)
+    editor = Editor(TOOL_ROOT, worktree=args.worktree, reviewer=args.reviewer,
+                    llm_reviewer=llm.Reviewer(args.llm_url, args.llm_model, enabled=not args.no_llm))
     token = secrets.token_urlsafe(18)
     Handler.app = App(editor, token, args.lan)
     host = "0.0.0.0" if args.lan else "127.0.0.1"
@@ -298,6 +327,8 @@ def main(argv):
     print(f"  reading {state.root}" + ("" if state.writable else " (read-only until you start a batch)"), flush=True)
     if not args.lan:
         print(f"  from a PC: ssh -L {args.port}:127.0.0.1:{args.port} foundry, then open the URL above", flush=True)
+    if editor.llm.available():
+        print(f"  text review: {args.llm_model} via {args.llm_url} (advisory; --no-llm turns it off)", flush=True)
     if editor.resolver.jar() is None:
         print("  vanilla models and mob textures unavailable: run ./gradlew build in mod/ first", flush=True)
     try:

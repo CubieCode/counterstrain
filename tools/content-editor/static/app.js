@@ -1,6 +1,6 @@
 // Content editor front end (P1.5). Plain DOM, no build step. Every request carries the
 // token from <meta name="editor-token">. All text goes in through text nodes.
-import { modelPreview, mobPreview } from '/static/preview.js?t=__TOKEN__';
+import { modelPreview, mobPreview, slugId } from '/static/preview.js?t=__TOKEN__';
 import { render as renderMarkdown, headings, lineDiff, slug } from '/static/markdown.js?t=__TOKEN__';
 
 const TOKEN = document.querySelector('meta[name="editor-token"]').content;
@@ -346,7 +346,7 @@ function rowLine(r) {
   if (r.kind === 'texture' || (r.path.endsWith('.png') && !r.key)) {
     thumb = h('span', { class: 'thumb' }, h('img', { class: 'pixel', src: url('/api/file', { path: r.path }), alt: '', width: 32, height: 32, loading: 'lazy' }));
   } else {
-    thumb = h('span', { class: 'thumb none' }, r.generated ? icon(LOCK) : r.kind === 'lang' ? 'Aa' : r.kind === 'markdown' ? 'md' : r.kind === 'model' ? '{ }' : r.kind === 'sound' ? 'ogg' : '·');
+    thumb = h('span', { class: 'thumb none' }, r.generated ? icon(LOCK) : r.kind === 'lang' ? 'Aa' : r.kind === 'markdown' ? 'md' : r.kind === 'properties' ? 'key' : r.kind === 'model' ? '{ }' : r.kind === 'sound' ? 'ogg' : '·');
   }
   let mark = null;
   if (r.generated) mark = h('span', { class: 'mark lock' }, 'read-only');
@@ -411,6 +411,7 @@ async function rowView(id, params) {
   const detail = await api(url('/api/row', { id }));
   if (detail.kind === 'lang') return langView(detail, params);
   if (detail.kind === 'markdown') return markdownView(detail);
+  if (detail.kind === 'properties') return propertiesView(detail);
   if (detail.kind === 'texture') return textureView(detail);
   if (detail.kind === 'model') return modelView(detail);
   if (detail.kind === 'sound') return soundView(detail);
@@ -453,6 +454,7 @@ async function langView(detail, params) {
   }
 
   const currentArgs = formatArgs(k.value);
+  const langVocab = vocabPanel(k.owner || r.id, () => edit.value);
   const ownerIsRow = k.owner === r.id;
   const sharedOthers = r.wildcard && ownerIsRow ? detail.keys.filter((x) => x.owner === r.id && x.key !== k.key).length : 0;
   const status = h('select', { id: 'st', 'aria-label': 'Status after replacing' }, h('option', { value: 'draft' }, 'draft'), h('option', { value: 'final' }, 'final'));
@@ -497,7 +499,7 @@ async function langView(detail, params) {
         h('div', {}, h('span', { class: 'add' }, '+ '), 'origin ', h('b', { style: 'color:var(--ac);font-weight:500' }, human), ` · status ${status.value}`));
     }
   }
-  edit.addEventListener('input', update);
+  edit.addEventListener('input', () => { update(); langVocab.update(); });
   status.addEventListener('change', update);
   replace.addEventListener('click', () => guard(async () => {
     await api('/api/lang/save', { body: { file: r.file, key: k.key, value: edit.value, status: status.value } });
@@ -539,11 +541,71 @@ async function langView(detail, params) {
         k.base !== null && k.base !== k.value ? h('span', { class: 'small dim' }, 'On main: ', h('span', { class: 'mono' }, k.base)) : null),
       h('div', { class: 'stack' }, h('div', { class: 'row-flex' }, h('label', { for: 'edit', class: 'small', style: 'font-weight:600;color:var(--f2)' }, 'Replacement'), argNote,
         h('span', { class: 'grow' }), h('label', { for: 'st', class: 'small dim' }, 'status'), status),
-        edit, problem, preview),
+        edit, problem, preview, langVocab.el),
       h('div', { class: 'stack', style: 'gap:6px' }, h('h2', { class: 'label' }, 'On save'), onSave),
       h('div', { class: 'row-flex', style: 'padding-top:14px;border-top:1px solid var(--bd)' }, replace, accept,
         h('span', { class: 'small dim' }, `Accepting keeps the string; status → final, notes gain “Accepted as final by ${STATE.reviewer}, ${STATE.today}.”`),
         h('span', { class: 'grow' }), acceptAll))));
+  update();
+}
+
+// --- vocabulary (glossary hits and the optional local review) ------------------------------
+
+function vocabPanel(rowId, getText) {
+  const hits = h('div', { class: 'stack', style: 'gap:4px' });
+  const issues = h('div', { class: 'stack', style: 'gap:4px' });
+  let timer = null;
+  async function refreshHits() {
+    const text = getText();
+    const res = await api('/api/vocabulary', { body: { text } }).catch(() => null);
+    if (!res) return;
+    hits.replaceChildren(
+      res.hits.length ? h('div', { class: 'callout error small', style: 'flex-direction:column;gap:4px' },
+        h('strong', {}, `Glossary: ${res.hits.length} word${res.hits.length === 1 ? '' : 's'} to check`),
+        res.hits.map((x) => h('span', {}, h('code', {}, x.term), x.line > 1 ? ` (line ${x.line})` : '', ` → ${x.suggestion}. `, h('span', { class: 'dim' }, x.reason)))) : null,
+      res.used.length ? h('div', { class: 'row-flex small dim', style: 'gap:6px' }, 'Glossary terms used:', res.used.map((t) => h('span', { class: 'chip outline plain' }, t))) : null);
+  }
+  const ask = STATE.llm ? h('button', { type: 'button', class: 'btn sm', onclick: () => guard(async () => {
+    issues.replaceChildren(h('span', { class: 'small muted' }, `Asking ${STATE.llm}… (uses foundry's GPU through Ollama)`));
+    const res = await api('/api/review', { body: { row: rowId, text: getText() } });
+    issues.replaceChildren(h('div', { class: 'callout info small', style: 'flex-direction:column;gap:4px' },
+      h('strong', {}, res.issues.length ? `${res.model}: ${res.issues.length} thing${res.issues.length === 1 ? '' : 's'} to look at` : `${res.model}: nothing to flag`),
+      res.issues.map((i) => h('span', {}, '“', h('b', {}, i.quote), '” ', i.problem)),
+      h('span', { class: 'dim' }, 'Advisory only: the model points at problems and never writes text, so anything you save is recorded as yours.')));
+    ask.disabled = false; delete ask.dataset.busy;
+  }) }, `Ask ${STATE.llm}`) : null;
+  const el = h('section', { class: 'stack', 'aria-label': 'Vocabulary' }, hits,
+    ask ? h('div', { class: 'row-flex' }, ask, h('span', { class: 'small muted' }, 'Optional review by a local model against the glossary and this row’s notes.')) : null, issues);
+  return { el, update: () => { clearTimeout(timer); timer = setTimeout(refreshHits, 300); } };
+}
+
+// --- properties ------------------------------------------------------------------------------
+
+function propertiesView(detail) {
+  const r = detail.row;
+  const vocab = vocabPanel(r.id, () => edit.value);
+  const edit = h('input', { type: 'text', id: 'pv', style: 'width:100%;font-size:14px' });
+  edit.value = detail.value;
+  const status = h('select', { 'aria-label': 'Status after replacing' }, h('option', { value: 'draft' }, 'draft'), h('option', { value: 'final' }, 'final'));
+  const save = h('button', { type: 'button', class: 'btn lg primary', onclick: () => guard(async () => {
+    await api('/api/properties/save', { body: { row: r.id, value: edit.value, status: status.value } });
+    toast(`Replaced ${r.key}`); await refresh(); route();
+  }) }, 'Replace');
+  const isFinal = r.status === 'final';
+  const accept = h('button', { type: 'button', class: 'btn lg ok', disabled: !STATE.batch || isFinal, onclick: () => guard(async () => {
+    await api('/api/accept', { body: { row: r.id } });
+    toast(`Accepted ${r.key} as final`); await refresh(); route();
+  }) }, icon(CHECK), isFinal ? 'Already final' : 'Accept as final');
+  const update = () => { save.disabled = !STATE.batch || !edit.value.trim() || edit.value.trim() === detail.value; vocab.update(); };
+  edit.addEventListener('input', update);
+  app.replaceChildren(rowHeader(detail), h('div', { class: 'content', style: 'max-width:1000px' }, batchGate(),
+    detail.gate ? h('div', { class: 'callout neutral small' }, h('span', {}, h('strong', {}, 'Shared build file. '), `${r.file} is a serialization gate for roadmap lanes: rebase this batch from main and rerun the checks just before merging.`)) : null,
+    h('div', { class: 'stack' }, h('h2', { class: 'label' }, `Current value · ${r.file}:${detail.line}`), h('div', { class: 'string' }, detail.value),
+      detail.base !== null && detail.base !== detail.value ? h('span', { class: 'small dim' }, 'On main: ', h('span', { class: 'mono' }, detail.base)) : null),
+    h('div', { class: 'stack' }, h('label', { for: 'pv', class: 'small', style: 'font-weight:600;color:var(--f2)' }, 'Replacement (one line)'), edit),
+    vocab.el,
+    h('div', { class: 'row-flex', style: 'padding-top:14px;border-top:1px solid var(--bd)' }, h('label', { class: 'row-flex small dim', style: 'gap:6px' }, 'status', status), save, accept,
+      h('span', { class: 'small dim' }, 'Only this line changes; the separator and every other entry stay as they are.'))));
   update();
 }
 
@@ -566,6 +628,7 @@ function markdownView(detail) {
   const warnings = h('div', { class: 'stack' });
   const counter = h('span', { class: 'mono tiny muted' });
   const grid = h('div', { style: 'display:grid;gap:16px;align-items:start' });
+  const mdVocab = vocabPanel(r.id, () => source.value);
 
   function jump(line) {
     const before = source.value.split('\n').slice(0, line - 1).join('\n').length;
@@ -628,7 +691,7 @@ function markdownView(detail) {
     toast(`Accepted ${r.file} as final`);
     await refresh(); route();
   }));
-  source.addEventListener('input', update);
+  source.addEventListener('input', () => { update(); mdVocab.update(); });
   source.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); if (!save.disabled) save.click(); }
     if (e.key === 'Tab' && !e.shiftKey) {
@@ -647,7 +710,7 @@ function markdownView(detail) {
     h('div', { class: 'content', style: 'padding-top:16px' }, batchGate(),
       h('div', { class: 'row-flex' }, seg, outline, h('span', { class: 'grow' }),
         h('span', { class: 'small muted' }, 'Ctrl+S saves · Tab indents')),
-      grid, warnings, changes,
+      grid, warnings, mdVocab.el, changes,
       h('div', { class: 'row-flex', style: 'padding-top:14px;border-top:1px solid var(--bd)' },
         h('label', { class: 'row-flex small dim', style: 'gap:6px' }, 'Status after saving', status), save, accept, revert,
         h('span', { class: 'small dim' }, `Saving records origin “human (${STATE.reviewer}, ${STATE.today})”; accepting keeps the text and adds “Accepted as final by ${STATE.reviewer}, ${STATE.today}.”`))));
@@ -913,14 +976,26 @@ function modelUploadSide(detail) {
     out.replaceChildren(...state.staged.checks.map((c) => h('div', { class: 'check' }, h('span', { class: `badge ${c.state}` }, c.state === 'pass' ? '✓' : c.state === 'fail' ? '×' : 'i'),
       h('div', { class: 'stack', style: 'gap:1px' }, h('b', {}, c.label), h('span', { class: 'small dim' }, c.detail)))));
     write.disabled = !state.staged.ok;
+    let model = null;
+    try { model = JSON.parse(state.text); } catch { /* reported by the checks */ }
+    if (model && detail.modelId) {
+      const canvas = h('canvas', { class: 'gl', role: 'img', 'aria-label': 'Uploaded model preview' });
+      upPreview.replaceChildren(h('span', { class: 'small', style: 'font-weight:600;color:var(--ac)' }, 'Uploaded, not written yet'), canvas);
+      modelPreview(canvas, {
+        modelId: detail.modelId, layout: 'block',
+        fetchModel: (id) => (id === slugId(detail.modelId) ? Promise.resolve(model) : api(url('/api/res', { kind: 'models', id })).catch(() => null)),
+        textureUrl: (id) => url('/api/res', { kind: 'textures', id }),
+      }).catch((e) => canvas.replaceWith(h('p', { class: 'small', style: 'color:var(--erf)' }, `Preview failed: ${e.message}`)));
+    }
   }
+  const upPreview = h('div', { class: 'stack', style: 'gap:6px' });
   const write = h('button', { type: 'button', class: 'btn lg primary', disabled: true, onclick: () => guard(async () => {
     await api('/api/upload/write', { body: { id: state.staged.id, status: state.status, origin: { kind: 'human' } } });
     toast('Wrote the model'); await refresh(); route();
   }) }, 'Write file and row');
   side.append(h('h2', {}, 'Replace the model'), file, area,
     h('label', { class: 'row-flex small dim' }, 'Status', h('select', { onchange: (e) => { state.status = e.target.value; } }, ['draft', 'final'].map((s) => h('option', { selected: s === state.status }, s)))),
-    h('button', { type: 'button', class: 'btn', disabled: !STATE.batch, onclick: check }, 'Check'), out, write);
+    h('button', { type: 'button', class: 'btn', disabled: !STATE.batch, onclick: check }, 'Check'), out, upPreview, write);
   return side;
 }
 
@@ -1025,6 +1100,17 @@ async function batchView() {
           h('span', { class: 'mono', style: 'color:var(--fg)' }, summary.branch), 'from', h('span', { class: 'mono' }, `main @ ${summary.base}`), '·',
           h('span', { class: 'mono ellipsis', title: summary.worktree }, summary.worktree))),
       h('span', { class: 'grow' }), h('span', { class: 'small muted' }, 'Never pushes to main, merges or publishes.')),
+    h('div', { class: 'row-flex', style: 'padding:12px 24px 0' },
+      h('div', { class: 'callout neutral', style: 'flex:1 1 auto;align-items:center' },
+        h('span', { class: 'grow small' }, summary.behind
+          ? [h('strong', {}, `main has ${summary.behind} new commit${summary.behind === 1 ? '' : 's'}. `), 'Update before merging; a batch touching en_us.json or texture references must be rebased and rechecked.']
+          : 'Up to date with main as last fetched. Update from main fetches first.'),
+        h('button', { type: 'button', class: 'btn sm', disabled: summary.uncommitted, title: summary.uncommitted ? 'Commit or undo changes first' : null, onclick: () => guard(async () => {
+          const res = await api('/api/batch/update', { body: {} });
+          toast(res.changed ? 'Rebased onto main; run the checks again' : 'Already up to date with main');
+          await refresh(); route();
+        }) }, 'Update from main'),
+        h('button', { type: 'button', class: 'btn sm', onclick: finishDialog }, 'Finish batch…'))),
     h('div', { class: 'row-flex', style: 'align-items:flex-start;gap:20px;padding:16px 24px 24px' },
       h('div', { class: 'stack', style: 'flex:999 1 640px;min-width:0' }, changes),
       h('div', { class: 'stack', style: 'flex:1 1 420px;max-width:540px;gap:16px' },
@@ -1037,6 +1123,28 @@ async function batchView() {
           summary.commits.length ? h('div', { class: 'stack', style: 'gap:2px' }, h('span', { class: 'eyebrow' }, `Commits on ${summary.branch}`),
             summary.commits.map((c) => h('span', { class: 'small' }, h('span', { class: 'mono muted' }, c.sha), ' ', c.subject))) : null))));
   renderChecks();
+}
+
+function finishDialog() {
+  const name = h('input', { type: 'text', id: 'discard', class: 'mono small', style: 'width:100%', placeholder: STATE.branch });
+  const dialog = h('dialog', {}, h('form', { method: 'dialog', class: 'stack', onsubmit: async (e) => {
+    e.preventDefault();
+    await guard(async () => {
+      const res = await api('/api/batch/finish', { body: { discard: name.value.trim() || null } });
+      dialog.close(); dialog.remove();
+      toast(`Finished ${res.branch}${res.pr ? ` (PR ${res.pr.state.toLowerCase()})` : ', discarded'}`);
+      await refresh(); location.hash = '#/'; route();
+    });
+  } },
+  h('h2', {}, 'Finish this batch'),
+  h('p', { class: 'small dim', style: 'margin:0' }, 'Removes the content worktree and its local branch. Once its PR is merged or closed this needs no confirmation; the PR and anything merged stay on GitHub.'),
+  h('p', { class: 'small dim', style: 'margin:0' }, 'A batch with no PR loses its changes for good: type the branch name to discard it.'),
+  h('label', { for: 'discard', class: 'small dim' }, `Branch name (${STATE.branch}), only to discard`), name,
+  h('div', { class: 'row-flex' }, h('span', { class: 'grow' }),
+    h('button', { type: 'button', class: 'btn', onclick: () => { dialog.close(); dialog.remove(); } }, 'Cancel'),
+    h('button', { type: 'submit', class: 'btn primary' }, 'Finish batch'))));
+  document.body.append(dialog);
+  dialog.showModal();
 }
 
 function defaultMessage(summary) {

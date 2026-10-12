@@ -47,6 +47,7 @@ LANG_TEXT = textwrap.dedent("""\
     }
     """)
 
+PROPS_TEXT = "# Mod metadata\nmod_id=remission\nmod_description=Hunt the Strain, a living plague.\nmod_version=0.1.0\n"
 LORE_TEXT = "# Lore outline\n\nSee the [ledger](CONTENT-PROVENANCE.md).\n\n## Premise\n\nA survey ship breaks up.\n"
 
 LEDGER_TEXT = textwrap.dedent(f"""\
@@ -77,6 +78,12 @@ LEDGER_TEXT = textwrap.dedent(f"""\
 
     | Path / ID | Type | Origin | Status | Notes |
     | --- | --- | --- | --- | --- |
+
+    ## Metadata
+
+    | Path / ID | Type | Origin | Status | Notes |
+    | --- | --- | --- | --- | --- |
+    | `mod/gradle.properties:mod_description` | metadata | ai (test) | draft | Mods list description. |
 
     ## Lore
 
@@ -114,6 +121,7 @@ class TempRepo:
         files = {
             "docs/CONTENT-PROVENANCE.md": LEDGER_TEXT,
             "docs/LORE.md": LORE_TEXT,
+            "mod/gradle.properties": PROPS_TEXT,
             LANG: LANG_TEXT,
             ".gitignore": ".local/\n",
             GEN_MODEL: '{\n  "parent": "minecraft:block/cube_all",\n  "textures": {\n    "all": "remission:block/stone"\n  }\n}',

@@ -125,6 +125,7 @@ class Viewport {
 // --- block and item models ---------------------------------------------------
 
 function norm(id) { return ds().Identifier.parse(id).toString(); }
+export { norm as slugId };
 
 async function loadModelChain(rootId, fetchModel) {
   const raw = new Map();

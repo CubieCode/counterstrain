@@ -5,6 +5,7 @@ branch made from origin/main. Nothing here pushes to main, merges or publishes.
 """
 import datetime
 import glob
+import json
 import os
 import re
 import subprocess
@@ -159,6 +160,65 @@ class Workspace:
         out = git(root, "diff", "--name-status", self.base()).stdout
         return [tuple(line.split("\t", 1)) for line in out.splitlines() if line.strip()]
 
+    def behind(self):
+        """Commits on the upstream (as last fetched) that the batch does not have."""
+        if not self.worktree:
+            return 0
+        out = git(self.worktree, "rev-list", "--count", f"HEAD..{self.upstream()}", check=False)
+        return int(out.stdout.strip() or 0) if out.returncode == 0 else 0
+
+    def update_from_main(self, fetch=True):
+        """Rebase the committed batch onto origin/main. On a conflict, abort and name the files."""
+        root = self.require_batch()
+        if self.uncommitted():
+            raise RepoError("commit (or undo) the batch's changes before updating it from main")
+        if fetch:
+            git(self.tool_root, "fetch", "--quiet", "origin", "main", check=False, timeout=60)
+        upstream = self.upstream()
+        before = git(root, "rev-parse", "HEAD").stdout.strip()
+        out = git(root, "rebase", "--quiet", upstream, check=False, timeout=120)
+        if out.returncode != 0:
+            conflicts = git(root, "diff", "--name-only", "--diff-filter=U", check=False).stdout.split()
+            git(root, "rebase", "--abort", check=False)
+            raise RepoError("main changed the same lines; nothing was changed here. Conflicting files: "
+                            + (", ".join(conflicts) or "unknown") + ". Resolve them by hand in " + root
+                            + " (git rebase " + upstream + "), or undo those rows and redo them.")
+        after = git(root, "rev-parse", "HEAD").stdout.strip()
+        return before != after
+
+    def pr(self):
+        """{url, state} of the branch's most recent PR, or None (needs gh)."""
+        branch = self.branch()
+        if not branch:
+            return None
+        try:
+            out = subprocess.run(["gh", "pr", "list", "--head", branch, "--state", "all", "--json", "url,state",
+                                  "--jq", ".[0] // empty"], cwd=self.worktree, capture_output=True, text=True,
+                                 timeout=60)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if out.returncode != 0 or not out.stdout.strip():
+            return None
+        return json.loads(out.stdout)
+
+    def finish(self, discard_name=None):
+        """Remove the content worktree and its local branch once its PR is merged or closed.
+
+        A batch with no PR (never pushed) is only removed when discard_name repeats the branch name.
+        """
+        root = self.require_batch()
+        branch = self.branch()
+        pr = self.pr()
+        if pr and pr.get("state") == "OPEN":
+            raise RepoError(f"its PR is still open ({pr.get('url')}); merge or close it first")
+        if not pr and discard_name != branch:
+            raise RepoError(f"{branch} has no PR; type its name to discard its changes for good")
+        git(self.tool_root, "worktree", "remove", "--force", root)
+        git(self.tool_root, "branch", "-D", branch, check=False)
+        self.worktree = None
+        self._write_state()
+        return branch, pr
+
     def uncommitted(self):
         """True when the content worktree has changes not yet committed to its branch."""
         if not self.worktree:
@@ -222,7 +282,9 @@ class Workspace:
             raise RepoError(f"refusing to push {branch}")
         if git(root, "status", "--porcelain").stdout.strip():
             raise RepoError("commit the batch before opening a PR")
-        git(root, "push", "--quiet", "-u", "origin", f"{branch}:{branch}", timeout=120)
+        # --force-with-lease: after "Update from main" the rebased branch replaces the pushed one, but never
+        # over commits someone else pushed to it. Only content/* branches get here.
+        git(root, "push", "--quiet", "--force-with-lease", "-u", "origin", f"{branch}:{branch}", timeout=120)
         found = subprocess.run(["gh", "pr", "list", "--head", branch, "--state", "open", "--json", "url",
                                 "--jq", ".[0].url // empty"], cwd=root, capture_output=True, text=True, timeout=60)
         existing = found.stdout.strip() if found.returncode == 0 else ""
