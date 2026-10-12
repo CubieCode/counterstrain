@@ -5,6 +5,10 @@ file = "config/ftbquests/quests/chapters/README.txt"
 hash = "06974a397709f16347b92ed77ccf9f373318d59f7b2552ad41be730b46d35bf6"
 
 [[files]]
+file = "config/remission-common.toml"
+hash = "78139358cb96c634a660297660dc428d283dbeaab1fa4d827fac785e79fd9244"
+
+[[files]]
 file = "kubejs/client_scripts/counterstrain.js"
 hash = "1b3c66cbd0e0a3cd9eea26ea61d963f43bd2f46176521f6fea88fd6e2798fbad"
 
