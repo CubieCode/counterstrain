@@ -11,6 +11,7 @@ import base64
 import json
 import mimetypes
 import os
+import re
 import secrets
 import sys
 import threading
@@ -53,7 +54,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # --- plumbing ------------------------------------------------------------
 
-    def send(self, status, body, ctype="application/json; charset=utf-8", cache=False):
+    def send(self, status, body, ctype="application/json; charset=utf-8", cache=False, attachment=None):
         if isinstance(body, (dict, list)):
             body = json.dumps(body).encode("utf-8")
         elif isinstance(body, str):
@@ -62,6 +63,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store" if not cache else "max-age=3600")
+        if attachment:
+            self.send_header("Content-Disposition", f'attachment; filename="{attachment}"')
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
@@ -157,12 +160,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(HTTPStatus.OK, data, ctype, cache=prefix == "/vendor/")
         self.fail(HTTPStatus.NOT_FOUND, "not found")
 
-    def binary(self, data, name):
+    def binary(self, data, name, download=False):
         if data is None:
             return self.fail(HTTPStatus.NOT_FOUND, "not found")
         ctype = "image/png" if name.endswith(".png") else "audio/ogg" if name.endswith(".ogg") else \
             "application/json" if name.endswith((".json", ".mcmeta")) else "application/octet-stream"
-        self.send(HTTPStatus.OK, data, ctype)
+        # Ledgered names are plain ASCII; anything else is dropped so the header stays well formed.
+        attachment = re.sub(r"[^A-Za-z0-9._-]", "_", os.path.basename(name)) if download else None
+        self.send(HTTPStatus.OK, data, ctype, attachment=attachment)
 
     # --- reads ---------------------------------------------------------------
 
@@ -183,7 +188,7 @@ class Handler(BaseHTTPRequestHandler):
         rel = q.get("path", "")
         if not self.app.editor.readable(rel):
             raise EditorError(f"`{rel}` is not a ledgered or asset path")
-        self.binary(self.app.editor.read(rel, q.get("rev", "worktree")), rel)
+        self.binary(self.app.editor.read(rel, q.get("rev", "worktree")), rel, download=q.get("download") == "1")
 
     def get_upload(self):
         self.binary(self.app.editor.upload_bytes(self.query().get("id", "")), ".bin")

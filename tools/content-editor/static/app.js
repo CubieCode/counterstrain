@@ -43,10 +43,17 @@ function icon(paths, size = 14) {
 const LOCK = ['M4 7.5h8v7H4z', 'M5.75 7.5V5a2.25 2.25 0 0 1 4.5 0v2.5'];
 const BRANCH = ['M4 2v12', 'M12 5.5c0 3-3 3-8 6', 'M12 4a1.5 1.5 0 1 0 0 .01'];
 const CHECK = ['m3 8.5 3.25 3L13 4.5'];
+const DOWNLOAD = ['M8 2.5v8', 'm4.5 7 3.5 3.5L11.5 7', 'M3 13.5h10'];
 
 function url(path, params = {}) {
   const q = new URLSearchParams({ ...params, t: TOKEN });
   return `${path}?${q}`;
+}
+// A link that saves a ledgered file as it is in the batch (or on main with rev 'base').
+function downloadLink(path, label, rev = 'worktree') {
+  const name = path.split('/').pop();
+  return h('a', { class: 'btn sm', href: url('/api/file', { path, rev, download: 1 }), download: name, title: `Download ${name}${rev === 'base' ? ' as on main' : ''}` },
+    icon(DOWNLOAD, 12), label);
 }
 async function api(path, options = {}) {
   const init = { method: options.method || 'GET', headers: { 'X-Editor-Token': TOKEN } };
@@ -754,9 +761,10 @@ async function textureView(detail) {
     const current = url('/api/file', { path: r.path });
     const panes = [h('section', { class: 'card pane', 'aria-label': 'Current' },
       h('div', { class: 'row-flex' }, h('h2', {}, 'Current'),
-        h('span', { class: 'mono small muted' }, `${detail.bytes ?? '?'} B · ${w}×${ht}${detail.marker ? ` · marker at 0,0` : ''}${detail.mcmeta ? ' · animated' : ''}`)),
+        h('span', { class: 'mono small muted' }, `${detail.bytes ?? '?'} B · ${w}×${ht}${detail.marker ? ` · marker at 0,0` : ''}${detail.mcmeta ? ' · animated' : ''}`),
+        h('span', { class: 'grow' }), detail.exists ? downloadLink(r.path, 'PNG') : null, detail.mcmeta ? downloadLink(`${r.path}.mcmeta`, '.mcmeta') : null),
       h('div', { class: 'row-flex', style: 'align-items:flex-start;gap:16px' }, zoomed(current, `Current ${r.path.split('/').pop()}, magnified`), tiles(current)),
-      r.pending ? h('span', { class: 'small dim' }, 'Changed in this batch. On main: ', h('img', { class: 'pixel', src: url('/api/file', { path: r.path, rev: 'base' }), alt: 'on main', width: 32, height: 32, style: 'vertical-align:middle' })) : null)];
+      r.pending ? h('span', { class: 'small dim' }, 'Changed in this batch. On main: ', h('img', { class: 'pixel', src: url('/api/file', { path: r.path, rev: 'base' }), alt: 'on main', width: 32, height: 32, style: 'vertical-align:middle' }), r.new ? null : [' ', downloadLink(r.path, 'main PNG', 'base')]) : null)];
     if (upload.staged) {
       const src = url('/api/upload', { id: upload.staged.id });
       panes.push(h('section', { class: 'card pane focus', 'aria-label': 'Replacement' },
@@ -972,7 +980,8 @@ async function modelView(detail) {
   app.replaceChildren(rowHeader(detail), main ? h('div', { style: 'padding:16px 24px 0' }, main) : '',
     h('div', { class: 'row-flex', style: 'align-items:flex-start;gap:20px;padding:18px 24px 24px' },
       h('div', { class: 'stack', style: 'flex:999 1 560px;min-width:0;gap:10px' }, batchGate(),
-        h('div', { class: 'row-flex' }, h('h2', { class: 'label' }, 'File'), h('span', { class: 'mono small muted' }, `${lines.length} lines`)), code,
+        h('div', { class: 'row-flex' }, h('h2', { class: 'label' }, 'File'), h('span', { class: 'mono small muted' }, `${lines.length} lines`),
+          h('span', { class: 'grow' }), detail.json ? downloadLink(r.path, 'JSON') : null, detail.json && r.pending && !r.new ? downloadLink(r.path, 'main JSON', 'base') : null), code,
         h('div', { class: 'row-flex', style: 'margin-top:10px' }, h('h2', { class: 'label' }, 'Preview'), h('span', { class: 'small muted' }, 'this JSON, rendered with the textures it names'),
           h('span', { class: 'grow' }), h('span', { class: 'small muted' }, 'Drag to orbit · scroll to zoom')), views,
         h('h2', { class: 'label', style: 'margin-top:10px' }, 'Textures it names'), textures,
@@ -1135,7 +1144,8 @@ async function soundView(detail) {
     write.disabled = !state.staged.ok;
   } });
   app.replaceChildren(rowHeader(detail), h('div', { class: 'content', style: 'max-width:900px' }, batchGate(),
-    h('h2', { class: 'label' }, 'Current'), detail.bytes ? h('audio', { controls: true, src: url('/api/file', { path: r.path }) }) : h('p', { class: 'muted' }, 'No file yet.'),
+    h('h2', { class: 'label' }, 'Current'), detail.bytes ? h('div', { class: 'row-flex' }, h('audio', { controls: true, src: url('/api/file', { path: r.path }) }), downloadLink(r.path, '.ogg'))
+      : h('p', { class: 'muted' }, 'No file yet.'),
     h('h2', { class: 'label' }, 'Replacement (.ogg Vorbis)'), file, player, out, write));
 }
 
