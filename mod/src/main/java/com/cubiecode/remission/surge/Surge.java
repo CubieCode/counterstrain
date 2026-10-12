@@ -113,6 +113,13 @@ public final class Surge {
         return hosts.removeIf(gone);
     }
 
+    /** Takes over the caught and fallen players and the hosts of {@code previous}, a surge this one replaces. */
+    void inherit(Surge previous) {
+        fallen.addAll(previous.fallen);
+        previous.participants.stream().filter(id -> !fallen.contains(id)).forEach(participants::add);
+        hosts.addAll(previous.hosts);
+    }
+
     /** A participant died: they no longer count and cannot rejoin this surge. */
     boolean fall(UUID player) {
         return participants.remove(player) && fallen.add(player);

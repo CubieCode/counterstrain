@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -110,20 +111,20 @@ public final class NidusBlock extends BaseEntityBlock {
         return NidusSettings.current().encounters() ? ENCOUNTER_EXPLOSION_RESISTANCE : super.getExplosionResistance(state, level, pos, explosion);
     }
 
-    /** A survival player's left-click (after the left-click event and claim checks): a strike. */
+    /**
+     * A survival player's left-click (after the left-click event and claim checks; adventure players need an item that
+     * may break it): a strike, subject to the strike cooldown. Fake players (machines) never strike.
+     */
     @Override
     protected void attack(BlockState state, Level level, BlockPos pos, Player player) {
         super.attack(state, level, pos, player);
         NidusSettings settings = NidusSettings.current();
         if (!(level instanceof ServerLevel serverLevel) || !(player instanceof ServerPlayer serverPlayer) || !settings.encounters()
-                || player.isSpectator() || !(level.getBlockEntity(pos) instanceof NidusBlockEntity entity)) {
+                || player.isSpectator() || player instanceof FakePlayer || !(level.getBlockEntity(pos) instanceof NidusBlockEntity entity)) {
             return;
         }
-        float amount = NidusEncounters.strikeDamage(player);
-        player.resetAttackStrengthTicker();
         ItemStack held = player.getMainHandItem();
-        float dealt = entity.damage(serverLevel, NidusDamagedEvent.Kind.STRIKE, serverPlayer, null, amount, settings,
-                serverLevel.getGameTime());
+        float dealt = entity.strike(serverLevel, serverPlayer, settings, serverLevel.getGameTime());
         if (dealt > 0 && held.isDamageableItem()) {
             held.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
         }

@@ -53,6 +53,18 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.Event;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.gametest.GameTestHolder;
+import com.cubiecode.remission.surge.SurgeController;
+import com.cubiecode.remission.surge.SurgeData;
+import com.cubiecode.remission.surge.SurgeSettings;
+import com.cubiecode.remission.world.SpreadSettings;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.PrimedTnt;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.Skeleton;
+import net.minecraft.world.entity.projectile.WitherSkull;
+import net.neoforged.fml.util.ObfuscationReflectionHelper;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
@@ -68,9 +80,9 @@ public final class NidusEncounterTests {
     private static final String BATCH = "nidi";
     private static final String PLAIN_BATCH = "nidi_plain";
     static final NidusSettings SETTINGS = new NidusSettings(100.0, 1000, 1.0, 16, 0.5, 3, 0.0, 2.0, 200, 40, 0.1,
-            List.of(75, 50, 25), 0.5, 0.25, 6.0, 15.0, 1.0);
+            List.of(75, 50, 25), 0.5, 0.25, 6.0, 15.0, 1.0, 10);
     private static final NidusSettings PLAIN = new NidusSettings(0.0, 1000, 1.0, 16, 0.5, 3, 0.0, 2.0, 200, 40, 0.1,
-            List.of(75, 50, 25), 0.5, 0.25, 6.0, 15.0, 1.0);
+            List.of(75, 50, 25), 0.5, 0.25, 6.0, 15.0, 1.0, 10);
     private static final float EPSILON = 1.0E-3F;
 
     private NidusEncounterTests() {
@@ -451,7 +463,7 @@ public final class NidusEncounterTests {
 
             // Distance scaling (off in SETTINGS): the factor per 1000 blocks from spawn, capped.
             NidusSettings far = new NidusSettings(100.0, 1000, 1.0, 16, 0.5, 3, 1.0, 0.5, 200, 40, 0.1, List.of(75, 50, 25),
-                    0.5, 0.25, 6.0, 15.0, 1.0);
+                    0.5, 0.25, 6.0, 15.0, 1.0, 10);
             helper.assertTrue(Math.abs(far.distanceMultiplier(200.0) - 1.2) < 1.0E-6, "distance multiplier at 200 blocks");
             helper.assertTrue(Math.abs(far.distanceMultiplier(1.0E6) - 1.5) < 1.0E-6, "distance multiplier cap");
             helper.assertTrue(Math.abs(SETTINGS.distanceMultiplier(1.0E6) - 1.0) < 1.0E-6, "distance scaling off by default");
@@ -532,11 +544,172 @@ public final class NidusEncounterTests {
         helper.succeed();
     }
 
+    // ---- fix round 1: fake players, strike cadence, attribution, supersession, explosions -----------------------------
+
+    /** A fake player (a machine acting as a player) neither strikes, starts a fight, damages nor breaks a nidus. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void fakePlayersNeverStrike(GameTestHelper helper) {
+        try (Fight fight = new Fight(helper)) {
+            FakePlayer machine = FakePlayerFactory.getMinecraft(fight.level);
+            machine.moveTo(fight.pos.getX() + 1.5, fight.pos.getY(), fight.pos.getZ() + 0.5);
+            machine.setGameMode(GameType.SURVIVAL);
+            machine.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.NETHERITE_SWORD));
+            long now = fight.level.getGameTime();
+            machine.gameMode.handleBlockBreakAction(fight.pos, ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
+                    Direction.UP, fight.level.getMaxBuildHeight(), 0);
+            helper.assertValueEqual(fight.nidus().strike(fight.level, machine, SETTINGS, now), 0.0F, "fake player strike");
+            for (NidusDamagedEvent.Kind kind : NidusDamagedEvent.Kind.values()) {
+                helper.assertValueEqual(fight.nidus().damage(fight.level, kind, machine, null, 1000.0F, SETTINGS, now), 0.0F,
+                        "fake player " + kind);
+            }
+            machine.gameMode.destroyBlock(fight.pos);
+            helper.assertFalse(fight.nidus().fighting(), "a fake player started a fight");
+            helper.assertBlockPresent(RemissionBlocks.NIDUS.get(), fight.rel);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Clicking every tick (20 clicks a second) for 10 seconds deals less than fully charged swings over the same time,
+     * with a sword, an axe and a bare hand: the strike cooldown ignores clicks within 10 ticks of the last strike that
+     * counted.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void strikeSpamNeverBeatsChargedSwings(GameTestHelper helper) {
+        NidusSettings tough = new NidusSettings(1.0E6, 1000, 1.0, 16, 0.5, 3, 0.0, 2.0, 200, 40, 0.1, List.of(), 0.5, 0.25,
+                6.0, 15.0, 1.0, 10);
+        try (Fight fight = new Fight(helper)) {
+            for (ItemStack held : List.of(new ItemStack(Items.IRON_SWORD), new ItemStack(Items.IRON_AXE), ItemStack.EMPTY)) {
+                ServerPlayer spammer = fight.player(1);
+                ServerPlayer charger = fight.player(-1);
+                for (ServerPlayer player : List.of(spammer, charger)) {
+                    player.setItemInHand(InteractionHand.MAIN_HAND, held.copy());
+                    held.forEachModifier(EquipmentSlot.MAINHAND, (attribute, modifier) ->
+                            player.getAttribute(attribute).addOrReplacePermanentModifier(modifier));
+                    setAttackTicker(player, 100);
+                }
+                long now = fight.level.getGameTime();
+                float spam = 0.0F;
+                float charged = 0.0F;
+                for (int t = 0; t < 200; t++) {
+                    spam += fight.nidus().strike(fight.level, spammer, tough, now + t);
+                    if (charger.getAttackStrengthScale(0.5F) >= 1.0F) {
+                        charged += fight.nidus().strike(fight.level, charger, tough, now + t);
+                    }
+                    for (ServerPlayer player : List.of(spammer, charger)) {
+                        setAttackTicker(player, attackTicker(player) + 1);
+                    }
+                }
+                helper.assertTrue(spam > 0 && spam <= charged, (held.isEmpty() ? "hand" : held.getItem().toString())
+                        + ": spam dealt " + spam + ", charged swings " + charged);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Only damage traceable to a player counts: a host creeper's blast, unlit (ownerless) TNT and a skeleton's arrow do
+     * nothing and start no fight; TNT a player lit does. Block-breaking blasts and a wither's dangerous skull leave the
+     * nidus in place.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void onlyPlayerDamageCounts(GameTestHelper helper) {
+        try (Fight fight = new Fight(helper)) {
+            ServerPlayer player = fight.player(4);
+            Vec3 above = Vec3.atCenterOf(fight.pos).add(0.0, 1.2, 0.0);
+            Creeper creeper = new Creeper(EntityType.CREEPER, fight.level);
+            creeper.setPos(above);
+            fight.level.explode(creeper, above.x, above.y, above.z, 1.5F, Level.ExplosionInteraction.MOB);
+            PrimedTnt unlit = new PrimedTnt(fight.level, above.x, above.y, above.z, null);
+            fight.level.explode(unlit, above.x, above.y, above.z, 1.5F, Level.ExplosionInteraction.TNT);
+            Skeleton skeleton = new Skeleton(EntityType.SKELETON, fight.level);
+            Arrow arrow = new Arrow(EntityType.ARROW, fight.level);
+            arrow.setOwner(skeleton);
+            arrow.setPos(Vec3.atCenterOf(fight.pos).add(2.0, 0.0, 0.0));
+            arrow.setDeltaMovement(-2.5, 0.0, 0.0);
+            BlockState state = fight.level.getBlockState(fight.pos);
+            state.onProjectileHit(fight.level, state, new BlockHitResult(Vec3.atCenterOf(fight.pos), Direction.EAST, fight.pos, false), arrow);
+            WitherSkull skull = new WitherSkull(EntityType.WITHER_SKULL, fight.level);
+            skull.setDangerous(true);
+            skull.setPos(above);
+            fight.level.explode(skull, above.x, above.y, above.z, 1.0F, Level.ExplosionInteraction.MOB);
+            helper.assertBlockPresent(RemissionBlocks.NIDUS.get(), fight.rel);
+            helper.assertFalse(fight.nidus().fighting(), "a host, unlit TNT, a skeleton or a wither skull started a fight");
+            helper.assertValueEqual(fight.nidus().damageTaken(), 0.0F, "damage without a player");
+
+            PrimedTnt lit = new PrimedTnt(fight.level, above.x, above.y, above.z, player);
+            fight.level.explode(lit, above.x, above.y, above.z, 1.5F, Level.ExplosionInteraction.TNT);
+            helper.assertBlockPresent(RemissionBlocks.NIDUS.get(), fight.rel);
+            helper.assertTrue(fight.nidus().damageTaken() > 0.0F, "TNT a player lit dealt nothing");
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A threshold surge replacing a surge from the same nidus awards nothing for the replaced one and keeps its caught
+     * players, so the fight awards {@code surge_survived} once; replacing a surge from another nidus awards its survivors.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void sameNidusSupersessionAwardsOnce(GameTestHelper helper) {
+        try (Fight fight = new Fight(helper)) {
+            ServerPlayer player = fight.player(1);
+            BlockPos other = fight.pos.east(3);
+            fight.level.setBlockAndUpdate(other, RemissionBlocks.NIDUS.get().defaultBlockState());
+            List<SurgeEndedEvent> ended = fight.listen(SurgeEndedEvent.class);
+            AdvancementHolder survived = gate(helper, player, "{\"trigger\":\"remission:surge_survived\"}");
+            SurgeController surges = new SurgeController(fight.level, new SurgeData(),
+                    () -> new SurgeSettings(false, 24000, 600, 2400, 4, 0, 50, 0, 0),
+                    () -> new SpreadSettings(400, 5, 2, 10, 40, 256, 32), new SurgeController.Players() {
+                        @Override
+                        public List<ServerPlayer> inLevel() {
+                            return List.of(player);
+                        }
+
+                        @Override
+                        public ServerPlayer byId(UUID id) {
+                            return player.getUUID().equals(id) ? player : null;
+                        }
+                    });
+            long now = fight.level.getGameTime();
+            try {
+                surges.startNow(fight.pos, 1, now);
+                surges.startNow(fight.pos, 2, now + 1);
+                helper.assertValueEqual(ended.size(), 1, "ended events after the same nidus surged again");
+                helper.assertValueEqual(ended.getFirst().getReason(), SurgeEndedEvent.Reason.SUPERSEDED, "reason");
+                helper.assertTrue(ended.getFirst().getSurvivors().isEmpty(), "survivors of a surge its own nidus replaced");
+                helper.assertFalse(done(player, survived), "surge_survived for a surge its own nidus replaced");
+                helper.assertValueEqual(surges.current().participants(), List.of(player.getUUID()), "caught players carried over");
+
+                surges.startNow(other, 1, now + 2);
+                helper.assertValueEqual(ended.get(1).getSurvivors(), List.of(player), "survivors of a surge another nidus replaced");
+                helper.assertTrue(done(player, survived), "surge_survived for a surge another nidus replaced");
+                helper.assertValueEqual(player.getStats().getValue(Stats.CUSTOM.get(RemissionStats.SURGES_SURVIVED.get())), 1,
+                        "surges survived");
+            } finally {
+                surges.stop(now + 3);
+                fight.level.removeBlock(other, false);
+            }
+        }
+        helper.succeed();
+    }
+
+    private static int attackTicker(ServerPlayer player) {
+        return ObfuscationReflectionHelper.getPrivateValue(LivingEntity.class, player, "attackStrengthTicker");
+    }
+
+    private static void setAttackTicker(ServerPlayer player, int ticks) {
+        ObfuscationReflectionHelper.setPrivateValue(LivingEntity.class, player, ticks, "attackStrengthTicker");
+    }
+
     // ---- helpers -----------------------------------------------------------------------------------------------------
 
     private static AdvancementHolder gate(GameTestHelper helper, ServerPlayer player) {
+        return gate(helper, player, "{\"trigger\":\"remission:nidus_destroyed\"}");
+    }
+
+    private static AdvancementHolder gate(GameTestHelper helper, ServerPlayer player, String json) {
         Criterion<?> criterion = Criterion.CODEC.parse(helper.getLevel().registryAccess().createSerializationContext(JsonOps.INSTANCE),
-                JsonParser.parseString("{\"trigger\":\"remission:nidus_destroyed\"}")).getOrThrow();
+                JsonParser.parseString(json)).getOrThrow();
         AdvancementHolder holder = Advancement.Builder.advancement().addCriterion("gate", criterion)
                 .build(Remission.id("test/" + UUID.randomUUID()));
         listen(player, criterion, holder);

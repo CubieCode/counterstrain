@@ -84,6 +84,7 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.DoubleValue NIDUS_LASH_RADIUS;
     public static final ModConfigSpec.DoubleValue NIDUS_LASH_VIRAL_LOAD;
     public static final ModConfigSpec.DoubleValue NIDUS_LASH_KNOCKBACK;
+    public static final ModConfigSpec.IntValue NIDUS_STRIKE_COOLDOWN_TICKS;
 
     static {
         BUILDER.push("hosts");
@@ -326,7 +327,7 @@ public final class RemissionCommonConfig {
                 .defineInRange("growthTicks", 24000, 1, 2400000);
         NIDUS_GROWTH_BONUS = BUILDER
                 .comment("Extra vitality of a full-grown nidus as a fraction of vitality (1 = twice as much), reached linearly over growthTicks.")
-                .defineInRange("growthBonus", 1.0, 0.0, 100.0);
+                .defineInRange("growthBonus", 0.5, 0.0, 100.0);
         NIDUS_RADIUS = BUILDER
                 .comment("Blocks from a nidus within which players count toward its fight and see its boss bar.")
                 .defineInRange("radius", 24, 1, 128);
@@ -371,10 +372,14 @@ public final class RemissionCommonConfig {
                 .defineInRange("lashRadius", 8.0, 0.0, 64.0);
         NIDUS_LASH_VIRAL_LOAD = BUILDER
                 .comment("Viral load a lash adds to each player it reaches (while [viral_load] is enabled).")
-                .defineInRange("lashViralLoad", 15.0, 0.0, 100.0);
+                .defineInRange("lashViralLoad", 8.0, 0.0, 100.0);
         NIDUS_LASH_KNOCKBACK = BUILDER
                 .comment("Knockback strength of a lash, away from the nidus (a strong mob hit is about 1).")
                 .defineInRange("lashKnockback", 1.5, 0.0, 10.0);
+        NIDUS_STRIKE_COOLDOWN_TICKS = BUILDER
+                .comment("Game ticks after a player's strike during which their further strikes on that nidus deal nothing, as a mob's",
+                        "invulnerability after a hit (10). Clicking faster never beats fully charged swings.")
+                .defineInRange("strikeCooldownTicks", 10, 0, 200);
         BUILDER.pop();
     }
 

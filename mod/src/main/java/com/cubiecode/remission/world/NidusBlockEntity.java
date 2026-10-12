@@ -8,6 +8,7 @@ import com.cubiecode.remission.viralload.ViralLoad;
 import com.cubiecode.remission.viralload.ViralLoadSettings;
 import com.cubiecode.remission.viralload.ViralLoadState;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,8 @@ public final class NidusBlockEntity extends BlockEntity {
     private int thresholdsPassed;
     private long lastDamaged;
     private final Map<UUID, Long> contributors = new LinkedHashMap<>();
+    /** Game time of each player's last strike that counted, for the strike cooldown; transient. */
+    private final Map<UUID, Long> lastStrikes = new HashMap<>();
 
     private final ServerBossEvent bar = new ServerBossEvent(Component.translatable("event.remission.nidus.bar"),
             BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.PROGRESS);
@@ -146,14 +149,34 @@ public final class NidusBlockEntity extends BlockEntity {
     // ---- damage ------------------------------------------------------------------------------------------------------
 
     /**
+     * A strike by {@code player} at game time {@code now}: unless the player struck this nidus within
+     * {@code strikeCooldownTicks}, it deals {@link NidusEncounters#strikeDamage} (charge scaled), resets the player's
+     * attack strength and goes through {@link #damage}. Fake players' strikes do nothing. Returns the damage dealt.
+     */
+    public float strike(ServerLevel level, ServerPlayer player, NidusSettings settings, long now) {
+        if (!settings.encounters() || !NidusEncounters.creditable(player)) {
+            return 0.0F;
+        }
+        Long last = lastStrikes.get(player.getUUID());
+        if (last != null && now - last < settings.strikeCooldownTicks() && now >= last) {
+            return 0.0F;
+        }
+        float amount = NidusEncounters.strikeDamage(player);
+        player.resetAttackStrengthTicker();
+        lastStrikes.put(player.getUUID(), now);
+        return damage(level, NidusDamagedEvent.Kind.STRIKE, player, null, amount, settings, now);
+    }
+
+    /**
      * Deals {@code amount} (after any projectile or explosion fraction) to the nidus's vitality at game time {@code now},
-     * after {@link NidusDamagedEvent}. Starts a fight if none is under way, credits {@code player}, passes thresholds and,
-     * for a strike that takes the last point, destroys the nidus. Projectile and explosion damage stops at 1 vitality.
-     * Does nothing while encounters are off. Returns the damage dealt.
+     * after {@link NidusDamagedEvent}. Only damage traceable to a player counts: with no player (or a fake player) it does
+     * nothing, so hosts, mob explosions and unattributed TNT never wear a nidus down. Starts a fight if none is under way,
+     * credits {@code player}, passes thresholds and, for a strike that takes the last point, destroys the nidus.
+     * Projectile and explosion damage stops at 1 vitality. Does nothing while encounters are off. Returns the damage dealt.
      */
     public float damage(ServerLevel level, NidusDamagedEvent.Kind kind, @Nullable ServerPlayer player, @Nullable Entity direct,
                         float amount, NidusSettings settings, long now) {
-        if (!settings.encounters() || isRemoved() || !(amount > 0)) {
+        if (!settings.encounters() || isRemoved() || !(amount > 0) || !NidusEncounters.creditable(player)) {
             return 0.0F;
         }
         NidusDamagedEvent event = NeoForge.EVENT_BUS.post(new NidusDamagedEvent(level, worldPosition, kind, player, direct, amount));
@@ -178,11 +201,9 @@ public final class NidusBlockEntity extends BlockEntity {
         }
         damage += dealt;
         lastDamaged = now;
-        if (NidusEncounters.creditable(player)) {
-            contributors.put(player.getUUID(), now);
-        }
+        contributors.put(player.getUUID(), now);
         setChanged();
-        if (damage >= max && kind == NidusDamagedEvent.Kind.STRIKE && player != null) {
+        if (damage >= max && kind == NidusDamagedEvent.Kind.STRIKE) {
             destroy(level, player, settings, now);
             return dealt;
         }
@@ -316,9 +337,13 @@ public final class NidusBlockEntity extends BlockEntity {
                 setChanged();
             }
         }
+        if (now % CHECK_TICKS == 0) {
+            lastStrikes.values().removeIf(time -> now - time >= settings.strikeCooldownTicks() || now < time);
+        }
+        // While it regenerates, the bar moves only every BAR_TICKS or when it has moved by 1% since last sent.
         if (now % BAR_TICKS == 0) {
             updateBar(level, settings);
-        } else {
+        } else if (Math.abs(progress(settings) - bar.getProgress()) >= 0.01F) {
             bar.setProgress(progress(settings));
         }
         updateDamageState(level, settings);

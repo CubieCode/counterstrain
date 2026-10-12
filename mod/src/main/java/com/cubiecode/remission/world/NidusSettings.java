@@ -1,8 +1,12 @@
 package com.cubiecode.remission.world;
 
+import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.config.RemissionCommonConfig;
 import java.util.Comparator;
 import java.util.List;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -26,13 +30,19 @@ import org.jetbrains.annotations.VisibleForTesting;
  * @param lashRadius             blocks a lash reaches
  * @param lashViralLoad          viral load a lash adds
  * @param lashKnockback          knockback strength of a lash
+ * @param strikeCooldownTicks    game ticks after a player's strike during which their further strikes deal nothing
  */
+@EventBusSubscriber(modid = Remission.MOD_ID)
 public record NidusSettings(double vitality, int growthTicks, double growthBonus, int radius, double playerFactor,
                             int playerCap, double distanceFactor, double distanceMaxBonus, int contributorWindowTicks,
                             int regenDelayTicks, double regenRate, List<Integer> thresholds, double projectileFraction,
-                            double explosionFraction, double lashRadius, double lashViralLoad, double lashKnockback) {
+                            double explosionFraction, double lashRadius, double lashViralLoad, double lashKnockback,
+                            int strikeCooldownTicks) {
     @Nullable
     private static volatile NidusSettings override;
+    /** The config settings, built once per config load or reload. */
+    @Nullable
+    private static volatile NidusSettings cached;
 
     public NidusSettings {
         thresholds = thresholds.stream().distinct().sorted(Comparator.reverseOrder()).toList();
@@ -56,13 +66,29 @@ public record NidusSettings(double vitality, int growthTicks, double growthBonus
                 RemissionCommonConfig.NIDUS_EXPLOSION_FRACTION.get(),
                 RemissionCommonConfig.NIDUS_LASH_RADIUS.get(),
                 RemissionCommonConfig.NIDUS_LASH_VIRAL_LOAD.get(),
-                RemissionCommonConfig.NIDUS_LASH_KNOCKBACK.get());
+                RemissionCommonConfig.NIDUS_LASH_KNOCKBACK.get(),
+                RemissionCommonConfig.NIDUS_STRIKE_COOLDOWN_TICKS.get());
     }
 
-    /** The settings in force: the config, unless a gametest replaced them. */
+    /** The settings in force: the config (cached until it next loads or reloads), unless a gametest replaced them. */
     public static NidusSettings current() {
         NidusSettings replaced = override;
-        return replaced != null ? replaced : fromConfig();
+        if (replaced != null) {
+            return replaced;
+        }
+        NidusSettings settings = cached;
+        if (settings == null) {
+            settings = fromConfig();
+            cached = settings;
+        }
+        return settings;
+    }
+
+    @SubscribeEvent
+    static void onConfig(ModConfigEvent event) {
+        if (event.getConfig().getSpec() == RemissionCommonConfig.SPEC) {
+            cached = null;
+        }
     }
 
     /** Replaces the config settings for gametests (null restores the config). Affects every level. */
