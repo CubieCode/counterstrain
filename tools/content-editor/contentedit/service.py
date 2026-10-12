@@ -320,6 +320,8 @@ class Editor:
             row = ledger.require(row_id)
             if kind_of(row) != "lang":
                 raise EditorError(f"`{row_id}` is not a lang row")
+            if row.status == "final":
+                raise EditorError(f"`{row.key}` is already final")
             self._target(row.file, ledger)
             ledger.set_fields(row, status="final", notes=append_note(row.notes, note))
             self._save_ledger(ledger)
@@ -327,6 +329,8 @@ class Editor:
         owner = ledger.owner(file, key)
         if owner is None:
             raise EditorError(f"no ledger row covers `{file}:{key}`")
+        if owner.status == "final":
+            raise EditorError(f"`{key}` is already final (row `{owner.key}`)")
         self._target(file, ledger)
         all_keys = lang.LangFile.load(self.path(file)).keys()
         if key not in all_keys:

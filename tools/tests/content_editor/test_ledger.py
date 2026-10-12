@@ -63,6 +63,8 @@ class LedgerTest(unittest.TestCase):
     def test_append_note(self):
         self.assertEqual(append_note("Block name", "Accepted as final by T, 2026-10-12."),
                          "Block name. Accepted as final by T, 2026-10-12.")
+        once = append_note("Block name", "Accepted as final by T, 2026-10-12.")
+        self.assertEqual(append_note(once, "Accepted as final by T, 2026-10-12."), once)
 
 
 if __name__ == "__main__":

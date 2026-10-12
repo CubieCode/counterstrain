@@ -64,8 +64,23 @@ function toast(message, error = false) {
   document.getElementById('toast').append(el);
   setTimeout(() => el.remove(), error ? 9000 : 4000);
 }
+// Runs an action; the button that started it stays disabled until the page re-renders,
+// or comes back on failure, so a double click cannot send the request twice.
 async function guard(fn) {
-  try { return await fn(); } catch (e) { toast(e.message, true); throw e; }
+  const ev = window.event;
+  const btn = ev && ev.target && ev.target.closest ? ev.target.closest('button') : null;
+  if (btn) {
+    if (btn.dataset.busy) return undefined;
+    btn.dataset.busy = '1';
+    btn.disabled = true;
+  }
+  try {
+    return await fn();
+  } catch (e) {
+    if (btn) { delete btn.dataset.busy; btn.disabled = false; }
+    toast(e.message, true);
+    throw e;
+  }
 }
 function store(key, fallback) {
   try { const v = localStorage.getItem(`ce.${key}`); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
@@ -490,12 +505,13 @@ async function langView(detail, params) {
     location.hash = rowHref(owner ? owner.id : r.id, { key: k.key });
     route();
   }));
-  const accept = h('button', { type: 'button', class: 'btn lg ok', disabled: !STATE.batch, onclick: () => guard(async () => {
+  const isFinal = (k.ownerStatus || r.status) === 'final';
+  const accept = h('button', { type: 'button', class: 'btn lg ok', disabled: !STATE.batch || isFinal, onclick: () => guard(async () => {
     await api('/api/lang/accept', { body: { file: r.file, key: k.key } });
     toast(`Accepted ${k.key} as final`);
     await refresh(); route();
-  }) }, icon(CHECK), 'Accept as final');
-  const acceptAll = r.wildcard ? h('button', { type: 'button', class: 'btn', disabled: !STATE.batch, onclick: () => guard(async () => {
+  }) }, icon(CHECK), isFinal ? 'Already final' : 'Accept as final');
+  const acceptAll = r.wildcard ? h('button', { type: 'button', class: 'btn', disabled: !STATE.batch || r.status === 'final', onclick: () => guard(async () => {
     await api('/api/lang/accept', { body: { row: r.id } });
     toast(`Accepted every key of ${r.key} as final`);
     await refresh(); route();

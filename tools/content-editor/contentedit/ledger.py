@@ -196,6 +196,8 @@ class Ledger:
 def append_note(notes, sentence):
     notes = notes.rstrip()
     sentence = sentence.strip()
+    if sentence and sentence in notes:
+        return notes
     if notes and not notes.endswith((".", "!", "?")):
         notes += "."
     return f"{notes} {sentence}".strip()

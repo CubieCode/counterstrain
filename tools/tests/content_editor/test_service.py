@@ -100,6 +100,12 @@ class ServiceTest(unittest.TestCase):
         self.editor.lang_accept(LANG, row_id=f"{LANG}:commands.remission.surge.*")
         whole = self.row(f"{LANG}:commands.remission.surge.*")
         self.assertEqual(whole.status, "final")
+        # Accepting again is refused and never repeats the note.
+        with self.assertRaises(EditorError):
+            self.editor.lang_accept(LANG, key="event.remission.surge.warning.title")
+        with self.assertRaises(EditorError):
+            self.editor.lang_accept(LANG, row_id=f"{LANG}:commands.remission.surge.*")
+        self.assertEqual(self.row(f"{LANG}:commands.remission.surge.*").notes.count("Accepted as final"), 1)
         self.assertIn("Surge from %s", self.read(LANG))  # text untouched
 
     # --- uploads -------------------------------------------------------------
