@@ -263,8 +263,8 @@ class Handler(BaseHTTPRequestHandler):
         title = (b.get("title") or "").strip()
         if not title:
             raise EditorError("the PR needs a title")
-        url = self.app.editor.workspace.open_pr(title, self.app.editor.pr_body(), draft=b.get("draft", True))
-        return {"url": url}
+        url, updated = self.app.editor.workspace.open_pr(title, self.app.editor.pr_body(), draft=b.get("draft", True))
+        return {"url": url, "updated": updated}
 
 
 def main(argv):

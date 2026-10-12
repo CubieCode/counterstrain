@@ -876,7 +876,7 @@ async function batchView() {
     const committed = summary.commits.length > 0;
     commitBtn.disabled = !dirty || !ok || !STATE.checked;
     prBtn.disabled = dirty || !committed;
-    if (!dirty && committed) hint.textContent = 'Everything is committed. Open PR pushes this branch (never main) and runs gh pr create --draft --body-file.';
+    if (!dirty && committed) hint.textContent = 'Everything is committed. Open PR pushes this branch (never main) and opens a draft PR, or updates the branch\'s open PR.';
     else if (!dirty) hint.textContent = 'Nothing to commit yet.';
     else if (!lastChecks) hint.textContent = committed ? 'New changes since the last commit: run the checks to commit them.' : 'Run the checks to commit.';
     else hint.textContent = ok ? 'Checks pass: commit, then open the PR.' : 'Fix the failing check and run the checks again.';
@@ -902,7 +902,7 @@ async function batchView() {
     prBtn.disabled = true;
     try {
       const res = await api('/api/batch/pr', { body: { title: message.value, draft: draft.checked } });
-      prResult.replaceChildren(h('span', {}, 'Opened ', h('a', { href: res.url, target: '_blank', rel: 'noreferrer' }, res.url)));
+      prResult.replaceChildren(h('span', {}, res.updated ? 'Pushed to the open PR ' : 'Opened ', h('a', { href: res.url, target: '_blank', rel: 'noreferrer' }, res.url)));
     } finally { prBtn.disabled = false; }
   }));
   const prResult = h('div', { class: 'small' });

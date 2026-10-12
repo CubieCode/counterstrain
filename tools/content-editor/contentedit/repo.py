@@ -212,7 +212,10 @@ class Workspace:
         return git(root, "rev-parse", "--short", "HEAD").stdout.strip()
 
     def open_pr(self, title, body, draft=True):
-        """Push the content branch and open a PR against main. Never pushes main."""
+        """Push the content branch and open a PR against main, or update the branch's open PR.
+
+        Returns (url, updated). Never pushes main, merges or publishes.
+        """
         root = self.require_batch()
         branch = self.branch()
         if branch in ("main", "master") or not branch.startswith(BRANCH_PREFIX):
@@ -220,19 +223,27 @@ class Workspace:
         if git(root, "status", "--porcelain").stdout.strip():
             raise RepoError("commit the batch before opening a PR")
         git(root, "push", "--quiet", "-u", "origin", f"{branch}:{branch}", timeout=120)
+        found = subprocess.run(["gh", "pr", "list", "--head", branch, "--state", "open", "--json", "url",
+                                "--jq", ".[0].url // empty"], cwd=root, capture_output=True, text=True, timeout=60)
+        existing = found.stdout.strip() if found.returncode == 0 else ""
         with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as f:
             f.write(body)
             body_file = f.name
         try:
-            cmd = ["gh", "pr", "create", "--base", "main", "--head", branch, "--title", title, "--body-file", body_file]
-            if draft:
-                cmd.append("--draft")
+            if existing:
+                # The push already added the new commits; refresh the body so it lists every changed row.
+                cmd = ["gh", "pr", "edit", existing, "--body-file", body_file]
+            else:
+                cmd = ["gh", "pr", "create", "--base", "main", "--head", branch, "--title", title,
+                       "--body-file", body_file]
+                if draft:
+                    cmd.append("--draft")
             out = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=120)
         finally:
             os.unlink(body_file)
         if out.returncode != 0:
-            raise RepoError(f"gh pr create: {out.stderr.strip()}")
-        return out.stdout.strip().splitlines()[-1]
+            raise RepoError(f"gh pr {'edit' if existing else 'create'}: {out.stderr.strip()}")
+        return (existing, True) if existing else (out.stdout.strip().splitlines()[-1], False)
 
 
 class Resolver:
