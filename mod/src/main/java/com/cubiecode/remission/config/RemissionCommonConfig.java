@@ -20,6 +20,15 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.BooleanValue INFECTION_FESTERING_LAND;
     public static final ModConfigSpec.IntValue INFECTION_FESTERING_LAND_MIN_STAGE;
     public static final ModConfigSpec.IntValue INFECTION_FESTERING_LAND_EXPOSURE_TICKS;
+    public static final ModConfigSpec.BooleanValue SURGES_SCHEDULED;
+    public static final ModConfigSpec.IntValue SURGE_INTERVAL_TICKS;
+    public static final ModConfigSpec.IntValue SURGE_WARNING_TICKS;
+    public static final ModConfigSpec.IntValue SURGE_DURATION_TICKS;
+    public static final ModConfigSpec.IntValue SURGE_SPREAD_MULTIPLIER;
+    public static final ModConfigSpec.IntValue SURGE_HOSTS_PER_WAVE;
+    public static final ModConfigSpec.IntValue SURGE_HOST_LEVEL;
+    public static final ModConfigSpec.IntValue SURGE_MAX_HOSTS;
+    public static final ModConfigSpec.IntValue SURGE_CLOUDS;
 
     static {
         BUILDER.push("hosts");
@@ -79,6 +88,38 @@ public final class RemissionCommonConfig {
                 .comment("Game ticks of exposure after which a mob becomes a host. Exposure falls by the same amount",
                         "per tick outside such land, and is checked once a second in budgeted batches.")
                 .defineInRange("festeringLandExposureTicks", 6000, 20, 1728000);
+        BUILDER.pop();
+
+        BUILDER.push("surges");
+        SURGES_SCHEDULED = BUILDER
+                .comment("Whether surges start on their own. Commands and the API start them either way.")
+                .define("scheduled", true);
+        SURGE_INTERVAL_TICKS = BUILDER
+                .comment("Game ticks from the end of one surge until the next comes due in the same level.",
+                        "A due surge starts once a player (not a spectator) is within a nidus's reach.")
+                .defineInRange("intervalTicks", 24000, 1200, 2400000);
+        SURGE_WARNING_TICKS = BUILDER
+                .comment("Game ticks between a surge's warning and its start.")
+                .defineInRange("warningTicks", 600, 0, 12000);
+        SURGE_DURATION_TICKS = BUILDER
+                .comment("Game ticks a surge lasts once it has started.")
+                .defineInRange("durationTicks", 2400, 200, 72000);
+        SURGE_SPREAD_MULTIPLIER = BUILDER
+                .comment("During a surge, spread from its nidus gains this many times its usual step per pass, times the intensity.")
+                .defineInRange("spreadMultiplier", 4, 1, 100);
+        SURGE_HOSTS_PER_WAVE = BUILDER
+                .comment("Hosts a surge tries to spawn near each player inside its reach every 10 seconds, times the intensity.",
+                        "None spawn on Peaceful.")
+                .defineInRange("hostsPerWave", 2, 0, 32);
+        SURGE_HOST_LEVEL = BUILDER
+                .comment("Strain level of the hosts a surge spawns.")
+                .defineInRange("hostLevel", 50, 1, CorruptionState.MAX_LEVEL);
+        SURGE_MAX_HOSTS = BUILDER
+                .comment("Most hosts one surge keeps alive at once; waves spawn none while it has this many.")
+                .defineInRange("maxHosts", 16, 0, 256);
+        SURGE_CLOUDS = BUILDER
+                .comment("Miasma clouds a surge releases above festering land when it starts, times the intensity (at most 32).")
+                .defineInRange("clouds", 3, 0, 32);
         BUILDER.pop();
     }
 

@@ -21,5 +21,6 @@ public final class RemissionRegistries {
         RemissionTriggers.TRIGGER_TYPES.register(modBus);
         RemissionDataComponents.DATA_COMPONENTS.register(modBus);
         RemissionStats.CUSTOM_STATS.register(modBus);
+        RemissionEntityTypes.ENTITY_TYPES.register(modBus);
     }
 }

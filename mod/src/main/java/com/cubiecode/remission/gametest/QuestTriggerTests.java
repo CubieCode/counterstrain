@@ -125,7 +125,7 @@ public final class QuestTriggerTests {
 
     @GameTest(template = "empty")
     public static void statsAreRegistered(GameTestHelper helper) {
-        for (String name : new String[] {"nidi_destroyed", "hosts_scanned", "blocks_scanned"}) {
+        for (String name : new String[] {"nidi_destroyed", "hosts_scanned", "blocks_scanned", "surges_survived"}) {
             ResourceLocation id = Remission.id(name);
             helper.assertTrue(BuiltInRegistries.CUSTOM_STAT.containsKey(id), "stat not registered: " + id);
             // Stat types key stats by identity: the registry's own id instance is the one that has the stat.

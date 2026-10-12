@@ -20,6 +20,8 @@ import net.minecraft.world.level.ChunkPos;
  * offset first), when the parent has reached the threshold; an unloaded parent is assumed to be at its own target. A
  * pass stops after {@code chunkBudget} visits and resumes on the next tick, so the same state and the same ticks always
  * give the same levels. A chunk still queued for catch-up is skipped (it counts as a visit) until it is caught up.
+ * While a surge from a nidus runs, its step (and its own chunk's growth) is multiplied by {@link Land#surgeFactor}
+ * before the spread attempt, so cancelled and scaled attempts still apply on top.
  *
  * <p>Catch-up: a chunk that loads again is queued; up to {@code catchUpBudget} queued chunks per tick are moved toward
  * each nidus target by the passes they missed since {@code max(last change, nidus indexed)}, in closed form. The land
@@ -51,6 +53,14 @@ public final class SpreadEngine {
 
         /** Checks a nidus whose chunk is loaded still exists, dropping it from the index if not. */
         boolean validate(Nidus nidus);
+
+        /**
+         * Factor on the live-pass steps from {@code nidus} now, applied before the spread attempt (1 normally; a surge
+         * from that nidus raises it). Catch-up never applies it.
+         */
+        default int surgeFactor(Nidus nidus) {
+            return 1;
+        }
     }
 
     /**
@@ -323,17 +333,18 @@ public final class SpreadEngine {
         if (state.level() >= target) {
             return;
         }
+        int factor = land.surgeFactor(nidus);
         int amount;
         if (distance == 0) {
-            amount = Math.min(pass.nidusGrowth(), target - state.level());
+            amount = Math.min(surged(pass.nidusGrowth(), factor), target - state.level());
         } else {
             long parent = parent(origin, dx, dz);
             int parentLevel = land.isLoaded(parent) ? land.get(parent).level() : pass.target(distance - 1);
             if (parentLevel < pass.spreadThreshold()) {
                 return;
             }
-            amount = clamp(land.spreadAttempt(parent, chunk, Math.min(pass.spreadStep(), target - state.level()), now,
-                    false), target - state.level());
+            amount = clamp(land.spreadAttempt(parent, chunk, Math.min(surged(pass.spreadStep(), factor),
+                    target - state.level()), now, false), target - state.level());
         }
         if (amount > 0) {
             land.set(chunk, new ChunkCorruption(state.level() + amount, now));
@@ -362,6 +373,10 @@ public final class SpreadEngine {
         list.sort(Comparator.<int[]>comparingInt(o -> Math.abs(o[0]) + Math.abs(o[1]))
                 .thenComparingInt(o -> o[0]).thenComparingInt(o -> o[1]));
         return list.toArray(new int[0][]);
+    }
+
+    private static int surged(int rate, int factor) {
+        return (int) Math.min(Integer.MAX_VALUE, (long) rate * factor);
     }
 
     private static int clamp(int amount, int max) {

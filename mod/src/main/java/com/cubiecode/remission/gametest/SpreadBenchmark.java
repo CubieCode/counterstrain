@@ -5,6 +5,11 @@ import com.cubiecode.remission.api.ChunkStageChangedEvent;
 import com.cubiecode.remission.api.StrainSpreadAttemptEvent;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionBlocks;
+import com.cubiecode.remission.surge.MiasmaCloud;
+import com.cubiecode.remission.surge.SurgeController;
+import com.cubiecode.remission.surge.SurgeData;
+import com.cubiecode.remission.surge.SurgeSettings;
+import com.cubiecode.remission.surge.Surges;
 import com.cubiecode.remission.world.ChunkCorruption;
 import com.cubiecode.remission.world.FesteringLand;
 import com.cubiecode.remission.world.SpreadEngine;
@@ -16,15 +21,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 
@@ -33,6 +44,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
  * {@code REMISSION_SPREAD_BENCHMARK} environment variable is set, so normal gametest runs skip it. It loads a square of
  * chunks away from the test area, places real nidi, drives a separate engine over them tick by tick with the default
  * config, and logs the time each engine tick took (the mspt it adds), also writing {@code spread-benchmark-<case>.txt}.
+ * The {@code surge} case (P4.3) runs the default case with a surge from one nidus, then a surge controller with four
+ * players in the surge's area for a whole surge, waves and clouds included.
  */
 @GameTestHolder(Remission.MOD_ID)
 public final class SpreadBenchmark {
@@ -54,7 +67,9 @@ public final class SpreadBenchmark {
                 new TestFunction("spreadBenchmark", "remission.spreadbenchmark_stress", "remission:empty", 200, 0L, true,
                         helper -> measure(helper, "stress", 8, 20, 128, false)),
                 new TestFunction("spreadBenchmark", "remission.spreadbenchmark_listeners", "remission:empty", 200, 0L, true,
-                        helper -> measure(helper, "listeners", 8, 20, 192, true)));
+                        helper -> measure(helper, "listeners", 8, 20, 192, true)),
+                new TestFunction("spreadBenchmark", "remission.spreadbenchmark_surge", "remission:empty", 200, 0L, true,
+                        helper -> measureSurge(helper, 256)));
     }
 
     private static void measure(GameTestHelper helper, String name, int nidiPerSide, int intervalTicks, int offset,
@@ -180,5 +195,120 @@ public final class SpreadBenchmark {
                 name, nanos.length, working, total / nanos.length / 1e3, working == 0 ? 0 : workingNanos / (double) working / 1e3,
                 sorted[(int) Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99))] / 1e3, sorted[sorted.length - 1] / 1e3,
                 interval > 0 ? String.format(", %.1f us per interval", total / (nanos.length / (double) interval) / 1e3) : "");
+    }
+
+    /**
+     * Default spread with a surge running from the first nidus (through the level's own controller, so the engine reads
+     * its factor as in play), then one surge of a separate controller over the same land with four players in its area.
+     */
+    private static void measureSurge(GameTestHelper helper, int offset) {
+        ServerLevel level = helper.getLevel();
+        ChunkPos origin = new ChunkPos(helper.absolutePos(BlockPos.ZERO));
+        int baseX = origin.x + offset;
+        int baseZ = origin.z + offset;
+        List<String> out = new ArrayList<>();
+        out.add("== surge");
+        List<LevelChunk> chunks = new ArrayList<>();
+        for (int x = 0; x < SIDE; x++) {
+            for (int z = 0; z < SIDE; z++) {
+                level.setChunkForced(baseX + x, baseZ + z, true);
+                chunks.add(level.getChunk(baseX + x, baseZ + z));
+            }
+        }
+        List<BlockPos> nidi = new ArrayList<>();
+        int spacing = SIDE / 4;
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                int chunkX = baseX + spacing / 2 + i * spacing;
+                int chunkZ = baseZ + spacing / 2 + j * spacing;
+                BlockPos pos = new BlockPos(chunkX * 16 + 8, level.getHeight(Heightmap.Types.MOTION_BLOCKING,
+                        chunkX * 16 + 8, chunkZ * 16 + 8), chunkZ * 16 + 8);
+                level.setBlockAndUpdate(pos, RemissionBlocks.NIDUS.get().defaultBlockState());
+                nidi.add(pos);
+            }
+        }
+        BlockPos surging = nidi.get(5);
+        SpreadSettings settings = SpreadSettings.fromConfig();
+        SurgeController surges = Surges.controller(level);
+        long base = level.getGameTime() + 2_000_000L;
+        try {
+            // Live spread from clean land with the surge running, against the default case's figures.
+            surges.stop(base);
+            surges.start(surging, 1, base);
+            surges.tick(surges.current().startTime());
+            SpreadEngine engine = FesteringLand.newEngine(level, () -> settings);
+            long ticks = 60L * settings.intervalTicks();
+            long[] nanos = new long[(int) ticks];
+            int working = 0;
+            long workingNanos = 0;
+            for (int t = 0; t < ticks; t++) {
+                long start = System.nanoTime();
+                SpreadEngine.TickWork work = engine.tick(base + t);
+                nanos[t] = System.nanoTime() - start;
+                if (work.visits() > 0) {
+                    working++;
+                    workingNanos += nanos[t];
+                }
+            }
+            out.add(summary("live spread with a surge from one of 16 nidi, 60 intervals", nanos, working, workingNanos,
+                    settings.intervalTicks()));
+            surges.stop(base + ticks);
+
+            // A whole surge of a separate controller: festering land, four players around the surging nidus.
+            chunks.forEach(chunk -> chunk.setData(RemissionAttachments.CHUNK_CORRUPTION, new ChunkCorruption(30, 0L)));
+            List<ServerPlayer> players = new ArrayList<>();
+            for (int[] at : new int[][] {{-40, 0}, {40, 0}, {0, -40}, {0, 40}}) {
+                int x = surging.getX() + at[0];
+                int z = surging.getZ() + at[1];
+                players.add(SurgeTests.player(helper, new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z), z)));
+            }
+            SurgeSettings config = SurgeSettings.fromConfig();
+            SurgeController measured = new SurgeController(level, new SurgeData(), () -> config, () -> settings,
+                    new SurgeController.Players() {
+                        @Override
+                        public List<ServerPlayer> inLevel() {
+                            return players;
+                        }
+
+                        @Override
+                        public ServerPlayer byId(UUID id) {
+                            return players.stream().filter(p -> p.getUUID().equals(id)).findFirst().orElse(null);
+                        }
+                    });
+            long now = base + 10_000_000L;
+            measured.start(surging, 1, now);
+            long end = measured.current().endTime();
+            List<Long> surgeNanos = new ArrayList<>();
+            while (measured.current() != null && now <= end + 1) {
+                long start = System.nanoTime();
+                measured.tick(now++);
+                surgeNanos.add(System.nanoTime() - start);
+            }
+            long[] surgeArray = surgeNanos.stream().mapToLong(Long::longValue).toArray();
+            AABB area = new AABB(chunks.getFirst().getPos().getMinBlockX(), level.getMinBuildHeight(),
+                    chunks.getFirst().getPos().getMinBlockZ(), chunks.getLast().getPos().getMaxBlockX() + 1,
+                    level.getMaxBuildHeight(), chunks.getLast().getPos().getMaxBlockZ() + 1);
+            List<Entity> made = level.getEntities((Entity) null, area, e -> e instanceof Mob || e instanceof MiasmaCloud);
+            out.add(String.format("%s; %d hosts and clouds in the land afterwards", summary(
+                    "surge controller, warning and whole surge with 4 players in the area (" + config + ")",
+                    surgeArray, surgeArray.length, Arrays.stream(surgeArray).sum(), 0), made.size()));
+            made.forEach(Entity::discard);
+        } finally {
+            surges.stop(level.getGameTime());
+            for (BlockPos pos : nidi) {
+                level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+            }
+            chunks.forEach(chunk -> {
+                chunk.removeData(RemissionAttachments.CHUNK_CORRUPTION);
+                level.setChunkForced(chunk.getPos().x, chunk.getPos().z, false);
+            });
+        }
+        out.forEach(line -> Remission.LOGGER.info("[spread benchmark] {}", line));
+        try {
+            Files.write(Path.of("spread-benchmark-surge.txt"), out);
+        } catch (IOException e) {
+            Remission.LOGGER.warn("Could not write spread-benchmark-surge.txt", e);
+        }
+        helper.succeed();
     }
 }

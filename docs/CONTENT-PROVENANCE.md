@@ -40,6 +40,7 @@ Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in t
 | `mod/src/main/resources/assets/remission/textures/block/festered_stone.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festered stone (P4.2): vanilla-grey stone with violet cracks and green flecks; currently reads as stripes when tiled. The art pass should make the cracks irregular across tiles. |
 | `mod/src/main/resources/assets/remission/textures/block/festered_deepslate.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festered deepslate side (P4.6): dark slate grey in horizontal bands with bruise-violet seams and blotches and a few yellow-green flecks. Must read as violet festering, never as sculk (no teal or cyan); the art pass should keep deepslate's layered feel. |
 | `mod/src/main/resources/assets/remission/textures/block/festered_deepslate_top.png` | texture | ai (Claude Opus 5.5, 2026-10-12; seeded pixel script, not kept) | placeholder | Festered deepslate end (P4.6): the side palette in rough concentric bands with wandering violet seams. |
+| `mod/src/main/resources/assets/remission/textures/entity/miasma_cloud.png` | texture | ai (Claude Opus 5.5, 2026-10-12; value-noise script, not kept) | placeholder | Miasma cloud puff (P4.3), 32×32 with a 4×4 marker: a soft round blot of murky violet with sickly-green patches, alpha falling to nothing at the edge. The cloud renderer draws 18 camera-facing copies at fixed offsets and rotations, so the art should read as one drifting cloud of the same miasma as the fluid, not as separate sprites; static (no animation) so harness scenes stay byte-identical. The marker shows as small magenta squares on every puff. |
 
 ## Models
 
@@ -138,6 +139,13 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.festered_stone` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festered stone block and item name (P4.2); glossary term. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.festered_deepslate` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Festered deepslate block and item name (P4.6); glossary term. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:biome.remission.fester` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Name of the `remission:fester` biome (P4.2), shown in F3 and by biome-aware mods; glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:entity.remission.miasma_cloud` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Entity name of the miasma cloud (P4.3), shown by debug screens, `/summon` and entity-aware mods; glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:stat.remission.surges_survived` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Statistics screen name for `remission:surges_survived` (P4.3). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.warning.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Surge warning title ("The Strain stirs") and subtitle ("A surge is coming"), shown to players in the surge's area when the warning begins (P4.3). Should feel ominous and short; titles are large on screen. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.bar.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Surge boss bar names: "Surge incoming" during the warning and "Surge" while it runs (P4.3). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.started` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Action bar line when a surge starts: hosts are rising (P4.3). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.ended` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Action bar line when a surge ends (P4.3). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.surge.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | `/remission surge start`, `stop` and `status` feedback and errors (P4.3): origin, intensity and ticks until start or end; a surge already running, no nidus reaching the position, no surge to stop. |
 
 ## Mod and pack metadata
 

@@ -1,16 +1,21 @@
 package com.cubiecode.remission.harness;
 
+import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionItems;
 import com.cubiecode.remission.research.Bestiary;
 import com.cubiecode.remission.research.Scanning;
+import com.cubiecode.remission.surge.SurgeController;
+import com.cubiecode.remission.surge.SurgeHosts;
 import com.cubiecode.remission.world.ChunkCorruption;
 import com.cubiecode.remission.world.FesteringStages;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -21,6 +26,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -36,11 +42,14 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * in the main hand, cooldown cleared) through the same server code a real break or scanner use runs, so stats,
  * advancement triggers and quest tasks see a player's action. {@code harness fester <from> <to> <level>} sets the
  * Strain level of the chunks a box covers and festers them at once; {@code harness resend <from> <to>} sends the chunks a
- * box covers to clients again (P4.2).
+ * box covers to clients again (P4.2). {@code harness surge hosts <centre> <count> <radius>} and {@code harness surge
+ * clouds <centre> <count>} spawn surge hosts and release miasma clouds through the surge code with a fixed seed (P4.3).
  */
 final class HarnessCommands {
     private static final SimpleCommandExceptionType NO_HOSTS =
             new SimpleCommandExceptionType(Component.literal("None of the targets is a host"));
+    private static final SimpleCommandExceptionType NO_SPOT =
+            new SimpleCommandExceptionType(Component.literal("No festering spot nearby"));
 
     private HarnessCommands() {
     }
@@ -92,6 +101,19 @@ final class HarnessCommands {
                                 .executes(context -> resend(context.getSource().getLevel(),
                                         BlockPosArgument.getBlockPos(context, "from"),
                                         BlockPosArgument.getBlockPos(context, "to"))))))
+                .then(Commands.literal("surge")
+                        .then(Commands.literal("hosts").then(Commands.argument("centre", BlockPosArgument.blockPos())
+                                .then(Commands.argument("count", IntegerArgumentType.integer(1, 64))
+                                        .then(Commands.argument("radius", IntegerArgumentType.integer(1, 32))
+                                                .executes(context -> surgeHosts(context.getSource().getLevel(),
+                                                        BlockPosArgument.getBlockPos(context, "centre"),
+                                                        IntegerArgumentType.getInteger(context, "count"),
+                                                        IntegerArgumentType.getInteger(context, "radius")))))))
+                        .then(Commands.literal("clouds").then(Commands.argument("centre", BlockPosArgument.blockPos())
+                                .then(Commands.argument("count", IntegerArgumentType.integer(1, 32))
+                                        .executes(context -> surgeClouds(context.getSource().getLevel(),
+                                                BlockPosArgument.getBlockPos(context, "centre"),
+                                                IntegerArgumentType.getInteger(context, "count")))))))
                 .then(Commands.literal("fester").then(Commands.argument("from", BlockPosArgument.blockPos())
                         .then(Commands.argument("to", BlockPosArgument.blockPos())
                                 .then(Commands.argument("level", IntegerArgumentType.integer(0, ChunkCorruption.MAX_LEVEL))
@@ -153,5 +175,34 @@ final class HarnessCommands {
             }
         }
         return chunks;
+    }
+
+    /**
+     * Spawns {@code count} surge hosts within {@code radius} blocks of {@code centre} through the surge spawn code
+     * ({@link SurgeHosts}: festering chunks, surface or covered spots near the centre's height, type spawn rules), with a
+     * random seeded from the arguments and no spawn finalisation, so a scene gets the same hosts every run. Returns the
+     * number spawned; fails if none could be.
+     */
+    private static int surgeHosts(ServerLevel level, BlockPos centre, int count, int radius) throws CommandSyntaxException {
+        RandomSource random = RandomSource.create(centre.asLong() * 31 + count * 17L + radius);
+        int spawned = SurgeHosts.spawnAround(level, centre, count, 1, radius,
+                RemissionCommonConfig.SURGE_HOST_LEVEL.get(), random, false, chunk -> true).size();
+        if (spawned == 0) {
+            throw NO_SPOT.create();
+        }
+        return spawned;
+    }
+
+    /**
+     * Releases {@code count} miasma clouds over festering chunks around {@code centre} through the surge release code,
+     * with a random seeded from the arguments. Returns the number released; fails if no chunk nearby is festering.
+     */
+    private static int surgeClouds(ServerLevel level, BlockPos centre, int count) throws CommandSyntaxException {
+        RandomSource random = RandomSource.create(centre.asLong() * 31 + count);
+        int released = SurgeController.releaseClouds(level, List.of(new ChunkPos(centre)), count, random, chunk -> true).size();
+        if (released == 0) {
+            throw NO_SPOT.create();
+        }
+        return released;
     }
 }

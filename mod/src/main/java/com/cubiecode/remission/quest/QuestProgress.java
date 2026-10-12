@@ -43,4 +43,13 @@ public final class QuestProgress {
         player.awardStat(RemissionStats.BLOCKS_SCANNED.get());
         RemissionTriggers.BLOCK_SCANNED.get().trigger(player, pos);
     }
+
+    /** The player was caught in a surge of {@code intensity} that just ended, and did not die during it. */
+    public static void surgeSurvived(ServerPlayer player, int intensity) {
+        if (player instanceof FakePlayer) {
+            return;
+        }
+        player.awardStat(RemissionStats.SURGES_SURVIVED.get());
+        RemissionTriggers.SURGE_SURVIVED.get().trigger(player, intensity);
+    }
 }

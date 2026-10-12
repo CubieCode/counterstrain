@@ -2,6 +2,7 @@ package com.cubiecode.remission.client;
 
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.config.RemissionClientConfig;
+import com.cubiecode.remission.registry.RemissionEntityTypes;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
@@ -23,5 +24,7 @@ public final class RemissionClient {
         modBus.addListener(EventPriority.LOWEST,
                 (EntityRenderersEvent.AddLayers event) -> HostLayerOverlay.addLayers(event));
         modBus.addListener(MiasmaClientExtensions::register);
+        modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
+                event.registerEntityRenderer(RemissionEntityTypes.MIASMA_CLOUD.get(), MiasmaCloudRenderer::new));
     }
 }
