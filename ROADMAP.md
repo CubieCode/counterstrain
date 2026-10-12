@@ -305,8 +305,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.8: Festering veins and contact infection
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p4.8-festering-veins
 - PR:
 - Depends on: P4.2, P4.6, P4.7
 - Scope: Festering veins: a `remission:festering_vein` multiface block (as vanilla glow lichen and sculk veins) that creeps over the solid faces of blocks in festering chunks from a minimum stage, on the surface and in caves, without replacing them. Veins grow over any solid face, player-built blocks and bases included, so festering land threatens what the player builds; packs keep them off chosen blocks with a block tag (`#remission:vein_resistant`, empty by default). Growth is deterministic, budgeted per tick like the cave pass, resumes after an unload and catches up with the chunk's stage; a vein drops nothing without Silk Touch. Veins must read clearly differently from sculk veins. Contact infection: a `Mob` touching a block in `#remission:infectious` (standing on it, inside it, or against it; Remission ships festering grass, the festered blocks and festering veins) or in water in a festering chunk at or above the minimum stage (fish, squid, drowned, axolotls; the water itself is not replaced, the biome flip already tints it), becomes a host after `[infection] contactTicks` of contact (0 = on first touch), with a new `CorruptionCause` (contact), through the same eligibility and `convert_to` path as P4.7. Festering land exposure (P4.7) is unchanged and stays the slow background source. Players never take contact infection; P5.1 turns contact into viral load gain. Config: veins on/off and minimum stage, contact infection on/off and `contactTicks`. Posts `BlockFesteredEvent` per vein placed. Documents the block, tags, cause and config in remission-data-formats and docs/ARCHITECTURE.md.
