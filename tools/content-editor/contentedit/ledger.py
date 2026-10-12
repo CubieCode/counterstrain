@@ -10,6 +10,9 @@ import re
 from . import files
 
 STATUSES = ("placeholder", "draft", "final", "removed")
+# The Type column's values (docs/CONTENT-PROVENANCE.md, "Columns").
+TYPES = ("texture", "model", "gui", "particle", "sound", "icon", "lang", "quest", "lore", "journal", "book",
+         "store-copy", "store-image", "metadata")
 ITEM = re.compile(r"\bP\d{1,2}\.\d{1,2}\b")
 GENERATED = "mod/src/generated/"
 
@@ -73,7 +76,13 @@ class Row:
 
 
 def format_row(path_id, type_, origin, status, notes):
-    return f"| `{path_id}` | {type_} | {origin} | {status} | {notes} |"
+    if type_ not in TYPES:
+        raise LedgerError(f"unknown type '{type_}' (use {', '.join(TYPES)})")
+    if status not in STATUSES:
+        raise LedgerError(f"unknown status '{status}'")
+    if "`" in path_id:
+        raise LedgerError("a path may not contain backticks")
+    return f"| `{check_cell(path_id, 'path')}` | {type_} | {check_cell(origin, 'origin')} | {status} | {check_cell(notes, 'notes')} |"
 
 
 class Ledger:

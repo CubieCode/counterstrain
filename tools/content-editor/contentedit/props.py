@@ -42,7 +42,7 @@ def _escape(value):
 class PropsFile:
     def __init__(self, text):
         self.text = text
-        self.values, self.lines = {}, {}
+        self.values, self.lines, self.raw = {}, {}, {}
         for i, line in enumerate(text.split("\n")):
             if line.lstrip().startswith(("#", "!")):
                 continue
@@ -50,6 +50,7 @@ class PropsFile:
             if m and not line.rstrip().endswith("\\"):
                 self.values[m.group(2)] = _unescape(m.group(4).rstrip())
                 self.lines[m.group(2)] = i
+                self.raw[m.group(2)] = m.group(4)
 
     @classmethod
     def load(cls, path):
@@ -78,6 +79,14 @@ class PropsFile:
         if edited.keys() != self.keys() or changed not in ([key], []):
             raise PropsError("the edit would change other entries")
         return edited
+
+    def with_raw(self, key, raw):
+        """A new PropsFile with `key`'s raw value text put back verbatim (Undo restores the base bytes)."""
+        self.get(key)
+        lines = self.text.split("\n")
+        m = ENTRY.match(lines[self.lines[key]])
+        lines[self.lines[key]] = m.group(1) + m.group(2) + m.group(3) + raw
+        return PropsFile("\n".join(lines))
 
     def save(self, path):
         files.write(path, self.text.encode("iso-8859-1"))

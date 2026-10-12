@@ -115,11 +115,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self.fail(HTTPStatus.NOT_FOUND, f"no route {method} {path}")
             # Reads never wait: writes are atomic, so a GET sees a file before or after a save. Writes are
             # serialized, and the model review only reads, so a slow review or check run never freezes the page.
-            if method == "GET" or handler.__name__ in self.LOCKLESS:
-                result = handler()
-            else:
-                with self.app.lock:
+            with self.app.editor.workspace.pinned_base():
+                if method == "GET" or handler.__name__ in self.LOCKLESS:
                     result = handler()
+                else:
+                    with self.app.lock:
+                        result = handler()
             if result is not None:
                 self.send(HTTPStatus.OK, result)
         except REFUSED as e:

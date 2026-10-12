@@ -75,6 +75,11 @@ class LangFile:
         self.text = text
         self.pairs = _pairs(text)
         self.values = dict(self.pairs)
+        self.literals = {}  # key -> its value's JSON literal exactly as written, for byte-exact restores
+        for line in text.split("\n"):
+            m = ENTRY.match(line)
+            if m:
+                self.literals.setdefault(json.loads(m.group(2)), m.group(4))
         # Keep the file's escaping style: \u escapes only if the file already uses them for non-ASCII.
         self.ascii = "\\u" in text and not any(ord(c) > 127 for c in text)
 
@@ -114,6 +119,21 @@ class LangFile:
         changed = [k for k in self.keys() if self.values[k] != edited.values[k]]
         if changed not in ([key], []):
             raise LangError(f"the edit would change other keys: {', '.join(changed)}")
+        return edited
+
+    def with_literal(self, key, literal):
+        """A new LangFile with `key`'s value literal replaced verbatim (Undo restores the base bytes)."""
+        lines = self.text.split("\n")
+        for i, line in enumerate(lines):
+            m = ENTRY.match(line)
+            if m and json.loads(m.group(2)) == key:
+                lines[i] = m.group(1) + m.group(2) + m.group(3) + literal + m.group(5)
+                break
+        else:
+            raise LangError(f"'{key}' is not on a single line of its own")
+        edited = LangFile("\n".join(lines))
+        if edited.keys() != self.keys():
+            raise LangError("the restore would change the key order")
         return edited
 
     def save(self, path):

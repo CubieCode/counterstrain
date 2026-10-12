@@ -101,10 +101,20 @@ class Editor:
     def readable(self, rel):
         """Files the UI may fetch: anything a row names, its .mcmeta, and assets under the scanned trees."""
         rel = normalize(rel)
-        ledger = self.ledger()
-        files = ledger.files()
+        files = self._ledger_files()
         return (rel in files or (rel.endswith(".mcmeta") and rel[:-7] in files)
                 or rel.startswith(("mod/src/main/resources/assets/", "mod/src/generated/resources/assets/", "pack/")))
+
+    def _ledger_files(self):
+        """Files the ledger names, re-read only when the ledger file changes (thumbnails ask per image)."""
+        path = self.path(LEDGER)
+        try:
+            key = (path, os.stat(path).st_mtime_ns)
+        except OSError:
+            return set()
+        if getattr(self, "_files_cache", (None,))[0] != key:
+            self._files_cache = (key, self.ledger().files())
+        return self._files_cache[1]
 
     def _target(self, rel, ledger, allow_new=False):
         """The absolute path to write `rel` to, or EditorError when the editor must not write it."""
@@ -164,13 +174,14 @@ class Editor:
             return keys_by_file[rel]
 
         exact = [r for r in ledger.rows if r.key is not None and not r.wildcard]
+        changed_paths = {p for _, p in self.workspace.changed_files()} if self.workspace.writable else set()
         for row in ledger.rows:
             item = row.to_dict()
             item["kind"] = kind_of(row)
             item["editable"] = item["kind"] is not None and not row.generated and row.status != "removed"
             before = base.find(row.path_id)
             item["pending"] = before is None or (before.origin, before.status, before.notes) != \
-                (row.origin, row.status, row.notes)
+                (row.origin, row.status, row.notes) or self._content_changed(ledger, row, changed_paths)
             item["new"] = before is None
             if row.wildcard:
                 item["overridden"] = sum(1 for r in exact if r.file == row.file and row.covers(r.key))
@@ -226,7 +237,7 @@ class Editor:
             current = props.PropsFile.load(self.path(row.file))
             base = self.read(row.file, "base")
             detail.update(value=current.get(row.key), line=current.lines[row.key] + 1,
-                          base=props.PropsFile(base.decode("utf-8")).values.get(row.key) if base else None,
+                          base=props.PropsFile(base.decode("iso-8859-1")).values.get(row.key) if base else None,
                           gate=row.file == "mod/gradle.properties")
         elif kind == "markdown":
             text = (self.read(row.file) or b"").decode("utf-8", "replace")
@@ -240,6 +251,11 @@ class Editor:
         base_data = show(self.root, self.workspace.base(), row.file)
         base = lang.LangFile(base_data.decode("utf-8")) if base_data else None
         keys = []
+        line_of = {}
+        for i, line in enumerate(current.text.split("\n"), 1):
+            m = lang.ENTRY.match(line)
+            if m:
+                line_of.setdefault(json.loads(m.group(2)), i)
         for key in ledger.keys(row, current.keys()):
             owner = ledger.owner(row.file, key)
             value = current.get(key)
@@ -247,7 +263,7 @@ class Editor:
                          "args": len(lang.format_args(value)), "owner": owner.path_id if owner else None,
                          "ownerStatus": owner.status if owner else None,
                          "ownerOrigin": owner.origin if owner else None,
-                         "line": next((i + 1 for i, l in enumerate(current.text.split("\n")) if f'"{key}"' in l), None)})
+                         "line": line_of.get(key)})
         return keys
 
     def _model_id(self, rel):
@@ -334,7 +350,7 @@ class Editor:
         others = [k for k in ledger.keys(owner, all_keys) if k != key and ledger.owner(file, k) is owner]
         if not others:
             return owner
-        return ledger.insert_after(owner, f"{file}:{key}", "lang", origin, status,
+        return ledger.insert_after(owner, f"{file}:{key}", owner.type, origin, status,
                                    notes if notes is not None else owner.notes)
 
     def lang_accept(self, file, key=None, row_id=None):
@@ -429,7 +445,7 @@ class Editor:
         except OSError:
             return []
         base = self.read(row.file, "base")
-        before = props.PropsFile(base.decode("utf-8")).values.get(row.key) if base else None
+        before = props.PropsFile(base.decode("iso-8859-1")).values.get(row.key) if base else None
         return [] if before == now else [{"key": row.key, "before": before, "after": now}]
 
     # --- vocabulary ------------------------------------------------------------
@@ -564,12 +580,17 @@ class Editor:
         """Every row that differs from the base ledger, with what changed, plus the changed files."""
         ledger, base = self.ledger(), self.base_ledger()
         changes = []
+        changed_paths = {p for _, p in self.workspace.changed_files()}
         for row in ledger.rows:
             before = base.find(row.path_id)
-            if before is not None and (before.origin, before.status, before.notes) == (row.origin, row.status, row.notes):
+            same_row = before is not None and (before.origin, before.status, before.notes) == \
+                (row.origin, row.status, row.notes)
+            # A re-edit on the same day can leave the row text identical (same origin and date), so also list
+            # rows whose governed content differs from the base.
+            if same_row and not self._content_changed(ledger, row, changed_paths):
                 continue
             change = {"row": row.to_dict(), "kind": kind_of(row), "new": before is None,
-                      "before": before.to_dict() if before else None}
+                      "before": before.to_dict() if before else None, "contentOnly": same_row}
             if kind_of(row) == "lang":
                 change["strings"] = self._changed_strings(ledger, row)
             elif kind_of(row) == "properties":
@@ -587,13 +608,41 @@ class Editor:
                 "base": self.workspace.base()[:9], "worktree": self.workspace.worktree,
                 "uncommitted": self.workspace.uncommitted(), "commits": self.workspace.commits()}
 
+    def _content_changed(self, ledger, row, changed_paths):
+        """True when the file content this row governs differs from the base."""
+        if row.file not in changed_paths:
+            return False
+        kind = kind_of(row)
+        if kind == "lang":
+            return bool(self._changed_strings(ledger, row))
+        if kind == "properties":
+            return bool(self._changed_property(row))
+        return row.key is None
+
+    def _lang_versions(self, rel):
+        """(current LangFile, base values) for a lang file, cached by base commit and file mtime: the queue
+        asks once per lang row, and those rows mostly share one en_us.json."""
+        base_commit = self.workspace.base()
+        try:
+            key = (rel, base_commit, os.stat(self.path(rel)).st_mtime_ns)
+        except OSError:
+            return None
+        cache = self.__dict__.setdefault("_lang_cache", {})
+        if key not in cache:
+            current = lang.LangFile.load(self.path(rel))
+            base_data = show(self.root, base_commit, rel)
+            cache.clear()
+            cache[key] = (current, lang.LangFile(base_data.decode("utf-8")).values if base_data else {})
+        return cache[key]
+
     def _changed_strings(self, ledger, row):
         try:
-            current = lang.LangFile.load(self.path(row.file))
-        except (OSError, lang.LangError):
+            versions = self._lang_versions(row.file)
+        except lang.LangError:
             return []
-        base_data = show(self.root, self.workspace.base(), row.file)
-        base = lang.LangFile(base_data.decode("utf-8")).values if base_data else {}
+        if versions is None:
+            return []
+        current, base = versions
         out = []
         for key in ledger.keys(row, current.keys()):
             if ledger.owner(row.file, key) is not row:
@@ -612,13 +661,22 @@ class Editor:
             strings = self._changed_strings(ledger, row)
             if strings:
                 current = lang.LangFile.load(self.path(row.file))
+                base_data = show(root, self.workspace.base(), row.file)
+                base_file = lang.LangFile(base_data.decode("utf-8")) if base_data else None
                 for s in strings:
-                    if s["before"] is not None:
-                        current = current.with_value(s["key"], s["before"])
+                    if s["before"] is None:
+                        continue
+                    literal = base_file.literals.get(s["key"]) if base_file else None
+                    # Put the base literal back verbatim so the file matches main byte for byte.
+                    current = current.with_literal(s["key"], literal) if literal is not None \
+                        else current.with_value(s["key"], s["before"])
                 current.save(self._target(row.file, ledger))
         elif kind_of(row) == "properties":
+            base_data = self.read(row.file, "base")
             for s in self._changed_property(row):
-                current = props.PropsFile.load(self.path(row.file)).with_value(row.key, s["before"])
+                current = props.PropsFile.load(self.path(row.file))
+                raw = props.PropsFile(base_data.decode("iso-8859-1")).raw.get(row.key) if base_data else None
+                current = current.with_raw(row.key, raw) if raw is not None else current.with_value(row.key, s["before"])
                 current.save(self._target(row.file, ledger))
         elif kind_of(row) in ("texture", "model", "sound", "markdown"):
             for rel in (row.file, row.file + ".mcmeta"):

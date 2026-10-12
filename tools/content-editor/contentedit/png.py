@@ -51,6 +51,8 @@ def _with_file(data, fn):
 def decode(data):
     """Decode a whole PNG (any colour type the checker supports) to an Image."""
     width, height, _ = header(data)
+    if width * height > 4096 * 4096:
+        raise PngError(f"{width}×{height} is too large to decode here")
     w, h, rows = _with_file(data, lambda p: provenance.png_top_left(p, max(width, height)))
     if len(rows) != h or any(len(r) != w for r in rows):
         raise PngError("truncated image data")

@@ -9,6 +9,9 @@ import json
 from . import png
 
 MAX_BYTES = 1024 * 1024
+# Decoding happens in pure Python, so a small file claiming a huge image must be refused from its header.
+MAX_SIDE = 8192
+MAX_PIXELS = 1024 * 1024
 
 
 def check(id_, label, ok, detail, state=None):
@@ -65,6 +68,9 @@ def validate(data, status, original=None, original_mcmeta=None, mcmeta=None, mar
         return [check("png", "Valid PNG", False, f"{len(data)} bytes; the limit is {MAX_BYTES}")], info
     try:
         width, height, interlaced = png.header(data)
+        if width > MAX_SIDE or height > MAX_SIDE or width * height > MAX_PIXELS:
+            raise png.PngError(f"{width}×{height} is too large for a Minecraft texture (at most {MAX_SIDE} on a side "
+                               f"and {MAX_PIXELS} pixels)")
         if interlaced:
             raise png.PngError("interlaced PNGs are not supported; save it non-interlaced")
         image = png.decode(data)

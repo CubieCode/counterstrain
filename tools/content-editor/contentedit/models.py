@@ -13,7 +13,9 @@ def check(id_, label, state, detail):
 
 def texture_refs(model):
     """[(variable, resource id)] for texture values that are not #references."""
-    textures = model.get("textures") or {}
+    textures = model.get("textures") if isinstance(model, dict) else None
+    if not isinstance(textures, dict):
+        return []
     refs = []
     for var, value in textures.items():
         if isinstance(value, dict):
@@ -34,6 +36,12 @@ def validate(data, resolver):
     if not isinstance(model, dict):
         return [check("json", "Valid JSON", "fail", "a model must be a JSON object")], None
     checks = [check("json", "Valid JSON", "pass", f"{len(data)} B")]
+    if "textures" in model and not isinstance(model["textures"], dict):
+        checks.append(check("textures", "Textures", "fail", "\"textures\" must be an object of name → texture"))
+        return checks, model
+    if "elements" in model and not isinstance(model["elements"], list):
+        checks.append(check("elements", "Elements", "fail", "\"elements\" must be a list"))
+        return checks, model
     missing, unknown, found = [], [], []
     for var, ref in texture_refs(model):
         namespace, path = split_id(ref)

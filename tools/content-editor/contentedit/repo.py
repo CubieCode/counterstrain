@@ -8,8 +8,10 @@ import glob
 import json
 import os
 import re
+import contextlib
 import subprocess
 import tempfile
+import threading
 import time
 import zipfile
 
@@ -30,8 +32,13 @@ class RepoError(RuntimeError):
     pass
 
 
+# Reads run alongside writes (the server does not lock GETs), so git must never take index.lock just to
+# refresh stat data during a read; writes such as add and commit still lock the index as usual.
+GIT_ENV = {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}
+
+
 def git(cwd, *args, check=True, binary=False, timeout=120):
-    out = subprocess.run(["git", "-C", cwd, *args], capture_output=True, text=not binary, timeout=timeout)
+    out = subprocess.run(["git", "-C", cwd, *args], capture_output=True, text=not binary, timeout=timeout, env=GIT_ENV)
     if check and out.returncode != 0:
         err = out.stderr if not binary else out.stderr.decode("utf-8", "replace")
         raise RepoError(f"git {' '.join(args)}: {err.strip()}")
@@ -49,6 +56,7 @@ class Workspace:
 
     def __init__(self, tool_root, worktree=None):
         self.tool_root = tool_root
+        self._pinned = threading.local()
         self.state_dir = os.path.join(tool_root, ".local", "content-editor")
         self.worktree = None
         if worktree:
@@ -98,8 +106,26 @@ class Workspace:
                 return ref
         raise RepoError("neither origin/main nor main exists")
 
+    @contextlib.contextmanager
+    def pinned_base(self):
+        """Compute base() once for the duration of one request (per thread) instead of per call."""
+        self._pinned.value = None
+        self._pinned.active = True
+        try:
+            yield
+        finally:
+            self._pinned.active = False
+            self._pinned.value = None
+
     def base(self):
         """The commit the batch branched from; 'on disk' previews read files at this commit."""
+        if getattr(self._pinned, "active", False):
+            if self._pinned.value is None:
+                self._pinned.value = self._base()
+            return self._pinned.value
+        return self._base()
+
+    def _base(self):
         root = self.root
         if not self.worktree:
             return git(root, "rev-parse", "HEAD").stdout.strip()
@@ -122,6 +148,8 @@ class Workspace:
         if not branch.startswith(BRANCH_PREFIX):
             raise RepoError(f"{path} is on {branch}, not a {BRANCH_PREFIX}<date>-<slug> branch")
         self.worktree = path
+        if getattr(self._pinned, "active", False):
+            self._pinned.value = None
         self._write_state()
 
     def start(self, slug, today=None, fetch=True):

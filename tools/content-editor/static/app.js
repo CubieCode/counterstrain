@@ -1162,7 +1162,8 @@ function changeLine(c) {
       h('img', { class: 'pixel', src: url('/api/file', { path: r.path }), alt: 'after', width: 32, height: 32, style: 'outline:1px solid var(--ac)' }))
     : h('span', { class: 'thumb none' }, c.new ? '+row' : c.kind === 'lang' ? 'Aa' : '·');
   let action = 'row updated';
-  if (c.new) action = r.key ? 'new exact-key row' : 'new row';
+  if (c.contentOnly) action = 'content changed again · row text unchanged';
+  else if (c.new) action = r.key ? 'new exact-key row' : 'new row';
   else if (b.status !== r.status && r.status === 'final' && b.origin === r.origin) action = r.wildcard ? 'accepted as final · * row updated' : 'accepted as final';
   else if (c.kind === 'texture' || c.kind === 'model' || c.kind === 'sound') action = `${c.kind} replaced`;
   else if (c.strings && c.strings.length) action = 'string replaced';
