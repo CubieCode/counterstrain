@@ -310,8 +310,11 @@ class Workspace:
             body_file = f.name
         try:
             if existing:
-                # The push already added the new commits; refresh the body so it lists every changed row.
-                cmd = ["gh", "pr", "edit", existing, "--body-file", body_file]
+                # The push already added the new commits; refresh the body so it lists every changed row. Uses the
+                # REST API: `gh pr edit` fails on repositories that still report classic project cards.
+                number = existing.rstrip("/").rsplit("/", 1)[-1]
+                cmd = ["gh", "api", "-X", "PATCH", f"repos/{{owner}}/{{repo}}/pulls/{number}", "-F", f"body=@{body_file}",
+                       "--silent"]
             else:
                 cmd = ["gh", "pr", "create", "--base", "main", "--head", branch, "--title", title,
                        "--body-file", body_file]
@@ -321,7 +324,7 @@ class Workspace:
         finally:
             os.unlink(body_file)
         if out.returncode != 0:
-            raise RepoError(f"gh pr {'edit' if existing else 'create'}: {out.stderr.strip()}")
+            raise RepoError(f"{'updating' if existing else 'opening'} the PR failed: {out.stderr.strip()}")
         return (existing, True) if existing else (out.stdout.strip().splitlines()[-1], False)
 
 
