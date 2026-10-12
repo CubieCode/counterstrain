@@ -361,9 +361,9 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.12: Team query
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p4.12-team-query
-- PR:
+- PR: #77
 - Depends on: P4.4
 - Scope: One generic answer to "are these two players teammates?", so every rule that involves teammates asks the same question (DESIGN "Teams and multiplayer"). A query in `com.cubiecode.remission.api`, backed by a team lookup event that packs and integrations answer; with nothing answering, each player is their own team. A guarded `integration/ftbteams/` (`compileOnly`, `ModList`) answers it from FTB Teams, whose team lookup is Java; packs without FTB Teams can answer it from KubeJS once P8.3's bindings exist. Answers are cached briefly so systems can ask freely. Documented in remission-data-formats and docs/ARCHITECTURE.md.
 - Acceptance: Gametests: with nothing answering, a player is a teammate only of themselves; a test listener makes two players teammates; with FTB Teams in the dev runtime, members of one FTB team are teammates and members of different teams are not; the cache follows a team change. `./gradlew build runGameTestServer` passes with and without FTB Teams.
