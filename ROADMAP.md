@@ -25,6 +25,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P6.3 (follow-up to P6.2) can join any wave or run alone; it owns `research/Bestiary` and the bestiary scene reference.
 - E: P4.2 (done), then P4.3 (after P4.5 and P8.1, both done). P4.3 owns surge scheduling, miasma clouds, its surge API events and the surge survived trigger and stat, and is the remission-data-formats owner while it runs; append-only edits in `api/` and `quest/`.
 - P4.8 (follow-up to P4.6 and P4.7) runs alone or before wave F; it owns the vein block and the contact source and must merge before P5.2.
+- P4.9 (follow-up to P4.6 and P5.2) runs alone or alongside items that do not touch `world/`, the `[spread]` config or remission-data-formats; it must merge before P11.2.
 - P4.6 and P4.7 (follow-ups to P4.2 and P3.3) can join wave E with P4.3 or run alone. P4.6 owns `world/FesteringStages` and `world/FesterMaps` and runs before P5.2; P4.7 owns `infection/`. With P4.3 in the same wave, appoint one owner for config specs and one for remission-data-formats.
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - P5.3 → P5.4 serially, after P5.1. P5.3 owns the revenant entity, `integration/curios/` and its build-file entries; P5.4 owns its payload and coordinates `integration/journeymap/` with P8.2 (never in the same wave).
@@ -315,7 +316,18 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Skills: neoforge-mod-dev, minecraft-world-generation, remission-data-formats, minecraft-testing, visual-checks, content-provenance
 - Parallel: Owns the vein block and its growth pass, and the contact source in `infection/`; appends to `api/CorruptionCause`, the registry and the `[festering]` and `[infection]` config sections. Do not run alongside P5.2, which must also clear veins.
 
-Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, P4.6, P4.7 and P4.8, follow-ups added after P4.4, are not part of these exit criteria.
+### P4.9: Initial festering
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.5, P4.6, P5.2
+- Scope: Optional festering from world generation, so a pack can start with the world already taken by the Strain instead of only around nidi. A newly generated chunk in a listed dimension starts with a chunk corruption level set by config: a level at a configurable distance from world spawn, rising to a maximum level further out (a flat level when both are equal), and none within a safe radius in chunks around world spawn. Existing chunks, chunks in remission and chunks inside a quarantine pylon's ward never get an initial level, so turning it on mid-world only affects new land. The existing stage work (P4.2, P4.6) and vein growth (P4.8) turn the level into land on load, budgeted as now; no new worldgen features or surface rules. Land with an initial level and no nidus in reach stays as it is until purified; a nidus in reach takes purified land back by normal spread, so nidi stay the source that must be destroyed before purifying around them means anything. The level is deterministic for a seed and position. Config in `[spread]` (dimensions, default empty = off; safe radius; near and far levels; distance of the ramp), posts `ChunkStageChangedEvent` for each initialised chunk, documented in remission-data-formats and docs/ARCHITECTURE.md. Remission ships it off; Counterstrain turns it on in P11.2.
+- Acceptance: Gametests: a new chunk in a listed dimension gets the configured level by distance and none in the safe radius, unlisted dimensions and old chunks get none, warded and remission chunks get none, the level is deterministic, an initialised chunk with no nidus in reach never rises, and a purified chunk next to a live nidus festers again; nothing changes with the dimension list empty. Per-tick cost and the delay before newly generated land looks festered measured on foundry while flying with elytra over new terrain, recorded in the PR next to P4.2's stage cost. Harness scene `world/initial_festering` (spawn's safe radius and festered land beyond it), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns the initial level hook in `world/` and the new `[spread]` keys; appends to remission-data-formats.
+
+Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, P4.6, P4.7, P4.8 and P4.9, follow-ups added after P4.4, are not part of these exit criteria.
 
 ## Phase 5: Viral load and early purification
 
@@ -605,9 +617,9 @@ Goals: Counterstrain becomes a playable pack.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P11.1, P11.4, P11.5, P10.2, P10.3, P10.4, P10.5, P10.6
-- Scope: Starting structure/map (the crash site holds a working quarantine pylon, so the player starts inside a warded radius). A choice of crash sites: several starts that differ in difficulty (distance to the first nidus, festering around the site, salvage), chosen when a world is created or on first join, with one default for servers and quick starts. The pressure to reclaim decided in DESIGN ([open decision](docs/DESIGN.md#open-decision-pressure-to-reclaim), settled before this item starts) is built into worldgen and gating, so walking away from the Strain is never the easy way to clean land. KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
-- Acceptance: New world starts at the chosen crash site, and each crash site is playable to the first nidus; the pressure-to-reclaim rule holds in a playtest that heads away from the crash site; gated recipes verified in EMI; each DESIGN integration gate is enforced in a playtest; harness scene `start/crash_site` for each crash site. Ledger updated; placeholders marked.
+- Depends on: P4.9, P11.1, P11.4, P11.5, P10.2, P10.3, P10.4, P10.5, P10.6
+- Scope: Starting structure/map (the crash site holds a working quarantine pylon, so the player starts inside a warded radius). A choice of crash sites: several starts that differ in difficulty (distance to the first nidus, festering around the site, salvage), chosen when a world is created or on first join, with one default for servers and quick starts. Pressure to reclaim (DESIGN): initial festering (P4.9) on for the overworld, with the safe radius around the crash sites and the level rising with distance, and a world border set from the pack (start at a few thousand blocks across, sized in P11.3) so curing the world is a finishable goal. The quest book shows how much of the land inside the border is in remission. KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
+- Acceptance: New world starts at the chosen crash site, and each crash site is playable to the first nidus; a playtest that heads away from the crash site finds festering land rising in level up to the border, never clean land; the remission share in the quest book matches the land cleansed; gated recipes verified in EMI; each DESIGN integration gate is enforced in a playtest; harness scene `start/crash_site` for each crash site. Ledger updated; placeholders marked.
 - Skills: kubejs-scripting, minecraft-datapack, minecraft-world-generation, playtesting, visual-checks, content-provenance
 
 ### P11.3: Balancing pass
@@ -616,7 +628,7 @@ Goals: Counterstrain becomes a playable pack.
 - Owner:
 - PR:
 - Depends on: P11.2
-- Scope: Spread rates, viral load, recipe costs, quest rewards, integration gate costs, wreck site loot, supply drop costs and standing, crash site difficulty.
+- Scope: Spread rates, viral load, recipe costs, quest rewards, integration gate costs, wreck site loot, supply drop costs and standing, crash site difficulty, initial festering levels, and the world border's size (ores and other finite resources inside it must last a full playthrough).
 - Acceptance: A documented playtest from start to Counterstrain.
 - Skills: playtesting
 

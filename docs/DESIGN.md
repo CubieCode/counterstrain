@@ -25,6 +25,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone`, `remission:festered_deepslate`, biome `remission:fester`; data map `remission:festers_into` |
 | The fester biome a particular source biome turns into | **fester variant** | data map `remission:fester_variant`; "plains festers into `remission:fester`, a pack's lavender field into its own fester variant" |
 | Growth that creeps over the faces of blocks in festering land, player builds included | **festering veins** | block `remission:festering_vein`; block tag `#remission:vein_resistant`; config `[festering] veins`, `veinMinStage`; "veins are creeping up the wall" |
+| Festering a new chunk starts with, from world generation | **initial festering** | config `[spread]` (planned, P4.9); "initial festering is off by default" |
 | A mob turning into a host by touching festered blocks or swimming in water in festering land | **contact infection** | block tag `#remission:infectious`; config `[infection] contact`, `contactTicks`; cause `CorruptionCause.CONTACT`; entity attachment `remission:contact_exposure` |
 | Boundary between festering land and reclaimed land | **frontier** | "hold the frontier" |
 | Periodic spread bursts from one nidus, telegraphed by a warning | **surges** | config `[surges]`; trigger `remission:surge_survived`, stat `remission:surges_survived`; `/remission surge start`; entity tag `#remission:surge_hosts`; "the nidus surges at the season change", "survive the surge" |
@@ -63,7 +64,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 ## Pillars
 
 1. **Any mob can become a host.** Infection is state on the entity, not a new entity type, so every installed mod widens the bestiary.
-2. **The land fights back.** Festering is visible, spreads from destroyable nidi, and keeps moving while you are away.
+2. **The land fights back.** Festering is visible, spreads from destroyable nidi (and in Counterstrain covers the world from the start), and keeps moving while you are away.
 3. **Progress is reclaimed ground.** Remission zones are the reward and the score; quests and bonuses key off them.
 4. **Science, not magic missiles.** You win by sampling, analysing and engineering, using the pack's tech mods.
 5. **Mod generic, pack specific.** Every number and story beat the pack might want to change is data, script or an API hook.
@@ -85,6 +86,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - **Underground:** a festering chunk is festering at every height. From a late stage its caves fester too, as a skin on the blocks facing cave air (rock inside the ground and ores are left alone, so mining stays viable), looking clearly different from sculk. Caves and underground bases are no refuge.
 - **Festering veins** creep over the faces of blocks in festering chunks without replacing them, player builds included, so a base inside festering land is overgrown unless it is warded by a quarantine pylon or cleansed.
 - The Strain spreads from **nidi** (blocks or structures). Destroying a nidus stops its spread but does not cleanse land.
+- **Initial festering** (optional, off by default; P4.9): new chunks start at a configured level, rising with distance from world spawn, outside a safe radius. Land with no nidus in reach holds its level until purified; a live nidus takes purified land back, so nidi must still be destroyed.
 - **Catch-up:** unloaded chunks record a timestamp; on load they fast-forward deterministically, bounded per tick.
 - **Surges:** periodic events that accelerate spread, spawn hosts (in caves under festering land as well as on the surface) and release miasma clouds that drift above festering land, telegraphed to players.
 
@@ -140,15 +142,13 @@ Integrations prefer pack-side KubeJS and datapacks built on these hooks (KubeJS 
 - **Progression:** KubeJS recipe gating through Mekanism, AE2, Create and Ars Nouveau tiers and the integration gates below, using Remission samples and data items as keys.
 - **Worldgen:** datapack and KubeJS tweaks for nidus placement, festering and pacing.
 
-### Open decision: pressure to reclaim
+### Pressure to reclaim
 
-The world is generated and endless, so a player could walk away from the Strain until they find clean land and ignore it, which undercuts the "progress is reclaimed ground" pillar. Counterstrain needs a rule that keeps the Strain in the player's way. Options, which can be combined:
+The world is generated, so without a rule a player could walk away from the Strain to find clean land and ignore it, undercutting the "progress is reclaimed ground" pillar. Counterstrain (decided 2026-10-12):
 
-- **The world starts mostly festered:** nidi are dense enough that clean land outside the crash site's ward is rare from the first day.
-- **Density rises with distance:** nidi and festering grow denser away from the crash site, so travelling away makes things harder, not easier.
-- **Remission zones are where resources work:** key resources (ores at full yield, breeding, crop growth, certain structures' loot) only appear or work in remission zones, so reclaimed land is worth more than distant clean land.
-
-Settled before P11.2 starts and recorded here, replacing this section.
+- **The world starts festered:** initial festering (P4.9) is on for the overworld. Only a safe radius around the crash sites starts clean, and the level rises with distance, so heading away makes things harder.
+- **The world is finite:** a world border (P11.2, sized in P11.3) makes curing the world a finishable goal and gives "how much is in remission" a denominator, at the cost of finite resources the balancing pass must check.
+- **Nidi still matter:** land without a nidus in reach holds its level; a live nidus takes purified land back, so the loop stays destroy the nidus, then purify.
 
 ## Pack integrations
 
