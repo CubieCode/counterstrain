@@ -472,7 +472,7 @@ Goals: the player can survive the Strain and push it back locally.
 
 ### P5.7: Countermeasures
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p5.7-countermeasures
 - PR:
 - Depends on: P4.12, P5.2, P7.2, P8.1

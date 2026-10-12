@@ -25,7 +25,10 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureManager;
@@ -47,6 +50,8 @@ import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
@@ -60,6 +65,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 /**
@@ -91,6 +97,7 @@ final class SceneRunner {
     private boolean pressed;
     private boolean recipesOpened;
     private boolean mapOpened;
+    private boolean inventoryOpened;
 
     SceneRunner(String sceneId, Path outputDir, long timeoutSeconds) {
         this.sceneId = sceneId;
@@ -159,6 +166,7 @@ final class SceneRunner {
                 pressKey(mc);
                 openRecipes(mc);
                 openMap(mc);
+                openInventory(mc);
                 stableTicks = isSettled(mc) ? stableTicks + 1 : 0;
                 if (stableTicks >= SETTLE_TICKS) {
                     captureRequested = true;
@@ -399,6 +407,7 @@ final class SceneRunner {
         pressed = false;
         recipesOpened = false;
         mapOpened = false;
+        inventoryOpened = false;
         Scene.Shot shot = scene.shots().get(index);
         Scene.Camera camera = shot.camera();
         mc.options.setCameraType(shot.view());
@@ -521,6 +530,46 @@ final class SceneRunner {
         }
         mapOpened = true;
         RemissionHarness.LOGGER.info("Scene {}: opened the JourneyMap full-screen map", sceneId);
+    }
+
+    /** Opens the player's inventory once the camera move reached the server, for a shot with {@code tooltip}. */
+    private void openInventory(Minecraft mc) {
+        Scene.Shot shot = scene.shots().get(shotIndex);
+        if (shot.tooltip().isEmpty() || inventoryOpened || !pending.isDone() || mc.player == null) {
+            return;
+        }
+        if (mc.player.isCreative()) {
+            throw new IllegalStateException("shot " + shot.name() + " shows a tooltip in the survival inventory; set gamemode survival");
+        }
+        mc.setScreen(new InventoryScreen(mc.player));
+        inventoryOpened = true;
+        RemissionHarness.LOGGER.info("Scene {}: opened the inventory for the tooltip of slot {}", sceneId, shot.tooltip().get());
+    }
+
+    /**
+     * Draws the tooltip of the shot's {@code tooltip} slot (an inventory menu slot index: 9-35 main inventory, 36-44
+     * hotbar) as if the mouse hovered it, after the inventory screen rendered. The real cursor is not moved.
+     */
+    @SubscribeEvent
+    public void onScreenRender(ScreenEvent.Render.Post event) {
+        if (phase != Phase.SHOOTING || scene == null || !(event.getScreen() instanceof AbstractContainerScreen<?> screen)) {
+            return;
+        }
+        Scene.Shot shot = scene.shots().get(shotIndex);
+        if (shot.tooltip().isEmpty() || !inventoryOpened) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        Slot slot = screen.getMenu().getSlot(shot.tooltip().get());
+        ItemStack stack = slot.getItem();
+        if (stack.isEmpty()) {
+            throw new IllegalStateException("shot " + shot.name() + ": slot " + shot.tooltip().get() + " is empty");
+        }
+        int x = screen.getGuiLeft() + slot.x;
+        int y = screen.getGuiTop() + slot.y;
+        GuiGraphics graphics = event.getGuiGraphics();
+        AbstractContainerScreen.renderSlotHighlight(graphics, x, y, 0);
+        graphics.renderTooltip(mc.font, stack, x + 8, y + 8);
     }
 
     /** Sets a JourneyMap properties field ({@code ConfigField#set}) in memory. */
