@@ -619,8 +619,9 @@ public final class SurgeTests {
         List<EntityType<?>> types = SurgeHosts.types();
         helper.assertValueEqual(types, List.of(EntityType.COW, EntityType.PIG, EntityType.SHEEP, EntityType.SPIDER,
                 EntityType.ZOMBIE), "default #remission:surge_hosts in id order");
-        helper.assertValueEqual(List.of(CorruptionCause.values()).indexOf(CorruptionCause.SURGE),
-                List.of(CorruptionCause.values()).indexOf(CorruptionCause.OTHER) - 1, "SURGE comes just before OTHER");
+        // Later causes (CONTACT, P4.8) are inserted after SURGE, still before OTHER.
+        helper.assertTrue(List.of(CorruptionCause.values()).indexOf(CorruptionCause.SURGE)
+                < List.of(CorruptionCause.values()).indexOf(CorruptionCause.OTHER), "SURGE comes before OTHER");
         helper.succeed();
     }
 

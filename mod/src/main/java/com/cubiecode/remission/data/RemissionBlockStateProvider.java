@@ -2,8 +2,12 @@ package com.cubiecode.remission.data;
 
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.registry.RemissionBlocks;
+import net.minecraft.core.Direction;
 import net.minecraft.data.PackOutput;
+import net.minecraft.world.level.block.MultifaceBlock;
 import net.neoforged.neoforge.client.model.generators.BlockStateProvider;
+import net.neoforged.neoforge.client.model.generators.ModelFile;
+import net.neoforged.neoforge.client.model.generators.MultiPartBlockStateBuilder;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
 public final class RemissionBlockStateProvider extends BlockStateProvider {
@@ -28,5 +32,22 @@ public final class RemissionBlockStateProvider extends BlockStateProvider {
         // Cave festering (P4.6).
         axisBlock(RemissionBlocks.FESTERED_DEEPSLATE.get(), modLoc("block/festered_deepslate"), modLoc("block/festered_deepslate_top"));
         simpleBlockItem(RemissionBlocks.FESTERED_DEEPSLATE.get(), models().getExistingFile(modLoc("block/festered_deepslate")));
+        // Festering veins (P4.8): one flat face model, rotated onto each face the state covers, as vanilla sculk veins.
+        ModelFile vein = models().getBuilder("festering_vein")
+                .ao(false)
+                .renderType("cutout")
+                .texture("particle", modLoc("block/festering_vein"))
+                .texture("vein", modLoc("block/festering_vein"))
+                .element().from(0, 0, 0.1F).to(16, 16, 0.1F)
+                .face(Direction.NORTH).uvs(0, 0, 16, 16).texture("#vein").end()
+                .face(Direction.SOUTH).uvs(0, 0, 16, 16).texture("#vein").end()
+                .end();
+        MultiPartBlockStateBuilder veins = getMultipartBuilder(RemissionBlocks.FESTERING_VEIN.get());
+        veins.part().modelFile(vein).addModel().condition(MultifaceBlock.getFaceProperty(Direction.NORTH), true);
+        veins.part().modelFile(vein).rotationY(90).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.EAST), true);
+        veins.part().modelFile(vein).rotationY(180).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.SOUTH), true);
+        veins.part().modelFile(vein).rotationY(270).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.WEST), true);
+        veins.part().modelFile(vein).rotationX(270).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.UP), true);
+        veins.part().modelFile(vein).rotationX(90).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.DOWN), true);
     }
 }

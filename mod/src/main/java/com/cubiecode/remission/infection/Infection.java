@@ -22,7 +22,9 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
  * How mobs become hosts. A {@link Mob} killed by a host (the damage source's responsible entity) does not die: it becomes a
  * host in place, or is replaced by its mob profile's {@code convert_to} type, at the first host stage. Immune mobs, mobs
  * that are already hosts and mobs whose profile turns off {@code conversion.on_kill} die normally. Mobs that stay in
- * festering land become hosts the same way through {@link #infectFromFesteringLand}, driven by {@link FesteringExposure}.
+ * festering land become hosts the same way through {@link #infectFromFesteringLand}, driven by {@link FesteringExposure},
+ * and mobs that touch infectious blocks or festering water through {@link #infectFromContact}, driven by
+ * {@link ContactInfection}.
  */
 @EventBusSubscriber(modid = Remission.MOD_ID)
 public final class Infection {
@@ -77,6 +79,20 @@ public final class Infection {
             return null;
         }
         return infect(mob, profile, CorruptionCause.FESTERING_LAND);
+    }
+
+    /**
+     * Turns a mob that touched an infectious block or festering water for long enough into a host (P4.8), with the
+     * festering land eligibility ({@link #canInfectFromFesteringLand}) and {@code convert_to}, and
+     * {@link CorruptionCause#CONTACT}. Returns the new host, or {@code null} if the mob is not eligible or the conversion
+     * was refused. Server only.
+     */
+    @Nullable
+    public static Mob infectFromContact(Mob mob, Optional<MobProfile> profile) {
+        if (!canInfectFromFesteringLand(mob, profile)) {
+            return null;
+        }
+        return infect(mob, profile, CorruptionCause.CONTACT);
     }
 
     @Nullable

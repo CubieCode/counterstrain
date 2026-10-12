@@ -20,5 +20,7 @@ public final class RemissionItemModelProvider extends ItemModelProvider {
         basicItem(RemissionItems.MIASMA_BUCKET.get());
         basicItem(RemissionItems.NIDUS_CORE.get());
         basicItem(RemissionItems.FESTERED_SOIL.get());
+        // Festering veins (P4.8): a flat item from the block texture, as sculk veins.
+        withExistingParent("festering_vein", mcLoc("item/generated")).texture("layer0", modLoc("block/festering_vein"));
     }
 }

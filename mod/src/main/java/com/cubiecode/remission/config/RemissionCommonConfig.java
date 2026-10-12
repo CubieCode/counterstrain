@@ -17,9 +17,13 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.IntValue SPREAD_CHUNK_BUDGET;
     public static final ModConfigSpec.IntValue SPREAD_CATCH_UP_BUDGET;
     public static final ModConfigSpec.ConfigValue<List<? extends Integer>> FESTERING_STAGE_THRESHOLDS;
+    public static final ModConfigSpec.BooleanValue FESTERING_VEINS;
+    public static final ModConfigSpec.IntValue FESTERING_VEIN_MIN_STAGE;
     public static final ModConfigSpec.BooleanValue INFECTION_FESTERING_LAND;
     public static final ModConfigSpec.IntValue INFECTION_FESTERING_LAND_MIN_STAGE;
     public static final ModConfigSpec.IntValue INFECTION_FESTERING_LAND_EXPOSURE_TICKS;
+    public static final ModConfigSpec.BooleanValue INFECTION_CONTACT;
+    public static final ModConfigSpec.IntValue INFECTION_CONTACT_TICKS;
     public static final ModConfigSpec.BooleanValue SURGES_SCHEDULED;
     public static final ModConfigSpec.IntValue SURGE_INTERVAL_TICKS;
     public static final ModConfigSpec.IntValue SURGE_WARNING_TICKS;
@@ -74,6 +78,14 @@ public final class RemissionCommonConfig {
                 .defineList(List.of("stageThresholds"), () -> List.of(1, 25, 50, 75), () -> CorruptionState.MAX_LEVEL,
                         value -> value instanceof Integer i && i >= 1 && i <= CorruptionState.MAX_LEVEL,
                         ModConfigSpec.Range.of(1, 8));
+        FESTERING_VEINS = BUILDER
+                .comment("Whether festering veins creep over the solid faces of blocks in festering chunks, player builds included.",
+                        "Blocks in #remission:vein_resistant never get veins. Veins already grown stay when this is turned off.")
+                .define("veins", true);
+        FESTERING_VEIN_MIN_STAGE = BUILDER
+                .comment("Lowest festering stage of a chunk at which veins grow; each stage above it grows more.",
+                        "Above the number of festering stage thresholds, no chunk grows veins.")
+                .defineInRange("veinMinStage", 2, 1, 8);
         BUILDER.pop();
 
         BUILDER.push("infection");
@@ -88,6 +100,14 @@ public final class RemissionCommonConfig {
                 .comment("Game ticks of exposure after which a mob becomes a host. Exposure falls by the same amount",
                         "per tick outside such land, and is checked once a second in budgeted batches.")
                 .defineInRange("festeringLandExposureTicks", 6000, 20, 1728000);
+        INFECTION_CONTACT = BUILDER
+                .comment("Whether mobs touching a block in #remission:infectious (on, in or against it), or in water in a chunk",
+                        "at or above festeringLandMinStage, become hosts. Players never do. Contact is frozen while this is off.")
+                .define("contact", true);
+        INFECTION_CONTACT_TICKS = BUILDER
+                .comment("Game ticks of contact after which a mob becomes a host; 0 infects on first touch. Contact falls by",
+                        "the same amount per tick without it, and is checked every 10 ticks in budgeted batches.")
+                .defineInRange("contactTicks", 100, 0, 72000);
         BUILDER.pop();
 
         BUILDER.push("surges");
