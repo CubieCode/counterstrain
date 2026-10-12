@@ -49,6 +49,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | A researched, permanent protection of a player or team against one Strain hazard | **countermeasure** | player attachment `remission:countermeasures`, trigger `remission:countermeasure_gained`, `/remission countermeasure` (planned, P5.7); "the team has the shedding countermeasure" |
 | Synthesized data item that grants a countermeasure when used | **countermeasure protocol** | item `remission:countermeasure_protocol` (planned, P5.7); "synthesize the fouling protocol" |
 | Resistant mutations | **variants** | "sequence the variant"; `CorruptionState` field `variant`; registry `remission:variant`, trigger `remission:variant_emerged` (planned, P7.5) |
+| The Strain returning after the final deployment, in an optional post-game | **relapse** | config `[relapse]`, `/remission relapse`, trigger `remission:relapse_began` (planned, P9.3); "the world relapsed a week after the deployment" |
 | Endgame cure | **the Counterstrain** | "unstable Counterstrain prototypes", "the final deployment" |
 | Samples | host tissue, **nidus cores**, festered soil | `remission:host_tissue`, `remission:nidus_core`, `remission:festered_soil` |
 | Machines that process the Strain | **analyzer**, **sequencer**, **synthesizer** | blocks `remission:analyzer`, `remission:sequencer`, `remission:synthesizer`; recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing`; "analyze the sample, sequence the Strain, synthesize the serum" |
@@ -140,7 +141,8 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 
 - The Counterstrain uses the same chunk spread engine in reverse.
 - The Strain adapts to the Counterstrain too: prototypes meet variants that resist them (P7.5's system) until the final formula.
-- A final deployment defence event, after which the world visibly heals. The Counterstrain is deployed from a **dispersal payload**: a placed block is enough to finish the game. Its API treats the payload as a dispersal source with a position, so a moving holder (a Create contraption or Aeronautics airship, through the optional integration) can carry it instead.
+- A final deployment defence event, after which the world visibly heals.
+- **Relapse** (P9.3, optional, off by default): remission is not a cure. After the deployment the Strain can return with new nidi and variants that resist the final formula, as a post-game for players who want to keep going. Counterstrain offers it as a choice at the ending. The Counterstrain is deployed from a **dispersal payload**: a placed block is enough to finish the game. Its API treats the payload as a dispersal source with a position, so a moving holder (a Create contraption or Aeronautics airship, through the optional integration) can carry it instead.
 
 ### Hazards and countermeasures
 
@@ -149,6 +151,9 @@ The Strain costs the player in two ways, and they are treated differently (decid
 - **Danger escalates.** Surges, nidus fights, hosts, variants and budding are the game, and they keep growing until the finale. They never get a countermeasure.
 - **Upkeep is curable.** Strain hazards (contact viral load, shedding, fouled machinery, containment breaches, contaminated items, rot) are chores. Each has a **countermeasure** that research unlocks for good: the synthesizer turns a strain sequence into a **countermeasure protocol**, and using it protects the user's team from that hazard from then on (P5.7). The late game is less fiddly but no easier.
 - **Pressure follows progress, not time.** Hazards arrive and danger rises with the player's progress (regions cleared, nidi destroyed, tech tier), never with days played, so slow play and idle servers are not punished. Each hazard arrives with its answer a region or so behind it: met, worked on, then cured.
+
+- **Nothing breaks while nobody is there.** Hazards on blocks (fouling, rot, containment breaches) advance only while a player from the placer's team is online, so chunk loaders and idle servers never mean logging in to a broken base (P5.7).
+- **Every hazard is visible.** The owner is told when a hazard strikes one of their blocks and where; the scanner shows a block's state; the bestiary screen lists active hazards and held countermeasures (P5.8). A hazard the player cannot see feels random, not manageable.
 
 Remission is generic: by default every hazard is active and no countermeasure is held, each hazard's own switch turns it off, and a cancellable hazard event lets a pack hold a hazard back until a stage. Counterstrain's schedule of which hazard arrives in which region, and what cures it, is pack data (P11.2).
 
@@ -186,6 +191,7 @@ Integrations prefer pack-side KubeJS and datapacks built on these hooks (KubeJS 
 - **Quest loop per region:** locate the nidus → research → gear up → destroy the nidus → purify → next region; the last region ends in the Counterstrain deployment.
 - **Exploration:** wreck sites, survivor camps and host-guarded caches between nidi, with loot and lab logs (P11.4), so travel between objectives has its own rewards. Sealed caches open only once their land is in remission, and the quest book rewards remission milestones across the world.
 - **Supply drops and standing:** the relay sends supply drops on request, each costing standing; progress earns standing back, and standing changes some quest text and the ending (P11.5). Asking for help is always possible and always a trade-off.
+- **Difficulty presets** (P11.2): relaxed, standard and harsh, chosen with the crash site, set every hazard switch and scaling value at once. Remission's gameplay config is global, so per-world values come from datapack tuning (P8.5); each preset is a built-in datapack.
 - **Servers** (P11.6): land claims (FTB Chunks) protect a team's blocks from other players but never ward against the Strain, so a claim is no substitute for a pylon. Placing nidi stays an operator and quest action. Standing can be passed between teams, and a team can call a supply drop for another (P11.5).
 - **Start:** a choice of crash sites of different difficulty, each a map/structure with a guided first chapter.
 - **Progression:** KubeJS recipe gating through Mekanism, AE2, Create and Ars Nouveau tiers and the integration gates below, using Remission samples and data items as keys.
