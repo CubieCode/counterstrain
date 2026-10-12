@@ -230,7 +230,9 @@ public final class ContactInfectionTests {
                     scene.set(x, 2, z, Blocks.WATER.defaultBlockState());
                 }
             }
-            Mob cod = create(level, EntityType.COD, feet(scene, 0.5, 1.2, 0.5));
+            // Both in the centre column: it is in the scene's chunk wherever the grid puts the template, while a corner
+            // column can fall in the neighbouring chunk, whose Strain level the test never sets.
+            Mob cod = create(level, EntityType.COD, feet(scene, 1.5, 1.2, 1.5));
             Mob squid = create(level, EntityType.SQUID, feet(scene, 1.5, 1.2, 1.5));
             List<Mob> swimmers = List.of(cod, squid);
 
