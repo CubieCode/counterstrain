@@ -1,0 +1,83 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "fester_fog": true,
+  "setup": [
+    "fill 11 -60 14 11 -56 14 minecraft:oak_log",
+    "fill 10 -55 13 12 -54 15 minecraft:oak_leaves[persistent=true]",
+    "fill 4 -60 30 4 -56 30 minecraft:oak_log",
+    "fill 3 -55 29 5 -54 31 minecraft:oak_leaves[persistent=true]",
+    "fill 12 -60 50 12 -56 50 minecraft:oak_log",
+    "fill 11 -55 49 13 -54 51 minecraft:oak_leaves[persistent=true]",
+    "fill 5 -60 76 5 -56 76 minecraft:oak_log",
+    "fill 4 -55 75 6 -54 77 minecraft:oak_leaves[persistent=true]",
+    "fill 10 -60 104 10 -56 104 minecraft:oak_log",
+    "fill 9 -55 103 11 -54 105 minecraft:oak_leaves[persistent=true]",
+    "fill 2 -61 40 4 -60 42 minecraft:stone",
+    "fill 43 -60 14 43 -56 14 minecraft:oak_log",
+    "fill 42 -55 13 44 -54 15 minecraft:oak_leaves[persistent=true]",
+    "fill 36 -60 30 36 -56 30 minecraft:oak_log",
+    "fill 35 -55 29 37 -54 31 minecraft:oak_leaves[persistent=true]",
+    "fill 44 -60 50 44 -56 50 minecraft:oak_log",
+    "fill 43 -55 49 45 -54 51 minecraft:oak_leaves[persistent=true]",
+    "fill 37 -60 76 37 -56 76 minecraft:oak_log",
+    "fill 36 -55 75 38 -54 77 minecraft:oak_leaves[persistent=true]",
+    "fill 42 -60 104 42 -56 104 minecraft:oak_log",
+    "fill 41 -55 103 43 -54 105 minecraft:oak_leaves[persistent=true]",
+    "fill 34 -61 40 36 -60 42 minecraft:stone",
+    "fill 75 -60 14 75 -56 14 minecraft:oak_log",
+    "fill 74 -55 13 76 -54 15 minecraft:oak_leaves[persistent=true]",
+    "fill 68 -60 30 68 -56 30 minecraft:oak_log",
+    "fill 67 -55 29 69 -54 31 minecraft:oak_leaves[persistent=true]",
+    "fill 76 -60 50 76 -56 50 minecraft:oak_log",
+    "fill 75 -55 49 77 -54 51 minecraft:oak_leaves[persistent=true]",
+    "fill 69 -60 76 69 -56 76 minecraft:oak_log",
+    "fill 68 -55 75 70 -54 77 minecraft:oak_leaves[persistent=true]",
+    "fill 74 -60 104 74 -56 104 minecraft:oak_log",
+    "fill 73 -55 103 75 -54 105 minecraft:oak_leaves[persistent=true]",
+    "fill 66 -61 40 68 -60 42 minecraft:stone",
+    "harness fester 32 -60 -16 47 -60 127 30",
+    "harness fester 64 -60 -16 79 -60 127 90"
+  ],
+  "shots": [
+    {
+      "name": "clean",
+      "camera": {
+        "pos": [
+          8.5,
+          -60.0,
+          4.5
+        ],
+        "yaw": 0.0,
+        "pitch": -4.0
+      },
+      "commands": [
+        "harness resend -16 -60 -16 95 -60 127"
+      ]
+    },
+    {
+      "name": "stage_2",
+      "camera": {
+        "pos": [
+          40.5,
+          -60.0,
+          4.5
+        ],
+        "yaw": 0.0,
+        "pitch": -4.0
+      }
+    },
+    {
+      "name": "stage_4",
+      "camera": {
+        "pos": [
+          72.5,
+          -60.0,
+          4.5
+        ],
+        "yaw": 0.0,
+        "pitch": -4.0
+      }
+    }
+  ]
+}

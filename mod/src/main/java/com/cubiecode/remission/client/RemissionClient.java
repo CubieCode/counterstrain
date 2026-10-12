@@ -15,7 +15,10 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
-/** Client entrypoint: renderers, render layers, HUD layers, client config and client-side integrations (JourneyMap). */
+/**
+ * Client entrypoint: renderers, render layers, HUD layers, festering fog, client config and client-side integrations
+ * (JourneyMap).
+ */
 @Mod(value = Remission.MOD_ID, dist = Dist.CLIENT)
 public final class RemissionClient {
     public RemissionClient(IEventBus modBus, ModContainer container) {
@@ -31,6 +34,7 @@ public final class RemissionClient {
         modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
                 event.registerEntityRenderer(RemissionEntityTypes.REVENANT.get(), RevenantRenderer::new));
         modBus.addListener(ViralLoadHud::register);
+        FesterFog.init();
         // Optional integrations: each class is touched only when its mod is loaded.
         if (ModList.get().isLoaded(JourneyMapIntegration.MOD_ID)) {
             JourneyMapIntegration.init();

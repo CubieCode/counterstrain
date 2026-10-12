@@ -122,5 +122,10 @@
   "commands.remission.countermeasure.revoke.success": "Revoked the countermeasure from %2$s players: %1$s",
   "commands.remission.countermeasure.list.none": "%s holds no countermeasures",
   "commands.remission.countermeasure.list.success": "%s holds %s countermeasures: %s",
-  "commands.remission.countermeasure.list.entry": "%s (%s)"
+  "commands.remission.countermeasure.list.entry": "%s (%s)",
+  "subtitles.remission.ambient.fester.mood": "Festering land groans",
+  "subtitles.remission.ambient.fester.additions": "Something squelches",
+  "remission.configuration.atmosphere": "Atmosphere",
+  "remission.configuration.festerFog": "Festering fog",
+  "remission.configuration.festerFog.tooltip": "How much the fog thickens in festering land as its stage rises, from 0 (off) to 1 (full). Changes only what you see."
 }

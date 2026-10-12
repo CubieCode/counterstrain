@@ -354,7 +354,7 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.11: Festering land atmosphere
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p4.11-fester-atmosphere
 - PR:
 - Depends on: P4.2
