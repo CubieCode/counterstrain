@@ -9,6 +9,7 @@ import datetime
 import json
 import os
 import posixpath
+import re
 import secrets
 import time
 
@@ -17,6 +18,8 @@ from .ledger import Ledger, LedgerError, append_note
 from .repo import PACK_INDEX, RepoError, Resolver, Workspace, git, show
 
 LEDGER = "docs/CONTENT-PROVENANCE.md"
+MODS_TOML = "mod/src/main/templates/META-INF/neoforge.mods.toml"
+TRIPLE = "'" * 3
 GENERATED = "mod/src/generated/"
 NEW_ROW_PREFIXES = ("mod/src/main/resources/assets/", "pack/")
 SOUND_BYTES = 8 * 1024 * 1024
@@ -134,6 +137,13 @@ class Editor:
     def _save_ledger(self, ledger):
         self.workspace.require_batch()
         ledger.save(self.path(LEDGER))
+
+    @staticmethod
+    def _live(row):
+        """Rows with status removed describe deleted files: the editor never edits or accepts them."""
+        if row.status == "removed":
+            raise EditorError(f"`{row.path_id}` is marked removed; its file no longer exists")
+        return row
 
     def human_origin(self):
         return f"human ({self.who()}, {self.today()})"
@@ -326,6 +336,7 @@ class Editor:
         owner = ledger.owner(file, key)
         if owner is None:
             raise EditorError(f"no ledger row covers `{file}:{key}`; add one first")
+        self._live(owner)
         current = lang.LangFile.load(self.path(file))
         try:
             edited = current.with_value(key, value)
@@ -359,6 +370,7 @@ class Editor:
         note = self.accepted_note()
         if row_id is not None:
             row = ledger.require(row_id)
+            self._live(row)
             if kind_of(row) != "lang":
                 raise EditorError(f"`{row_id}` is not a lang row")
             if row.status == "final":
@@ -370,6 +382,7 @@ class Editor:
         owner = ledger.owner(file, key)
         if owner is None:
             raise EditorError(f"no ledger row covers `{file}:{key}`")
+        self._live(owner)
         if owner.status == "final":
             raise EditorError(f"`{key}` is already final (row `{owner.key}`)")
         self._target(file, ledger)
@@ -391,6 +404,7 @@ class Editor:
             raise EditorError("replaced text is draft or final")
         ledger = self.ledger()
         row = ledger.require(row_id)
+        self._live(row)
         if kind_of(row) != "markdown":
             raise EditorError(f"`{row_id}` is not a Markdown row")
         try:
@@ -408,6 +422,7 @@ class Editor:
         """Accept a whole row (lang or Markdown) unchanged as final, recording the reviewer and date."""
         ledger = self.ledger()
         row = ledger.require(row_id)
+        self._live(row)
         if kind_of(row) not in ("lang", "markdown", "properties"):
             raise EditorError(f"`{row_id}` is accepted through its upload page, not as text")
         if row.status == "final":
@@ -425,8 +440,13 @@ class Editor:
             raise EditorError("replaced text is draft or final")
         ledger = self.ledger()
         row = ledger.require(row_id)
+        self._live(row)
         if kind_of(row) != "properties":
             raise EditorError(f"`{row_id}` is not a properties row")
+        if isinstance(value, str) and row.key in self._toml_literal_keys(row.file) and \
+                (TRIPLE in value or value.rstrip().endswith("'")):
+            raise EditorError(f"{row.key} is expanded inside {TRIPLE}...{TRIPLE} in neoforge.mods.toml: it may not "
+                              f"contain {TRIPLE} or end with a single quote")
         try:
             edited = props.PropsFile.load(self.path(row.file)).with_value(row.key, value)
         except props.PropsError as e:
@@ -438,6 +458,13 @@ class Editor:
         ledger.set_fields(row, origin=self.human_origin(), status=status)
         self._save_ledger(ledger)
         return ledger.find(row_id)
+
+    def _toml_literal_keys(self, rel):
+        """gradle.properties keys the mods.toml template wraps in a TOML multi-line literal string."""
+        if rel != "mod/gradle.properties":
+            return set()
+        template = (self.read(MODS_TOML) or b"").decode("utf-8", "replace")
+        return set(re.findall(TRIPLE + r"\$\{(\w+)\}" + TRIPLE, template))
 
     def _changed_property(self, row):
         try:
@@ -474,6 +501,7 @@ class Editor:
         """Check an upload against a row without writing it. Returns {id, checks, info}."""
         ledger = self.ledger()
         row = ledger.require(row_id)
+        self._live(row)
         kind = kind_of(row)
         if row.generated:
             raise EditorError(f"`{row.file}` is datagen output and read-only here")
@@ -510,6 +538,7 @@ class Editor:
             raise EditorError("that upload has expired; choose the file again")
         ledger = self.ledger()
         row = ledger.require(upload["row"])
+        self._live(row)
         if status not in ("placeholder", "draft", "final"):
             raise EditorError("status must be placeholder, draft or final")
         checks, _ = self._validate(upload["kind"], row, upload["data"], status, upload["mcmeta"])
@@ -628,12 +657,14 @@ class Editor:
         except OSError:
             return None
         cache = self.__dict__.setdefault("_lang_cache", {})
-        if key not in cache:
+        hit = cache.get(key)
+        if hit is None:  # GETs run concurrently: build into a local and return that, never re-read the dict
             current = lang.LangFile.load(self.path(rel))
             base_data = show(self.root, base_commit, rel)
+            hit = (current, lang.LangFile(base_data.decode("utf-8")).values if base_data else {})
             cache.clear()
-            cache[key] = (current, lang.LangFile(base_data.decode("utf-8")).values if base_data else {})
-        return cache[key]
+            cache[key] = hit
+        return hit
 
     def _changed_strings(self, ledger, row):
         try:

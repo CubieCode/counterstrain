@@ -1,11 +1,14 @@
-"""A scripted edit session on a clone of this repository: the real ledger, lang file and
+"""A scripted edit session on a copy of this repository: the real ledger, lang file and
 textures, then the real batch checks (tools/check-provenance.sh, check-docs, git diff --check).
 
-No network: the clone's origin is a bare copy made on disk.
+No network: the copy's origin is a bare repository made on disk. The copy is built from the
+committed files (git archive) in a fresh repository, so it works from CI's shallow checkout too.
 """
+import io
 import os
 import shutil
 import subprocess
+import tarfile
 import tempfile
 import unittest
 
@@ -30,9 +33,11 @@ class SessionTest(unittest.TestCase):
         cls.tmp = tempfile.mkdtemp(prefix="content-editor-session-")
         cls.clone = os.path.join(cls.tmp, "repo")
         origin = os.path.join(cls.tmp, "origin.git")
-        head = git(ROOT, "rev-parse", "HEAD").strip()
-        subprocess.run(["git", "clone", "-q", "--no-checkout", ROOT, cls.clone], check=True)
-        git(cls.clone, "checkout", "-q", "-B", "main", head)
+        archive = subprocess.run(["git", "-C", ROOT, "archive", "--format=tar", "HEAD"], check=True,
+                                 capture_output=True).stdout
+        with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+            tar.extractall(cls.clone, filter="data")
+        subprocess.run(["git", "init", "-q", "-b", "main", cls.clone], check=True)
         # Uncommitted work in the checkout under test (this editor's own files) goes into the clone too.
         status = git(ROOT, "status", "--porcelain", "--untracked-files=all")
         for line in status.splitlines():
@@ -49,7 +54,7 @@ class SessionTest(unittest.TestCase):
         git(cls.clone, "add", "-A")
         git(cls.clone, "commit", "-q", "--allow-empty", "-m", "session base")
         subprocess.run(["git", "init", "-q", "--bare", "-b", "main", origin], check=True)
-        git(cls.clone, "remote", "set-url", "origin", origin)
+        git(cls.clone, "remote", "add", "origin", origin)
         git(cls.clone, "push", "-q", "origin", "main")
         git(cls.clone, "fetch", "-q", "origin")
 

@@ -30,21 +30,31 @@ class ServerTest(unittest.TestCase):
         self.httpd.server_close()
         self.repo.cleanup()
 
-    def get(self, path, token=False):
+    def get(self, path, token=False, headers=None):
         conn = http.client.HTTPConnection("127.0.0.1", self.httpd.server_port, timeout=5)
-        conn.request("GET", path, headers={"X-Editor-Token": "tok"} if token else {})
+        conn.request("GET", path, headers={**({"X-Editor-Token": "tok"} if token else {}), **(headers or {})})
         res = conn.getresponse()
         body = res.read()
         conn.close()
         return res.status, body
 
     def test_static_paths_cannot_leave_their_folder(self):
-        self.assertEqual(self.get("/static/app.js")[0], 200)
+        self.assertEqual(self.get("/static/app.js?t=tok")[0], 200)
         for evil in ("/static//etc/passwd", "/static/../server.py", "/static/%2e%2e/server.py",
                      "/vendor//etc/hostname", "/static/../../../../etc/passwd"):
-            status, body = self.get(evil)
+            status, body = self.get(evil, token=True)
             self.assertEqual(status, 404, evil)
             self.assertNotIn(b"root:", body)
+
+    def test_every_request_needs_the_token(self):
+        for path in ("/", "/index.html", "/static/app.js", "/vendor/deepslate-0.27.2.umd.js", "/api/state"):
+            self.assertEqual(self.get(path)[0], 403, path)
+        status, body = self.get("/?t=tok")
+        self.assertEqual(status, 200)
+        self.assertIn(b'content="tok"', body)
+        # A non-ASCII token is refused with a 403, not a crashed request thread.
+        self.assertEqual(self.get("/?t=%C3%A9")[0], 403)
+        self.assertEqual(self.get("/api/state", headers={"X-Editor-Token": "caf\xe9"})[0], 403)
 
     def test_reads_do_not_wait_for_a_running_write(self):
         with self.app.lock:  # as if Run checks or a push were holding the write lock

@@ -2,9 +2,9 @@
 
     python3 -I tools/content-editor/server.py [--port N] [--lan] [--worktree PATH] [--reviewer NAME]
 
-Run through tools/content-editor.sh. Binds 127.0.0.1 unless --lan. Every API
-request carries the random token printed at start (the page sends it for you);
-with --lan every request, pages included, needs it.
+Run through tools/content-editor.sh. Binds 127.0.0.1 unless --lan. Every request,
+pages included, carries the random token printed at start (open the printed URL;
+the page sends it for you).
 """
 import argparse
 import base64
@@ -79,10 +79,10 @@ class Handler(BaseHTTPRequestHandler):
             host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]")
             if host not in ("127.0.0.1", "localhost", "::1"):
                 return False  # DNS rebinding: only the loopback names reach a loopback-bound editor
-        if not api and not app.lan:
-            return True
+        # Every request needs the token, pages included: the page embeds it, so serving the page without it
+        # would hand it to any local process. Compared as bytes (compare_digest rejects non-ASCII str).
         given = self.headers.get("X-Editor-Token") or self.query().get("t", "")
-        return secrets.compare_digest(given, app.token)
+        return secrets.compare_digest(given.encode("utf-8", "replace"), app.token.encode("ascii"))
 
     def body(self):
         length = int(self.headers.get("Content-Length") or 0)

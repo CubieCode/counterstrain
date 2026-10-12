@@ -8,6 +8,7 @@ most-specific-row rule: an exact `file:key` row overrides a matching `*` row.
 import re
 
 from . import files
+from .checker import provenance
 
 STATUSES = ("placeholder", "draft", "final", "removed")
 # The Type column's values (docs/CONTENT-PROVENANCE.md, "Columns").
@@ -33,8 +34,7 @@ class Row:
         self.index = index  # 0-based line index in the ledger
         self.section = section
         self.path_cell, self.type, self.origin, self.status, self.notes = cells[:5]
-        ticked = re.search(r"`([^`]+)`", self.path_cell)
-        self.path_id = (ticked.group(1) if ticked else self.path_cell).strip()
+        self.path_id = provenance.row_path_id(self.path_cell)
         self.type = self.type.strip("` ").lower()
         self.status = self.status.strip("` ").lower()
 
@@ -108,12 +108,9 @@ class Ledger:
             if line.startswith("## "):
                 section = line[3:].strip()
                 continue
-            if not line.startswith("|"):
-                continue
-            cells = [c.strip() for c in line.strip().strip("|").split("|")]
-            if len(cells) < 5 or cells[0] == "Path / ID" or set(cells[0]) <= set("-: "):
-                continue
-            self.rows.append(Row(i, section, cells))
+            cells = provenance.parse_row(line)  # the CI check's own definition of a row
+            if cells is not None:
+                self.rows.append(Row(i, section, cells))
 
     # --- lookups -------------------------------------------------------------
 

@@ -293,7 +293,9 @@ class Workspace:
         return stats
 
     def touches_pack(self):
-        return any(path.startswith("pack/") and path not in PACK_INDEX for _, path in self.changed_files())
+        # Includes index.toml and pack.toml themselves: after a refresh and an Undo of the pack edit, the index
+        # is the only change left and must be refreshed (back to main's) and checked again.
+        return any(path.startswith("pack/") for _, path in self.changed_files())
 
     def run_checks(self):
         root = self.require_batch()

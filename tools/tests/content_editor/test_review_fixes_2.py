@@ -127,6 +127,39 @@ class EditorFixesTest(unittest.TestCase):
         self.assertEqual((detail["value"], detail["base"]), ("Café of the Strain", "Café of the Strain"))
         self.assertEqual(self.editor.batch()["changes"], [])
 
+    def test_undo_after_a_pack_refresh_refreshes_the_index_again(self):
+        ws = self.editor.workspace
+        pack_lang = "pack/kubejs/assets/counterstrain/lang/en_us.json"
+        self.editor.lang_save(pack_lang, "quest.counterstrain.crash", "The crash site")
+        ws.run_checks()  # refreshes pack/index.toml for the edit
+        self.editor.undo(f"{pack_lang}:quest.counterstrain.crash")
+        results, _ = ws.run_checks()
+        self.assertIn("tools/pack.sh refresh", [r["cmd"] for r in results])
+        self.assertTrue(all(r["ok"] for r in results), results)
+        self.assertEqual(fixture.git(ws.worktree, "status", "--porcelain").strip(), "")  # index back to main's
+
+    def test_mods_toml_literal_values_refuse_triple_quotes(self):
+        template = "mod/src/main/templates/META-INF/neoforge.mods.toml"
+        os.makedirs(os.path.dirname(self.editor.path(template)), exist_ok=True)
+        with open(self.editor.path(template), "w", encoding="utf-8") as f:
+            f.write("description='''${mod_description}'''\n")
+        for bad in ("Cure the Strain '''for good'''", "Cure the Strain, it said '"):
+            with self.assertRaises(EditorError):
+                self.editor.properties_save("mod/gradle.properties:mod_description", bad)
+        self.editor.properties_save("mod/gradle.properties:mod_description", "Cure the Strain, nidus by nidus")
+
+    def test_removed_rows_are_read_only(self):
+        path = self.editor.path("docs/CONTENT-PROVENANCE.md")
+        with open(path, encoding="utf-8") as f:
+            text = f.read().replace("| `docs/LORE.md` (premise, arc) | lore | ai (test) | draft |",
+                                    "| `docs/LORE.md` (premise, arc) | lore | ai (test) | removed |")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+        for call in (lambda: self.editor.accept_row("docs/LORE.md"),
+                     lambda: self.editor.markdown_save("docs/LORE.md", "# New\n")):
+            with self.assertRaises(EditorError):
+                call()
+
     def test_add_row_refuses_unknown_types(self):
         with self.assertRaises(EditorError):
             self.editor.add_row("mod/src/main/resources/assets/remission/textures/block/y.png", "texture | evil", "Textures", "n")

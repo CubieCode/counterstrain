@@ -1,16 +1,9 @@
 """PNG reading and writing, sharing tools/check-provenance.py's decoder and marker rule
 so the editor and the CI check can never disagree about what a placeholder is."""
-import importlib.util
-import os
 import struct
-import tempfile
 import zlib
 
-_CHECKER = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                        "check-provenance.py")
-_spec = importlib.util.spec_from_file_location("check_provenance", _CHECKER)
-provenance = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(provenance)
+from .checker import provenance
 
 PngError = provenance.PngError
 SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -38,22 +31,12 @@ def header(data):
     return width, height, bool(interlace)
 
 
-def _with_file(data, fn):
-    fd, path = tempfile.mkstemp(suffix=".png", prefix="content-editor-")
-    try:
-        with os.fdopen(fd, "wb") as f:
-            f.write(data)
-        return fn(path)
-    finally:
-        os.unlink(path)
-
-
 def decode(data):
     """Decode a whole PNG (any colour type the checker supports) to an Image."""
     width, height, _ = header(data)
     if width * height > 4096 * 4096:
         raise PngError(f"{width}×{height} is too large to decode here")
-    w, h, rows = _with_file(data, lambda p: provenance.png_top_left(p, max(width, height)))
+    w, h, rows = provenance.png_top_left_bytes(data, max(width, height))
     if len(rows) != h or any(len(r) != w for r in rows):
         raise PngError("truncated image data")
     return Image(w, h, rows)
@@ -61,7 +44,7 @@ def decode(data):
 
 def marker(data):
     """(marker_size, has_marker) exactly as tools/check-provenance.py computes them."""
-    return _with_file(data, provenance.has_marker)
+    return provenance.has_marker_bytes(data)
 
 
 def marker_size(width):
