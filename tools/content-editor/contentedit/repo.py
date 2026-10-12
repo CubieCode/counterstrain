@@ -20,6 +20,10 @@ CHECKS = (
     ("python3 -I tools/check-docs.py", ["python3", "-I", "tools/check-docs.py"]),
     ("git diff --check", ["git", "diff", "--cached", "--check"]),
 )
+# Files under pack/ are hashed in pack/index.toml (and its hash in pack/pack.toml): a batch that edits one
+# refreshes the index before the checks and adds the pack check. Mod assets ship in the jar, not the index.
+PACK_INDEX = ("pack/index.toml", "pack/pack.toml")
+PACK_CHECK = ("tools/pack.sh check", ["tools/pack.sh", "check"])
 
 
 class RepoError(RuntimeError):
@@ -242,11 +246,24 @@ class Workspace:
             stats[path] = (added, deleted)
         return stats
 
+    def touches_pack(self):
+        return any(path.startswith("pack/") and path not in PACK_INDEX for _, path in self.changed_files())
+
     def run_checks(self):
         root = self.require_batch()
+        results, checks = [], list(CHECKS)
+        if self.touches_pack():
+            start = time.monotonic()
+            try:
+                out = subprocess.run(["tools/pack.sh", "refresh"], cwd=root, capture_output=True, text=True, timeout=300)
+                ok, output = out.returncode == 0, (out.stdout + out.stderr).strip()
+            except (OSError, subprocess.TimeoutExpired) as e:
+                ok, output = False, str(e)
+            results.append({"cmd": "tools/pack.sh refresh", "ok": ok, "output": output,
+                            "seconds": round(time.monotonic() - start, 1)})
+            checks.append(PACK_CHECK)
         git(root, "add", "--all")
-        results = []
-        for label, cmd in CHECKS:
+        for label, cmd in checks:
             start = time.monotonic()
             try:
                 out = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=300)

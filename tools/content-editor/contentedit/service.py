@@ -645,7 +645,9 @@ class Editor:
                     parts.append("notes updated")
                 what = ", ".join(parts) or "updated"
             lines.append(f"- `{row['path']}`: {what}")
+        pack = " `tools/pack.sh refresh` updated `pack/index.toml` and `pack/pack.toml`, then `tools/pack.sh check`." \
+            if self.workspace.touches_pack() else ""
         lines += ["", "Checks run before the commit: `tools/check-provenance.sh`, `python3 -I tools/check-docs.py`, "
-                      "`git diff --check`.", "",
+                      "`git diff --check`." + pack, "",
                   "A batch that touches `en_us.json` or texture references rebases and reruns its checks before merge."]
         return "\n".join(lines) + "\n"

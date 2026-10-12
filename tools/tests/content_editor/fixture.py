@@ -47,6 +47,15 @@ LANG_TEXT = textwrap.dedent("""\
     }
     """)
 
+PACK_SH = """#!/bin/sh
+set -e
+cd "$(dirname "$0")/.."
+index() { (cd pack && find . -type f ! -name index.toml ! -name pack.toml | sort | xargs sha256sum); }
+case "$1" in
+  refresh) index > pack/index.toml; sha256sum pack/index.toml | cut -c1-64 > pack/pack.toml ;;
+  check) index | cmp -s - pack/index.toml || { echo "pack/ is out of date"; exit 1; } ;;
+esac
+"""
 PROPS_TEXT = "# Mod metadata\nmod_id=remission\nmod_description=Hunt the Strain, a living plague.\nmod_version=0.1.0\n"
 LORE_TEXT = "# Lore outline\n\nSee the [ledger](CONTENT-PROVENANCE.md).\n\n## Premise\n\nA survey ship breaks up.\n"
 
@@ -99,6 +108,7 @@ LEDGER_TEXT = textwrap.dedent(f"""\
     | `{LANG}:event.remission.surge.warning.*` | lang | ai (test) | draft | Surge warning (P4.3). |
     | `{LANG}:event.remission.surge.bar.*` | lang | ai (test) | draft | Boss bars (P4.3). |
     | `{LANG}:commands.remission.surge.*` | lang | ai (test) | draft | Surge commands (P4.3). |
+    | `pack/kubejs/assets/counterstrain/lang/en_us.json:quest.counterstrain.crash` | lang | ai (test) | draft | Quest title (P11.1). |
     """)
 
 
@@ -128,10 +138,15 @@ class TempRepo:
             HAND_MODEL: '{\n  "parent": "minecraft:item/generated",\n  "textures": {\n    "layer0": "remission:block/stone"\n  }\n}\n',
             "tools/check-provenance.sh": "#!/bin/sh\necho provenance ok\n",
             "tools/check-docs.py": "print('check-docs: ok')\n",
+            # Stand-in for packwiz: index.toml lists a hash per pack file; check fails when it is stale.
+            "tools/pack.sh": PACK_SH,
+            "pack/kubejs/assets/counterstrain/lang/en_us.json": '{\n  "quest.counterstrain.crash": "Crash site"\n}\n',
         }
         for rel, text in files.items():
             self.write(rel, text.encode("utf-8"))
         os.chmod(os.path.join(self.root, "tools/check-provenance.sh"), 0o755)
+        os.chmod(os.path.join(self.root, "tools/pack.sh"), 0o755)
+        subprocess.run([os.path.join(self.root, "tools/pack.sh"), "refresh"], cwd=self.root, check=True)
         self.write(TEX + "block/stone.png", solid(16, 16, marker=True))
         for i, shade in ((1, 60), (2, 120), (3, 180)):
             self.write(f"{HOST}stage_{i}.png", solid(32, 32, (shade, 40, shade, 128), marker=True))

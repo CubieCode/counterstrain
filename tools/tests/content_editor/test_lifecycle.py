@@ -122,6 +122,20 @@ class LifecycleTest(unittest.TestCase):
         self.assertEqual(fixture.git(self.editor.root, "rev-parse", "HEAD"), head)
         self.assertFalse(self.editor.workspace.uncommitted())
 
+    def test_pack_files_refresh_the_index_before_the_checks(self):
+        results, _ = self.editor.workspace.run_checks()
+        self.assertNotIn("tools/pack.sh check", [r["cmd"] for r in results])  # mod-only batch
+        pack_lang = "pack/kubejs/assets/counterstrain/lang/en_us.json"
+        self.editor.lang_save(pack_lang, "quest.counterstrain.crash", "The crash site")
+        results, tree = self.editor.workspace.run_checks()
+        self.assertEqual([r["cmd"] for r in results][0], "tools/pack.sh refresh")
+        self.assertIn("tools/pack.sh check", [r["cmd"] for r in results])
+        self.assertTrue(all(r["ok"] for r in results), results)
+        self.editor.workspace.commit("Content: Rename the crash site quest", tree)
+        changed = fixture.git(self.editor.root, "show", "--name-only", "--format=", "HEAD").split()
+        self.assertIn("pack/index.toml", changed)
+        self.assertIn("pack/pack.toml", changed)
+
     def test_finish_needs_a_closed_pr_or_the_name_to_discard(self):
         path, branch = self.editor.workspace.worktree, self.editor.workspace.branch()
         with self.assertRaises(RepoError):
