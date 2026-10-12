@@ -1,0 +1,30 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamerule sendCommandFeedback false",
+    "fill -24 -61 -40 -8 -61 -24 minecraft:water",
+    "fill 40 -61 40 72 -61 41 minecraft:dirt_path",
+    "fill 40 -60 -40 44 -57 -36 minecraft:stone",
+    "setblock 8 -60 8 remission:nidus"
+  ],
+  "shots": [
+    {"name": "before", "camera": {"pos": [8.5, -60.0, 8.5], "yaw": 180.0, "pitch": 0.0}, "map": true},
+    {
+      "name": "overlay",
+      "camera": {"pos": [8.5, -60.0, 8.5], "yaw": 180.0, "pitch": 0.0},
+      "commands": [
+        "remission region advance 8 -60 8 5",
+        "remission region advance 8 -60 8 3",
+        "remission region advance 8 -60 8 1",
+        "remission region advance 8 -60 8 0",
+        "remission region advance 104 -60 -88 1 2",
+        "remission region advance -56 -60 72 2 2",
+        "harness fester -112 -60 -128 143 -60 111",
+        "setblock -72 -60 72 remission:quarantine_pylon",
+        "harness purify"
+      ],
+      "map": true
+    }
+  ]
+}

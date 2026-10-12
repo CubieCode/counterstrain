@@ -78,6 +78,12 @@
   "commands.remission.surge.failed.running": "A surge is already under way in this dimension",
   "commands.remission.surge.failed.no_nidus": "No nidus reaches that position",
   "commands.remission.surge.failed.none": "No surge is under way in this dimension",
+  "commands.remission.nidus.seed.success": "Seeded a nidus at %s, %s, %s",
+  "commands.remission.nidus.seed.failed.present": "A nidus is already there",
+  "commands.remission.nidus.seed.failed.blocked": "A nidus cannot take root there",
+  "commands.remission.nidus.seed.failed.not_indexed": "The nidus failed to take root; the block was restored",
+  "commands.remission.region.advance.success": "The Strain advanced in %s chunks (radius %s around chunk %s, %s)",
+  "commands.remission.region.advance.failed": "No loaded chunk there can fester further",
   "death.attack.remission.viral_load": "%1$s succumbed to the Strain",
   "death.attack.remission.viral_load.player": "%1$s succumbed to the Strain while fighting %2$s",
   "block.remission.analyzer": "Analyzer",
@@ -101,5 +107,7 @@
   "stat.remission.chunks_cleansed": "Chunks Cleansed",
   "entity.remission.revenant": "Revenant",
   "entity.remission.revenant.named": "Revenant of %s",
-  "stat.remission.revenants_reclaimed": "Revenants Reclaimed"
+  "stat.remission.revenants_reclaimed": "Revenants Reclaimed",
+  "map.remission.festering": "Festering land, stage %s",
+  "map.remission.remission_zone": "Remission zone"
 }

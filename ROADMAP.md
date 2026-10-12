@@ -653,9 +653,9 @@ Goals: quests and scripts can observe and drive Remission.
 
 ### P8.2: Quest-fired events and map overlay
 
-- Status: `todo`
-- Owner:
-- PR:
+- Status: `review`
+- Owner: `feat/p8.2-quest-events-map-overlay`
+- PR: https://github.com/CubieCode/counterstrain/pull/71
 - Depends on: P8.1, P4.3
 - Scope: Commands for quests and scripts to start surges, seed nidi (`/remission nidus seed <pos>`) or advance regions; optional JourneyMap overlay of festering chunks and remission zones via its polygon overlay API (`integration/journeymap/`, `compileOnly` API, guarded by `ModList`).
 - Acceptance: A quest reward fires an event in a dev run; overlay screenshot reviewed (harness scene `quest/map_overlay`). Ledger updated; placeholders marked.

@@ -74,6 +74,8 @@ final class SceneRunner {
     /** Client ticks the world must stay loaded and compiled before a shot (2 s). */
     static final int SETTLE_TICKS = 40;
     static final String RESULT_FILE = "harness-result.txt";
+    /** JourneyMap full-screen zoom for {@code map} shots: four times its default (512), so the land near the camera fills the screen. */
+    static final int MAP_ZOOM = 2048;
 
     private enum Phase { WAIT_TITLE, LOADING, SETUP, SHOOTING, DONE }
 
@@ -88,6 +90,7 @@ final class SceneRunner {
     private boolean captureRequested;
     private boolean pressed;
     private boolean recipesOpened;
+    private boolean mapOpened;
 
     SceneRunner(String sceneId, Path outputDir, long timeoutSeconds) {
         this.sceneId = sceneId;
@@ -155,6 +158,7 @@ final class SceneRunner {
                 }
                 pressKey(mc);
                 openRecipes(mc);
+                openMap(mc);
                 stableTicks = isSettled(mc) ? stableTicks + 1 : 0;
                 if (stableTicks >= SETTLE_TICKS) {
                     captureRequested = true;
@@ -394,6 +398,7 @@ final class SceneRunner {
         }
         pressed = false;
         recipesOpened = false;
+        mapOpened = false;
         Scene.Shot shot = scene.shots().get(index);
         Scene.Camera camera = shot.camera();
         mc.options.setCameraType(shot.view());
@@ -489,6 +494,39 @@ final class SceneRunner {
         if (recipesOpened) {
             RemissionHarness.LOGGER.info("Scene {}: opened recipes {}", sceneId, category);
         }
+    }
+
+    /** Opens JourneyMap's full-screen map once the camera move reached the server, for a shot with {@code map}. */
+    private void openMap(Minecraft mc) {
+        Scene.Shot shot = scene.shots().get(shotIndex);
+        if (!shot.map() || mapOpened || !pending.isDone()) {
+            return;
+        }
+        if (!ModList.get().isLoaded("journeymap")) {
+            throw new IllegalStateException("shot " + shot.name() + " needs JourneyMap for its map");
+        }
+        try {
+            // Set in memory; the harness never saves them. The first-run splash would cover the map; the zoom is fixed.
+            Class<?> client = Class.forName("journeymap.client.JourneymapClient");
+            Object instance = client.getMethod("getInstance").invoke(null);
+            Object core = client.getMethod("getCoreProperties").invoke(instance);
+            Object version = Class.forName("journeymap.common.Journeymap").getField("JM_VERSION").get(null);
+            setField(core, "splashViewed", version.toString());
+            Object fullMap = client.getMethod("getFullMapProperties").invoke(instance);
+            setField(fullMap, "zoomLevel", MAP_ZOOM);
+            Class<?> manager = Class.forName("journeymap.client.ui.UIManager");
+            manager.getMethod("getOrOpenFullscreenMap").invoke(manager.getField("INSTANCE").get(null));
+        } catch (ReflectiveOperationException | LinkageError e) {
+            throw new IllegalStateException("cannot open the JourneyMap full-screen map", e);
+        }
+        mapOpened = true;
+        RemissionHarness.LOGGER.info("Scene {}: opened the JourneyMap full-screen map", sceneId);
+    }
+
+    /** Sets a JourneyMap properties field ({@code ConfigField#set}) in memory. */
+    private static void setField(Object properties, String name, Object value) throws ReflectiveOperationException {
+        Object field = properties.getClass().getField(name).get(properties);
+        field.getClass().getMethod("set", Object.class).invoke(field, value);
     }
 
     private void fail(String message, Throwable cause) {
