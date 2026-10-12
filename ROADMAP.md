@@ -26,6 +26,8 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - E: P4.2 (done), then P4.3 (after P4.5 and P8.1, both done). P4.3 owns surge scheduling, miasma clouds, its surge API events and the surge survived trigger and stat, and is the remission-data-formats owner while it runs; append-only edits in `api/` and `quest/`.
 - P4.8 (follow-up to P4.6 and P4.7) runs alone or before wave F; it owns the vein block and the contact source and must merge before P5.2.
 - P4.9 (follow-up to P4.6 and P5.2) runs alone or alongside items that do not touch `world/`, the `[spread]` config or remission-data-formats; it must merge before P11.2.
+- P4.10 (follow-up to P4.3) runs alone or alongside items that do not touch `world/` nidus code, `surge/` or the nidus contracts; it owns `NidusBlock`, the nidus API events and the `nidus_destroyed` trigger while it runs.
+- P5.5 (follow-up to P5.2) can join any wave or run alone; it owns `RemissionZones` and the `[remission_zones]` config.
 - P4.6 and P4.7 (follow-ups to P4.2 and P3.3) can join wave E with P4.3 or run alone. P4.6 owns `world/FesteringStages` and `world/FesterMaps` and runs before P5.2; P4.7 owns `infection/`. With P4.3 in the same wave, appoint one owner for config specs and one for remission-data-formats.
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - P5.3 → P5.4 serially, after P5.1. P5.3 owns the revenant entity, `integration/curios/` and its build-file entries; P5.4 owns its payload and coordinates `integration/journeymap/` with P8.2 (never in the same wave).
@@ -327,7 +329,18 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
 - Parallel: Owns the initial level hook in `world/` and the new `[spread]` keys; appends to remission-data-formats.
 
-Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, P4.6, P4.7, P4.8 and P4.9, follow-ups added after P4.4, are not part of these exit criteria.
+### P4.10: Nidus encounters
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.3, P4.4, P8.1
+- Scope: Destroying a nidus becomes a fight instead of mining one block. A nidus has **nidus vitality** (config, scaled by how long it has grown) and cannot be mined: players wear it down by striking it (damage from the held item's attack damage and attack strength), and projectiles and explosions count at configurable fractions, so TNT alone is not the answer. As vitality falls past thresholds (default 75, 50 and 25%) the nidus fights back: it starts a surge from itself at once with no warning (P4.3), at rising intensity, and lashes nearby players with viral load and knockback. Vitality regenerates when no player has struck it for a while, so a failed attempt has to start over. Nearby players see a boss bar with its vitality, and the block shows its damage (block state or crack overlay). The player who lands the final blow destroys it: the nidus core drops, `NidusDestroyedEvent` gains that player, and `remission:nidus_destroyed` fires for that player only. A new cancellable `NidusDamagedEvent` (with a mutable amount) lets packs and scripts make prepared items or serums deal more (P7.3, P8.3) or protect a story nidus. Creative players and `/setblock` still remove a nidus at once. Config in a new `[nidi]` section (vitality, growth scaling, regeneration, thresholds, the projectile and explosion fractions; vitality 0 restores plain mining). Documents the event, the trigger change and the config in remission-data-formats and docs/ARCHITECTURE.md.
+- Acceptance: Gametests: mining never breaks a nidus; strikes, projectiles and explosions deal their configured damage; each threshold starts one surge from that nidus and lashes players; vitality regenerates after the delay and is saved with the block entity; the final blow drops the core and fires the event and trigger for that player; `NidusDamagedEvent` cancels and scales damage; vitality 0 restores mining. A dev-world fight against a full-grown nidus with iron gear is winnable but costly, noted in the PR. Harness scene `world/nidus_fight` (a damaged nidus at each threshold, the boss bar and a surge under way), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns `NidusBlock` and its block entity, the `[nidi]` config, `NidusDamagedEvent` and the `nidus_destroyed` trigger contract; appends to `api/` and the surge controller's start path.
+
+Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5 to P4.10, follow-ups added after P4.4, are not part of these exit criteria.
 
 ## Phase 5: Viral load and early purification
 
@@ -377,7 +390,18 @@ Goals: the player can survive the Strain and push it back locally.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 - Parallel: Adds a network payload (one registry and network spine owner per wave) and the JourneyMap build-file entry; P8.2 also uses `integration/journeymap/`, so whichever runs second appends to that package rather than replacing it.
 
-Exit criteria: a player can enter, survive and cleanse festering land in a dev world, leaving chunks in remission; scenes reviewed. P5.3 and P5.4, added later, are not part of these exit criteria.
+### P5.5: Remission zones come back to life
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P5.2
+- Scope: Make reclaimed land visibly worth winning, beyond P5.2's numeric bonuses. **Wildlife returns:** chunks in remission slowly gain passive animals from their restored biome's creature spawn list (vanilla only spawns these when a chunk is generated, so cleansed land would otherwise stay empty), capped per chunk and never as hosts. **Regrowth:** cleansed surfaces gradually regain grass, flowers and saplings suited to the restored biome, budgeted per tick like the other land passes. Both are new `[remission_zones]` settings (on/off, rates, caps), on by default, and deterministic where they place blocks. Documented in remission-data-formats and docs/ARCHITECTURE.md.
+- Acceptance: Gametests: animals from the biome's list appear in a chunk in remission within the configured time and stop at the cap, none outside remission and none with the setting off; regrowth places only biome-appropriate plants on cleansed surfaces, is deterministic and stops with the setting off. Per-tick cost measured on foundry and recorded in the PR. Harness scene `purification/regrowth` (the same patch of land festered, just cleansed and after regrowth), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns `RemissionZones` and the `[remission_zones]` config; appends to remission-data-formats.
+
+Exit criteria: a player can enter, survive and cleanse festering land in a dev world, leaving chunks in remission; scenes reviewed. P5.3, P5.4 and P5.5, added later, are not part of these exit criteria.
 
 ## Phase 6: Research
 
@@ -618,8 +642,8 @@ Goals: Counterstrain becomes a playable pack.
 - Owner:
 - PR:
 - Depends on: P4.9, P11.1, P11.4, P11.5, P10.2, P10.3, P10.4, P10.5, P10.6
-- Scope: Starting structure/map (the crash site holds a working quarantine pylon, so the player starts inside a warded radius). A choice of crash sites: several starts that differ in difficulty (distance to the first nidus, festering around the site, salvage), chosen when a world is created or on first join, with one default for servers and quick starts. Pressure to reclaim (DESIGN): initial festering (P4.9) on for the overworld, with the safe radius around the crash sites and the level rising with distance, and a world border set from the pack (start at a few thousand blocks across, sized in P11.3) so curing the world is a finishable goal. The quest book shows how much of the land inside the border is in remission. KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
-- Acceptance: New world starts at the chosen crash site, and each crash site is playable to the first nidus; a playtest that heads away from the crash site finds festering land rising in level up to the border, never clean land; the remission share in the quest book matches the land cleansed; gated recipes verified in EMI; each DESIGN integration gate is enforced in a playtest; harness scene `start/crash_site` for each crash site. Ledger updated; placeholders marked.
+- Scope: Starting structure/map (the crash site holds a working quarantine pylon, so the player starts inside a warded radius). A choice of crash sites: several starts that differ in difficulty (distance to the first nidus, festering around the site, salvage), chosen when a world is created or on first join, with one default for servers and quick starts. Pressure to reclaim (DESIGN): initial festering (P4.9) on for the overworld, with the safe radius around the crash sites and the level rising with distance, and a world border set from the pack (start at a few thousand blocks across, sized in P11.3) so curing the world is a finishable goal. The quest book shows how much of the land inside the border is in remission, with reward quests at milestones (for example 10, 25, 50 and 75%), and the chapters that unlock waystones, colonies and other P10.6 settlement content point the player at reclaimed land as where to build them. KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
+- Acceptance: New world starts at the chosen crash site, and each crash site is playable to the first nidus; a playtest that heads away from the crash site finds festering land rising in level up to the border, never clean land; the remission share in the quest book matches the land cleansed and its milestone quests complete; gated recipes verified in EMI; each DESIGN integration gate is enforced in a playtest; harness scene `start/crash_site` for each crash site. Ledger updated; placeholders marked.
 - Skills: kubejs-scripting, minecraft-datapack, minecraft-world-generation, playtesting, visual-checks, content-provenance
 
 ### P11.3: Balancing pass
@@ -628,7 +652,7 @@ Goals: Counterstrain becomes a playable pack.
 - Owner:
 - PR:
 - Depends on: P11.2
-- Scope: Spread rates, viral load, recipe costs, quest rewards, integration gate costs, wreck site loot, supply drop costs and standing, crash site difficulty, initial festering levels, and the world border's size (ores and other finite resources inside it must last a full playthrough).
+- Scope: Spread rates, viral load, recipe costs, quest rewards, integration gate costs, wreck site and sealed cache loot, remission milestone rewards, nidus vitality, supply drop costs and standing, crash site difficulty, initial festering levels, and the world border's size (ores and other finite resources inside it must last a full playthrough).
 - Acceptance: A documented playtest from start to Counterstrain.
 - Skills: playtesting
 
@@ -637,9 +661,9 @@ Goals: Counterstrain becomes a playable pack.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P11.1, P10.7
-- Scope: Hand-built places worth exploring between nidi, as structures in the pack datapack: wreck sites (pieces of the survey ship scattered by the crash, including the ship's lab), survivor camps and caches guarded by hosts, at least one per region and some placed inside or next to festering land. Each has its own loot table (salvage, samples and items that shortcut early gates, tuned in P11.3) and carries lab logs: found items with P11.1's text that unlock field journal entries (P10.7) and, where a chapter needs them, quest tasks. Structures fester and grow veins like any other build unless warded. Pack-side only: Remission gains no structure or log code.
-- Acceptance: Every structure generates in a fresh world and is reachable; `/locate structure` finds each type; every lab log is obtainable and unlocks its journal entry; loot tables pass `tools/pack.sh check`; harness scene `explore/wreck_sites` (each structure type, clean and festering), reviewed. Ledger updated; placeholders marked.
+- Depends on: P11.1, P10.7, P8.3
+- Scope: Hand-built places worth exploring between nidi, as structures in the pack datapack: wreck sites (pieces of the survey ship scattered by the crash, including the ship's lab), survivor camps and caches guarded by hosts, at least one per region and some placed inside or next to festering land. Each has its own loot table (salvage, samples and items that shortcut early gates, tuned in P11.3) and carries lab logs: found items with P11.1's text that unlock field journal entries (P10.7) and, where a chapter needs them, quest tasks. Some wreck sites hold **sealed caches** that stay shut until their chunk enters remission (KubeJS on P8.3's bindings), so the best loot is a reward for reclaiming land, not for running in. Structures fester and grow veins like any other build unless warded. Pack-side only: Remission gains no structure or log code.
+- Acceptance: Every structure generates in a fresh world and is reachable; `/locate structure` finds each type; every lab log is obtainable and unlocks its journal entry; a sealed cache stays shut while its chunk is festering and opens once it is in remission; loot tables pass `tools/pack.sh check`; harness scene `explore/wreck_sites` (each structure type, clean and festering), reviewed. Ledger updated; placeholders marked.
 - Skills: minecraft-world-generation, minecraft-datapack, kubejs-scripting, ftb-quests-authoring, visual-checks, content-provenance
 
 ### P11.5: Supply drops and standing
