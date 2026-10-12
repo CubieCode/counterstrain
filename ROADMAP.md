@@ -105,9 +105,9 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.5: Local content editor
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: `feat/p1.5-local-content-editor`
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/60
 - Depends on: P1.4
 - Scope: A small local web app for replacing AI-generated player-facing content without hand-editing files: `tools/content-editor.sh [--port N] [--lan]`, a Python standard library HTTP server (no new Python dependencies, no root, no build step; plain HTML, CSS and JavaScript served from `tools/content-editor/`, plus one vendored viewer, below). It is built on the provenance ledger: it lists `docs/CONTENT-PROVENANCE.md` rows, filterable by status (`placeholder`, `draft`, `final`), type and roadmap item, and edits the files they point at.
   - **Text:** for `lang` rows, shows each matching key's current English string (rows with `*` expand to every matching key) with the row's notes as guidance, and saves edits to `en_us.json`, keeping key order and formatting and refusing invalid JSON or a changed set of `%s` arguments. The same page can accept a string unchanged as final. Markdown text rows (`docs/LORE.md` now; store copy, field journal entries and books once their files exist) open in a source and live preview editor with a heading outline, a diff against main and warnings for broken relative links; saving or accepting updates the row the same way. `file.properties:key` rows (the mod description) get a one-line in-place editor. Text pages warn about words the glossary replaces and, when a local Ollama model is running, can ask it to point out problems against the glossary and the row's notes; the model never writes text, so saved text stays `human`.
