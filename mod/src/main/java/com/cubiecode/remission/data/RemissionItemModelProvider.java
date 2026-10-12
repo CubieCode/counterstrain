@@ -26,5 +26,7 @@ public final class RemissionItemModelProvider extends ItemModelProvider {
         // Purification (P5.2): mendroot's item is its flat block texture, as saplings.
         basicItem(RemissionItems.HANDHELD_PURIFIER.get());
         withExistingParent("mendroot", mcLoc("item/generated")).texture("layer0", modLoc("block/mendroot"));
+        // Countermeasures (P5.7)
+        basicItem(RemissionItems.COUNTERMEASURE_PROTOCOL.get());
     }
 }

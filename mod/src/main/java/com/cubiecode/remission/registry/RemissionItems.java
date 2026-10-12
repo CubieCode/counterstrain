@@ -1,6 +1,7 @@
 package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.countermeasure.CountermeasureProtocolItem;
 import com.cubiecode.remission.purification.HandheldPurifierItem;
 import com.cubiecode.remission.research.ScanItem;
 import com.cubiecode.remission.research.ScannerItem;
@@ -57,6 +58,10 @@ public final class RemissionItems {
     public static final DeferredItem<BlockItem> QUARANTINE_PYLON = ITEMS.registerSimpleBlockItem(RemissionBlocks.QUARANTINE_PYLON);
     /** Planted like seeds (a block item), so players, dispensers with a pack's behaviour, and automation can place it. */
     public static final DeferredItem<BlockItem> MENDROOT = ITEMS.registerSimpleBlockItem(RemissionBlocks.MENDROOT);
+
+    // Countermeasures (P5.7)
+    public static final DeferredItem<CountermeasureProtocolItem> COUNTERMEASURE_PROTOCOL = ITEMS.registerItem(
+            "countermeasure_protocol", CountermeasureProtocolItem::new);
 
     private RemissionItems() {
     }

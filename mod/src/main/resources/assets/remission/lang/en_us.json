@@ -109,5 +109,18 @@
   "entity.remission.revenant.named": "Revenant of %s",
   "stat.remission.revenants_reclaimed": "Revenants Reclaimed",
   "map.remission.festering": "Festering land, stage %s",
-  "map.remission.remission_zone": "Remission zone"
+  "map.remission.remission_zone": "Remission zone",
+  "item.remission.countermeasure_protocol": "Countermeasure Protocol",
+  "item.remission.countermeasure_protocol.hazard": "Countermeasure: %s",
+  "item.remission.countermeasure_protocol.desc": "Use to protect you and your team from this hazard for good",
+  "item.remission.countermeasure_protocol.blank": "Names no hazard",
+  "hazard.remission.contact": "Contact viral load",
+  "message.remission.countermeasure.gained": "Countermeasure gained: %s",
+  "message.remission.countermeasure.held": "Your team already holds this countermeasure: %s",
+  "stat.remission.countermeasures_gained": "Countermeasures Gained",
+  "commands.remission.countermeasure.grant.success": "Granted the countermeasure to %2$s players: %1$s",
+  "commands.remission.countermeasure.revoke.success": "Revoked the countermeasure from %2$s players: %1$s",
+  "commands.remission.countermeasure.list.none": "%s holds no countermeasures",
+  "commands.remission.countermeasure.list.success": "%s holds %s countermeasures: %s",
+  "commands.remission.countermeasure.list.entry": "%s (%s)"
 }

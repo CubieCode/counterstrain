@@ -1,8 +1,10 @@
 package com.cubiecode.remission.config;
 
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.countermeasure.BlockHazardMode;
 import com.cubiecode.remission.viralload.ViralLoadSettings;
 import com.cubiecode.remission.viralload.ViralLoadState;
+import com.electronwill.nightconfig.core.EnumGetMethod;
 import java.util.List;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
@@ -64,6 +66,7 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.DoubleValue REMISSION_GROWTH_CHANCE;
     public static final ModConfigSpec.DoubleValue REMISSION_YIELD_CHANCE;
     public static final ModConfigSpec.IntValue REVENANT_PICKUP_TIMEOUT_TICKS;
+    public static final ModConfigSpec.EnumValue<BlockHazardMode> COUNTERMEASURES_BLOCK_HAZARDS;
 
     static {
         BUILDER.push("hosts");
@@ -285,6 +288,15 @@ public final class RemissionCommonConfig {
                         "teammates (the team query, such as FTB Teams parties) can pick them up. After that anyone can, and the",
                         "items despawn like other dropped items. Until then they never despawn and mobs and players cannot take them.")
                 .defineInRange("pickupTimeoutTicks", 12000, 0, 1728000);
+        BUILDER.pop();
+
+        BUILDER.push("countermeasures");
+        COUNTERMEASURES_BLOCK_HAZARDS = BUILDER
+                .comment("When block hazards (fouling, rot, containment breaches) may strike a placed block: TEAM_ONLINE while a",
+                        "player from the placer's team is online, PLAYER_NEARBY while one is within 128 blocks in the same",
+                        "dimension, or ALWAYS. A block with no known placer is treated as PLAYER_NEARBY (any player), so chunk",
+                        "loaders and idle servers never break a base while nobody is there.")
+                .defineEnum("blockHazards", BlockHazardMode.TEAM_ONLINE, EnumGetMethod.NAME_IGNORECASE);
         BUILDER.pop();
     }
 

@@ -1,6 +1,7 @@
 package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.quest.CountermeasureGainedTrigger;
 import com.cubiecode.remission.quest.HostScannedTrigger;
 import com.cubiecode.remission.quest.LocationTrigger;
 import com.cubiecode.remission.quest.RegionCleansedTrigger;
@@ -32,6 +33,9 @@ public final class RemissionTriggers {
 
     public static final Supplier<RegionCleansedTrigger> REGION_CLEANSED =
             TRIGGER_TYPES.register("region_cleansed", RegionCleansedTrigger::new);
+
+    public static final Supplier<CountermeasureGainedTrigger> COUNTERMEASURE_GAINED =
+            TRIGGER_TYPES.register("countermeasure_gained", CountermeasureGainedTrigger::new);
 
     private RemissionTriggers() {
     }

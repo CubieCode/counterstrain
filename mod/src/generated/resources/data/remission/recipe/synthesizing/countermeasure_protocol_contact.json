@@ -1,0 +1,32 @@
+{
+  "type": "remission:synthesizing",
+  "energy": 8000,
+  "fluid_ingredient": {
+    "amount": 1000,
+    "fluid": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "count": 1,
+      "item": "remission:strain_sequence"
+    },
+    {
+      "count": 1,
+      "item": "remission:festered_soil"
+    },
+    {
+      "count": 1,
+      "item": "minecraft:paper"
+    }
+  ],
+  "results": [
+    {
+      "components": {
+        "remission:hazard": "remission:contact"
+      },
+      "count": 1,
+      "id": "remission:countermeasure_protocol"
+    }
+  ],
+  "time": 400
+}
