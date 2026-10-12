@@ -52,4 +52,12 @@ public final class QuestProgress {
         player.awardStat(RemissionStats.SURGES_SURVIVED.get());
         RemissionTriggers.SURGE_SURVIVED.get().trigger(player, intensity);
     }
+
+    /** The player's viral load changed to {@code viralLoad}; it is already stored. */
+    public static void viralLoadChanged(ServerPlayer player, float viralLoad) {
+        if (player instanceof FakePlayer) {
+            return;
+        }
+        RemissionTriggers.VIRAL_LOAD_CHANGED.get().trigger(player, viralLoad);
+    }
 }

@@ -5,6 +5,7 @@ import com.cubiecode.remission.behaviour.AppliedHostGoals;
 import com.cubiecode.remission.corruption.CorruptionState;
 import com.cubiecode.remission.research.Bestiary;
 import com.cubiecode.remission.research.BestiaryProgress;
+import com.cubiecode.remission.viralload.ViralLoadState;
 import com.cubiecode.remission.world.ChunkCorruption;
 import com.mojang.serialization.Codec;
 import java.util.function.Supplier;
@@ -12,7 +13,7 @@ import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
-/** Data attachment types (planned: player viral load). */
+/** Data attachment types. */
 public final class RemissionAttachments {
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
             DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, Remission.MOD_ID);
@@ -82,6 +83,16 @@ public final class RemissionAttachments {
     public static final Supplier<AttachmentType<Integer>> CONTACT_EXPOSURE = ATTACHMENT_TYPES.register("contact_exposure",
             () -> AttachmentType.builder(() -> 0)
                     .serialize(Codec.intRange(0, Integer.MAX_VALUE), ticks -> ticks > 0)
+                    .build());
+
+    /**
+     * A player's viral load (P5.1): 0 to 100 and its last trend. The load is saved with the player (never at 0); the trend
+     * is not. Not copied on death, so a respawned player starts at 0. Not attachment-synced: the server sends the owner
+     * {@code ViralLoadPayload}, whose client handler sets it on the local player.
+     */
+    public static final Supplier<AttachmentType<ViralLoadState>> VIRAL_LOAD = ATTACHMENT_TYPES.register("viral_load",
+            () -> AttachmentType.builder(() -> ViralLoadState.NONE)
+                    .serialize(ViralLoadState.CODEC, state -> state.load() > 0)
                     .build());
 
     private RemissionAttachments() {

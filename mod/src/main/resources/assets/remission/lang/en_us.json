@@ -77,5 +77,7 @@
   "commands.remission.surge.status.running": "Surge from the nidus at %s, %s, %s (intensity %s); it ends in %s ticks",
   "commands.remission.surge.failed.running": "A surge is already under way in this dimension",
   "commands.remission.surge.failed.no_nidus": "No nidus reaches that position",
-  "commands.remission.surge.failed.none": "No surge is under way in this dimension"
+  "commands.remission.surge.failed.none": "No surge is under way in this dimension",
+  "death.attack.remission.viral_load": "%1$s succumbed to the Strain",
+  "death.attack.remission.viral_load.player": "%1$s succumbed to the Strain while fighting %2$s"
 }

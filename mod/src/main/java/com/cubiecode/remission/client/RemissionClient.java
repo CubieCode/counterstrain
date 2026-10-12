@@ -13,7 +13,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
-/** Client entrypoint: renderers, render layers, client payload handlers and client config. */
+/** Client entrypoint: renderers, render layers, HUD layers and client config. */
 @Mod(value = Remission.MOD_ID, dist = Dist.CLIENT)
 public final class RemissionClient {
     public RemissionClient(IEventBus modBus, ModContainer container) {
@@ -26,5 +26,6 @@ public final class RemissionClient {
         modBus.addListener(MiasmaClientExtensions::register);
         modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
                 event.registerEntityRenderer(RemissionEntityTypes.MIASMA_CLOUD.get(), MiasmaCloudRenderer::new));
+        modBus.addListener(ViralLoadHud::register);
     }
 }

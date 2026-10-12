@@ -42,5 +42,8 @@ public final class RemissionDataGenerators {
         generator.addProvider(event.includeServer(), new RemissionMobProfileProvider(output, lookup));
         generator.addProvider(event.includeServer(), new RemissionBiomeProvider(output, lookup));
         generator.addProvider(event.includeServer(), new RemissionDataMapProvider(output, lookup));
+        var damageTypes = generator.addProvider(event.includeServer(), new RemissionDamageTypeProvider(output, lookup));
+        generator.addProvider(event.includeServer(),
+                new RemissionDamageTypeTagsProvider(output, damageTypes.getRegistryProvider(), files));
     }
 }
