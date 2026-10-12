@@ -75,6 +75,18 @@ public final class QuestProgress {
         }
     }
 
+    /**
+     * The player slew a revenant whose items they may pick up: their own ({@code own}) or a teammate's (the team query,
+     * {@code TeamQueries}).
+     */
+    public static void revenantReclaimed(ServerPlayer player, boolean own) {
+        if (player instanceof FakePlayer) {
+            return;
+        }
+        player.awardStat(RemissionStats.REVENANTS_RECLAIMED.get());
+        RemissionTriggers.REVENANT_RECLAIMED.get().trigger(player, own);
+    }
+
     /** The player's viral load changed to {@code viralLoad}; it is already stored. */
     public static void viralLoadChanged(ServerPlayer player, float viralLoad) {
         if (player instanceof FakePlayer) {

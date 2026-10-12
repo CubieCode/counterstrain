@@ -187,6 +187,9 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.quarantine_pylon` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Quarantine pylon block and item name (P5.2); glossary term. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.mendroot` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Mendroot block and item name (P5.2); glossary term. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:stat.remission.chunks_cleansed` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Statistics screen name for `remission:chunks_cleansed` (P5.2). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:entity.remission.revenant` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Entity name of a revenant without an owner (P5.3), shown by debug screens, `/summon` and entity-aware mods; glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:entity.remission.revenant.named` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | A revenant's name, "Revenant of %s" with its owner's name (P5.3): shown in death messages ("was slain by Revenant of Steve") and by entity-aware mods. Should stay short and read naturally after "slain by". |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:stat.remission.revenants_reclaimed` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Statistics screen name for `remission:revenants_reclaimed` (P5.3). |
 
 ## Mod and pack metadata
 

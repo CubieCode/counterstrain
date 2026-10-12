@@ -98,5 +98,8 @@
   "item.remission.handheld_purifier.desc": "Use on festering ground to cleanse it, or on a host to weaken the Strain",
   "block.remission.quarantine_pylon": "Quarantine Pylon",
   "block.remission.mendroot": "Mendroot",
-  "stat.remission.chunks_cleansed": "Chunks Cleansed"
+  "stat.remission.chunks_cleansed": "Chunks Cleansed",
+  "entity.remission.revenant": "Revenant",
+  "entity.remission.revenant.named": "Revenant of %s",
+  "stat.remission.revenants_reclaimed": "Revenants Reclaimed"
 }

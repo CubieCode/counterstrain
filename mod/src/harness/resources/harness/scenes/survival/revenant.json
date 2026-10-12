@@ -1,0 +1,21 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamerule sendCommandFeedback false",
+    "gamemode creative @a",
+    "fill -6 -61 -3 6 -61 3 minecraft:smooth_stone",
+    "fill -7 -61 -4 7 -55 -4 minecraft:white_concrete",
+    "item replace entity @a armor.chest with minecraft:iron_chestplate",
+    "item replace entity @a armor.legs with minecraft:iron_leggings",
+    "item replace entity @a armor.feet with minecraft:golden_boots",
+    "item replace entity @a weapon.mainhand with minecraft:diamond_sword",
+    "harness revenant -2 -60 0 @p 20 0",
+    "harness revenant 2 -60 0 @p 90 0"
+  ],
+  "shots": [
+    {"name": "lineup", "camera": {"pos": [0.5, -60.0, 5.5], "yaw": 180.0, "pitch": 8.0}},
+    {"name": "stage_1", "camera": {"pos": [-1.5, -60.0, 2.8], "yaw": 180.0, "pitch": 12.0}},
+    {"name": "stage_3", "camera": {"pos": [2.5, -60.0, 2.8], "yaw": 180.0, "pitch": 12.0}}
+  ]
+}

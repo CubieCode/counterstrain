@@ -4,6 +4,7 @@ import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
 import com.cubiecode.remission.registry.RemissionAttachments;
+import com.cubiecode.remission.revenant.Revenant;
 import com.cubiecode.remission.viralload.ViralLoad;
 import com.cubiecode.remission.viralload.ViralLoadState;
 import com.cubiecode.remission.world.ChunkCorruption;
@@ -81,6 +82,11 @@ public final class CorruptionQueries {
     /** The highest festering stage the current config allows (the number of thresholds). */
     public static int maxChunkStage() {
         return RemissionCommonConfig.FESTERING_STAGE_THRESHOLDS.get().size();
+    }
+
+    /** Whether {@code entity} is a revenant ({@code remission:revenant}, P5.3). Both sides. */
+    public static boolean isRevenant(Entity entity) {
+        return entity instanceof Revenant;
     }
 
     /**

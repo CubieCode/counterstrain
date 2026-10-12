@@ -5,10 +5,12 @@ import com.cubiecode.remission.behaviour.AppliedHostGoals;
 import com.cubiecode.remission.corruption.CorruptionState;
 import com.cubiecode.remission.research.Bestiary;
 import com.cubiecode.remission.research.BestiaryProgress;
+import com.cubiecode.remission.revenant.RevenantDrop;
 import com.cubiecode.remission.viralload.ViralLoadState;
 import com.cubiecode.remission.world.ChunkCorruption;
 import com.mojang.serialization.Codec;
 import java.util.function.Supplier;
+import net.minecraft.Util;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
@@ -102,6 +104,15 @@ public final class RemissionAttachments {
     public static final Supplier<AttachmentType<Long>> CHUNK_REMISSION = ATTACHMENT_TYPES.register("chunk_remission",
             () -> AttachmentType.builder(() -> 0L)
                     .serialize(Codec.LONG)
+                    .build());
+
+    /**
+     * Pickup restriction on an item a slain revenant dropped (P5.3): its owner and the free time. Saved with the item
+     * entity, server only; removed when the restriction ends.
+     */
+    public static final Supplier<AttachmentType<RevenantDrop>> REVENANT_DROP = ATTACHMENT_TYPES.register("revenant_drop",
+            () -> AttachmentType.builder(() -> new RevenantDrop(Util.NIL_UUID, 0L, 0L))
+                    .serialize(RevenantDrop.CODEC)
                     .build());
 
     private RemissionAttachments() {

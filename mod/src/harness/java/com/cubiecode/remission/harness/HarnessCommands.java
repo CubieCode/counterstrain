@@ -1,5 +1,6 @@
 package com.cubiecode.remission.harness;
 
+import com.cubiecode.remission.api.CorruptionCause;
 import com.cubiecode.remission.api.ViralLoadChangedEvent;
 import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.corruption.Corruption;
@@ -10,6 +11,8 @@ import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionItems;
 import com.cubiecode.remission.research.Bestiary;
 import com.cubiecode.remission.research.Scanning;
+import com.cubiecode.remission.revenant.Revenant;
+import com.cubiecode.remission.revenant.Revenants;
 import com.cubiecode.remission.surge.SurgeController;
 import com.cubiecode.remission.surge.SurgeHosts;
 import com.cubiecode.remission.viralload.ViralLoad;
@@ -22,7 +25,10 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -37,7 +43,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.BlockHitResult;
@@ -58,6 +66,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * {@code harness viral_load <targets> <load> [rising|falling]} sets players' viral load and the trend their HUD shows
  * (P5.1). {@code harness purify} runs the level's quarantine pylon passes until every loaded warded chunk is in remission
  * and does every queued cleanse at once, as the budgeted passes would over many ticks (P5.2).
+ * {@code harness revenant <pos> <owner> <level> <yaw>} raises a revenant of the owner player there, through the
+ * revenant code, wearing copies of the owner's armour and main-hand item, at that Strain level and facing (P5.3).
  */
 final class HarnessCommands {
     private static final SimpleCommandExceptionType NO_HOSTS =
@@ -153,7 +163,44 @@ final class HarnessCommands {
                         .then(Commands.argument("to", BlockPosArgument.blockPos())
                                 .executes(context -> veins(context.getSource().getLevel(),
                                         BlockPosArgument.getBlockPos(context, "from"),
-                                        BlockPosArgument.getBlockPos(context, "to")))))));
+                                        BlockPosArgument.getBlockPos(context, "to"))))))
+                .then(Commands.literal("revenant").then(Commands.argument("pos", BlockPosArgument.blockPos())
+                        .then(Commands.argument("owner", EntityArgument.player())
+                                .then(Commands.argument("level", IntegerArgumentType.integer(1, CorruptionState.MAX_LEVEL))
+                                        .then(Commands.argument("yaw", FloatArgumentType.floatArg(-180.0F, 180.0F))
+                                                .executes(context -> revenant(context.getSource().getLevel(),
+                                                        BlockPosArgument.getBlockPos(context, "pos"),
+                                                        EntityArgument.getPlayer(context, "owner"),
+                                                        IntegerArgumentType.getInteger(context, "level"),
+                                                        FloatArgumentType.getFloat(context, "yaw")))))))));
+    }
+
+    /**
+     * Raises a revenant of {@code owner} at {@code pos} through the revenant code, as the owner's Strain death there would:
+     * it holds and wears copies of the owner's armour and main-hand item (the owner keeps theirs), then is set to
+     * {@code level} and turned to {@code yaw}, without AI so it holds its pose (P5.3).
+     */
+    private static int revenant(ServerLevel level, BlockPos pos, ServerPlayer owner, int strain, float yaw) {
+        Map<EquipmentSlot, ItemStack> worn = new EnumMap<>(EquipmentSlot.class);
+        List<ItemStack> items = new ArrayList<>();
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            ItemStack stack = owner.getItemBySlot(slot);
+            if (!stack.isEmpty() && (slot.isArmor() || slot == EquipmentSlot.MAINHAND)) {
+                worn.put(slot, stack.copy());
+                items.add(stack.copy());
+            }
+        }
+        Revenant revenant = Revenants.rise(level, owner, level.damageSources().generic(), pos, items, 0, 0.0F, worn);
+        if (revenant == null) {
+            return 0;
+        }
+        revenant.setNoAi(true);
+        revenant.setSilent(true);
+        revenant.moveTo(revenant.getX(), revenant.getY(), revenant.getZ(), yaw, 0.0F);
+        revenant.setYHeadRot(yaw);
+        revenant.setYBodyRot(yaw);
+        Corruption.set(revenant, strain, CorruptionCause.COMMAND);
+        return 1;
     }
 
     private static int eachPlayer(CommandContext<CommandSourceStack> context, Consumer<ServerPlayer> action) {
