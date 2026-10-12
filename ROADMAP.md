@@ -225,9 +225,10 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.3: Surges
 
-- Status: `review`
+- Status: `done`
 - Owner: `feat/p4.3-surges`
 - PR: https://github.com/CubieCode/counterstrain/pull/48
+- Validation: PR #48; scheduled and commanded surges (warning, spread factor before the spread attempt event, budgeted host waves from `#remission:surge_hosts` with `CorruptionCause.SURGE`, `remission:miasma_cloud` with no viral load), surge started/ended events, `surge_survived` trigger and `surges_survived` stat, `/remission surge`; 122/122 gametests; SpreadBenchmark within ARCHITECTURE ranges, a whole surge 1.2 µs mean per tick (max 1.1 ms on the start tick); GPU scenes `world/surge` and `world/miasma_cloud` (RTX 4070) reviewed and deterministic; CI and gpu-smoke green.
 - Depends on: P4.1, P3.1, P4.4, P8.1
 - Scope: Periodic surges that accelerate spread, spawn hosts (on the surface and in caves and other covered spaces under festering chunks) and release miasma clouds (drifting airborne areas above festering land; their viral load effect is added by P5.1), with warnings; config and command to trigger. Emits surge started and surge ended events. Adds the surge survived advancement trigger and stat, following P8.1's trigger and stat conventions.
 - Acceptance: Gametests for scheduling, host spawning on the surface and underground, and cloud spawning and drift; harness scenes `world/surge` and `world/miasma_cloud`. Ledger updated; placeholders marked.
