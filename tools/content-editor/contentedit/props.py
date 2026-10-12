@@ -1,9 +1,13 @@
 """Edit one value in a Java .properties file (e.g. `mod/gradle.properties:mod_description`) in place.
 
 Only single-line `key=value` (or `key = value`, `key: value`) entries are editable; the
-separator, its spacing and every other line stay as they are.
+separator, its spacing and every other line stay as they are. Like java.util.Properties (and
+Gradle, which reads gradle.properties with it), the file is ISO-8859-1: anything outside ASCII is
+written as a \\uXXXX escape, and existing escapes are decoded for display.
 """
 import re
+
+from . import files
 
 ENTRY = re.compile(r"^(\s*)([^\s=:#!]+)(\s*[=:]\s*)(.*)$")
 MAX_CHARS = 2000
@@ -14,11 +18,25 @@ class PropsError(ValueError):
 
 
 def _unescape(raw):
-    return re.sub(r"\\(.)", lambda m: {"n": "\n", "t": "\t"}.get(m.group(1), m.group(1)), raw)
+    def one(m):
+        if m.group(1):
+            return chr(int(m.group(1), 16))
+        return {"n": "\n", "t": "\t", "r": "\r", "f": "\f"}.get(m.group(2), m.group(2))
+    text = re.sub(r"\\(?:u([0-9a-fA-F]{4})|(.))", one, raw)
+    return text.encode("utf-16", "surrogatepass").decode("utf-16")  # join escaped surrogate pairs
 
 
 def _escape(value):
-    return value.replace("\\", "\\\\").lstrip().replace("\n", "\\n")
+    out = []
+    for ch in value.replace("\\", "\\\\").lstrip():
+        if ch == "\n":
+            out.append("\\n")
+        elif ord(ch) < 128:
+            out.append(ch)
+        else:  # ISO-8859-1 file: non-ASCII as UTF-16 \\u escapes (surrogate pairs above U+FFFF)
+            units = ch.encode("utf-16-be")
+            out += [f"\\u{int.from_bytes(units[i:i + 2], 'big'):04x}" for i in range(0, len(units), 2)]
+    return "".join(out)
 
 
 class PropsFile:
@@ -35,7 +53,7 @@ class PropsFile:
 
     @classmethod
     def load(cls, path):
-        with open(path, encoding="utf-8") as f:
+        with open(path, encoding="iso-8859-1") as f:
             return cls(f.read())
 
     def keys(self):
@@ -62,5 +80,4 @@ class PropsFile:
         return edited
 
     def save(self, path):
-        with open(path, "w", encoding="utf-8", newline="") as f:
-            f.write(self.text)
+        files.write(path, self.text.encode("iso-8859-1"))

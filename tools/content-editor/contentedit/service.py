@@ -12,9 +12,9 @@ import posixpath
 import secrets
 import time
 
-from . import glossary, host, lang, llm, markdown, models, png, props, textures
+from . import files as atomic, glossary, host, lang, llm, markdown, models, png, props, textures
 from .ledger import Ledger, LedgerError, append_note
-from .repo import RepoError, Resolver, Workspace, git, show
+from .repo import PACK_INDEX, RepoError, Resolver, Workspace, git, show
 
 LEDGER = "docs/CONTENT-PROVENANCE.md"
 GENERATED = "mod/src/generated/"
@@ -119,10 +119,7 @@ class Editor:
         return os.path.join(root, rel)
 
     def _write(self, rel, data, ledger, allow_new=False):
-        target = self._target(rel, ledger, allow_new)
-        os.makedirs(os.path.dirname(target), exist_ok=True)
-        with open(target, "wb") as f:
-            f.write(data)
+        atomic.write(self._target(rel, ledger, allow_new), data)
 
     def _save_ledger(self, ledger):
         self.workspace.require_batch()
@@ -156,7 +153,17 @@ class Editor:
 
     def rows(self):
         ledger, base = self.ledger(), self.base_ledger()
-        out = []
+        out, keys_by_file = [], {}
+
+        def file_keys(rel):  # parse each lang file once per listing, not once per `*` row
+            if rel not in keys_by_file:
+                try:
+                    keys_by_file[rel] = lang.LangFile.load(self.path(rel)).keys()
+                except (OSError, lang.LangError):
+                    keys_by_file[rel] = None
+            return keys_by_file[rel]
+
+        exact = [r for r in ledger.rows if r.key is not None and not r.wildcard]
         for row in ledger.rows:
             item = row.to_dict()
             item["kind"] = kind_of(row)
@@ -166,11 +173,9 @@ class Editor:
                 (row.origin, row.status, row.notes)
             item["new"] = before is None
             if row.wildcard:
-                item["overridden"] = len(ledger.overrides(row))
-                try:
-                    item["keyCount"] = len(ledger.keys(row, lang.LangFile.load(self.path(row.file)).keys()))
-                except (OSError, lang.LangError):
-                    item["keyCount"] = None
+                item["overridden"] = sum(1 for r in exact if r.file == row.file and row.covers(r.key))
+                keys = file_keys(row.file)
+                item["keyCount"] = len(ledger.keys(row, keys)) if keys is not None else None
             item["host"] = host.is_host_pattern(row.file)
             out.append(item)
         return out
@@ -310,6 +315,9 @@ class Editor:
             edited = current.with_value(key, value)
         except lang.LangError as e:
             raise EditorError(str(e))
+        if edited.values[key] == current.values[key]:
+            # Saving the AI text unchanged would record it as human-written; Accept as final is that path.
+            raise EditorError("nothing changed; use Accept as final to keep the string as it is")
         target = self._target(file, ledger)
         origin = self.human_origin()
         row = self._row_for_key(ledger, owner, file, key, current.keys(), origin, status)
@@ -571,9 +579,10 @@ class Editor:
                 change["diff"] = markdown.diff((base_text or b"").decode("utf-8", "replace"),
                                                (self.read(row.file) or b"").decode("utf-8", "replace"), row.file)
             changes.append(change)
-        stats = self.workspace.numstat()
+        base_commit = self.workspace.base()
+        stats = self.workspace.numstat(base_commit)
         files = [{"status": s, "path": p, "added": stats.get(p, ("", ""))[0], "deleted": stats.get(p, ("", ""))[1]}
-                 for s, p in self.workspace.changed_files()]
+                 for s, p in self.workspace.changed_files(base_commit)]
         return {"changes": changes, "files": files, "branch": self.workspace.branch(), "behind": self.workspace.behind(),
                 "base": self.workspace.base()[:9], "worktree": self.workspace.worktree,
                 "uncommitted": self.workspace.uncommitted(), "commits": self.workspace.commits()}
@@ -617,8 +626,8 @@ class Editor:
                 target = os.path.join(root, rel)
                 if data is not None:
                     self._write(rel, data, ledger, allow_new=True)
-                elif os.path.exists(target) and rel != row.file:
-                    os.unlink(target)
+                elif os.path.exists(target):
+                    os.unlink(target)  # added in this batch (not at the base), including a new row's asset
         if before is None:
             del ledger.lines[row.index]
             ledger._parse()
@@ -627,8 +636,8 @@ class Editor:
             ledger._parse()
         self._save_ledger(ledger)
 
-    def pr_body(self):
-        summary = self.batch()
+    def pr_body(self, summary=None):
+        summary = summary or self.batch()
         lines = ["Replaces player-facing content through the local content editor (`tools/content-editor.sh`).", "",
                  "Changed ledger rows:"]
         for c in summary["changes"]:
@@ -646,7 +655,7 @@ class Editor:
                 what = ", ".join(parts) or "updated"
             lines.append(f"- `{row['path']}`: {what}")
         pack = " `tools/pack.sh refresh` updated `pack/index.toml` and `pack/pack.toml`, then `tools/pack.sh check`." \
-            if self.workspace.touches_pack() else ""
+            if any(f["path"].startswith("pack/") and f["path"] not in PACK_INDEX for f in summary["files"]) else ""
         lines += ["", "Checks run before the commit: `tools/check-provenance.sh`, `python3 -I tools/check-docs.py`, "
                       "`git diff --check`." + pack, "",
                   "A batch that touches `en_us.json` or texture references rebases and reruns its checks before merge."]

@@ -155,14 +155,18 @@ class Workspace:
             raise RepoError(f"the content worktree is on {branch}; refusing to write")
         return self.worktree
 
-    def changed_files(self):
-        """[(status, path)] for every file that differs from the base, committed or not."""
+    def _untracked(self):
+        out = git(self.worktree, "ls-files", "--others", "--exclude-standard").stdout
+        return [p for p in out.splitlines() if p]
+
+    def changed_files(self, base=None):
+        """[(status, path)] for every file that differs from the base, committed or not. Read-only: it
+        never touches the index, so listing a batch cannot change what the next commit contains."""
         if not self.worktree:
             return []
-        root = self.worktree
-        git(root, "add", "--intent-to-add", "--all")
-        out = git(root, "diff", "--name-status", self.base()).stdout
-        return [tuple(line.split("\t", 1)) for line in out.splitlines() if line.strip()]
+        out = git(self.worktree, "diff", "--name-status", base or self.base()).stdout
+        changed = [tuple(line.split("\t", 1)) for line in out.splitlines() if line.strip()]
+        return changed + [("A", p) for p in self._untracked()]
 
     def behind(self):
         """Commits on the upstream (as last fetched) that the batch does not have."""
@@ -191,12 +195,12 @@ class Workspace:
         return before != after
 
     def pr(self):
-        """{url, state} of the branch's most recent PR, or None (needs gh)."""
+        """{url, state, headRefOid} of the branch's most recent PR, or None (needs gh)."""
         branch = self.branch()
         if not branch:
             return None
         try:
-            out = subprocess.run(["gh", "pr", "list", "--head", branch, "--state", "all", "--json", "url,state",
+            out = subprocess.run(["gh", "pr", "list", "--head", branch, "--state", "all", "--json", "url,state,headRefOid",
                                   "--jq", ".[0] // empty"], cwd=self.worktree, capture_output=True, text=True,
                                  timeout=60)
         except (OSError, subprocess.TimeoutExpired):
@@ -215,8 +219,15 @@ class Workspace:
         pr = self.pr()
         if pr and pr.get("state") == "OPEN":
             raise RepoError(f"its PR is still open ({pr.get('url')}); merge or close it first")
-        if not pr and discard_name != branch:
-            raise RepoError(f"{branch} has no PR; type its name to discard its changes for good")
+        if discard_name != branch:
+            if not pr:
+                raise RepoError(f"{branch} has no PR; type its name to discard its changes for good")
+            # Work after the PR (edits, or commits it never received) would be lost: ask for the name too.
+            head = pr.get("headRefOid")
+            unpushed = not head or git(root, "merge-base", "--is-ancestor", "HEAD", head, check=False).returncode != 0
+            if self.uncommitted() or unpushed:
+                raise RepoError(f"{branch} has work its {pr.get('state', '').lower()} PR does not contain; "
+                                "type its name to discard it for good")
         git(self.tool_root, "worktree", "remove", "--force", root)
         git(self.tool_root, "branch", "-D", branch, check=False)
         self.worktree = None
@@ -236,14 +247,21 @@ class Workspace:
         out = git(self.worktree, "log", "--format=%h%x09%s", f"{self.base()}..HEAD").stdout
         return [dict(zip(("sha", "subject"), line.split("\t", 1))) for line in out.splitlines() if line]
 
-    def numstat(self):
+    def numstat(self, base=None):
         if not self.worktree:
             return {}
-        out = git(self.worktree, "diff", "--numstat", self.base()).stdout
+        out = git(self.worktree, "diff", "--numstat", base or self.base()).stdout
         stats = {}
         for line in out.splitlines():
             added, deleted, path = line.split("\t", 2)
             stats[path] = (added, deleted)
+        for path in self._untracked():  # new files git diff does not see yet
+            try:
+                with open(os.path.join(self.worktree, path), "rb") as f:
+                    data = f.read()
+            except OSError:
+                continue
+            stats[path] = ("-", "-") if b"\0" in data else (str(data.count(b"\n") + (not data.endswith(b"\n") and bool(data))), "0")
         return stats
 
     def touches_pack(self):
@@ -325,7 +343,12 @@ class Workspace:
             os.unlink(body_file)
         if out.returncode != 0:
             raise RepoError(f"{'updating' if existing else 'opening'} the PR failed: {out.stderr.strip()}")
-        return (existing, True) if existing else (out.stdout.strip().splitlines()[-1], False)
+        if existing:
+            return existing, True
+        url = pr_url(out.stdout + "\n" + out.stderr) or (self.pr() or {}).get("url")
+        if not url:
+            raise RepoError("gh reported success but printed no PR URL; check GitHub for the branch's PR")
+        return url, False
 
 
 class Resolver:
@@ -392,6 +415,12 @@ class Resolver:
             return True
         except KeyError:
             return False
+
+
+def pr_url(text):
+    """The first GitHub pull request URL in gh's output (some versions print it to stderr), or None."""
+    match = re.search(r"https://\S+/pull/\d+", text or "")
+    return match.group(0) if match else None
 
 
 def split_id(resource_id, default_namespace="minecraft"):

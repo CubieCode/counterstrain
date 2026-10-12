@@ -1138,7 +1138,7 @@ function finishDialog() {
   } },
   h('h2', {}, 'Finish this batch'),
   h('p', { class: 'small dim', style: 'margin:0' }, 'Removes the content worktree and its local branch. Once its PR is merged or closed this needs no confirmation; the PR and anything merged stay on GitHub.'),
-  h('p', { class: 'small dim', style: 'margin:0' }, 'A batch with no PR loses its changes for good: type the branch name to discard it.'),
+  h('p', { class: 'small dim', style: 'margin:0' }, 'A batch with no PR, or with edits or commits its merged or closed PR does not contain, loses that work for good: type the branch name to discard it.'),
   h('label', { for: 'discard', class: 'small dim' }, `Branch name (${STATE.branch}), only to discard`), name,
   h('div', { class: 'row-flex' }, h('span', { class: 'grow' }),
     h('button', { type: 'button', class: 'btn', onclick: () => { dialog.close(); dialog.remove(); } }, 'Cancel'),

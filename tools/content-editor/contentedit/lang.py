@@ -7,6 +7,8 @@ changed set of format arguments.
 import json
 import re
 
+from . import files
+
 # Minecraft's TranslatableContents format pattern: %s, %1$s and the %% escape.
 FORMAT = re.compile(r"%(?:(\d+)\$)?([A-Za-z%]|$)")
 STRING = r'"(?:[^"\\]|\\.)*"'
@@ -115,5 +117,4 @@ class LangFile:
         return edited
 
     def save(self, path):
-        with open(path, "w", encoding="utf-8", newline="") as f:
-            f.write(self.text)
+        files.write(path, self.text.encode("utf-8"))

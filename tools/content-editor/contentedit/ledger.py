@@ -7,6 +7,8 @@ most-specific-row rule: an exact `file:key` row overrides a matching `*` row.
 """
 import re
 
+from . import files
+
 STATUSES = ("placeholder", "draft", "final", "removed")
 ITEM = re.compile(r"\bP\d{1,2}\.\d{1,2}\b")
 GENERATED = "mod/src/generated/"
@@ -86,8 +88,7 @@ class Ledger:
             return cls(f.read())
 
     def save(self, path):
-        with open(path, "w", encoding="utf-8", newline="\n") as f:
-            f.write(self.text())
+        files.write(path, self.text().encode("utf-8"))
 
     def text(self):
         return "\n".join(self.lines) + ("\n" if self.trailing_newline else "")

@@ -45,6 +45,7 @@ class App:
 class Handler(BaseHTTPRequestHandler):
     server_version = "content-editor"
     app = None  # set in main()
+    LOCKLESS = {"post_review", "post_vocabulary"}
 
     def log_message(self, fmt, *args):
         if os.environ.get("CONTENT_EDITOR_LOG"):
@@ -112,8 +113,13 @@ class Handler(BaseHTTPRequestHandler):
             handler = getattr(self, f"{method.lower()}_{path[5:].replace('/', '_')}", None)
             if handler is None:
                 return self.fail(HTTPStatus.NOT_FOUND, f"no route {method} {path}")
-            with self.app.lock:
+            # Reads never wait: writes are atomic, so a GET sees a file before or after a save. Writes are
+            # serialized, and the model review only reads, so a slow review or check run never freezes the page.
+            if method == "GET" or handler.__name__ in self.LOCKLESS:
                 result = handler()
+            else:
+                with self.app.lock:
+                    result = handler()
             if result is not None:
                 self.send(HTTPStatus.OK, result)
         except REFUSED as e:
@@ -129,9 +135,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(HTTPStatus.OK, page, "text/html; charset=utf-8")
         for prefix, base in (("/static/", STATIC), ("/vendor/", VENDOR)):
             if path.startswith(prefix):
-                rel = os.path.normpath(path[len(prefix):])
-                full = os.path.join(base, rel)
-                if rel.startswith("..") or not os.path.isfile(full):
+                # Resolve and require the result to stay inside the folder: `//etc/passwd`, `..` and symlinks
+                # out of it are refused.
+                root = os.path.realpath(base)
+                full = os.path.realpath(os.path.join(root, path[len(prefix):].lstrip("/")))
+                if os.path.commonpath([root, full]) != root or not os.path.isfile(full):
                     break
                 ctype = mimetypes.guess_type(full)[0] or "application/octet-stream"
                 if full.endswith(".js"):
@@ -193,7 +201,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def get_batch(self):
         summary = self.app.editor.batch()
-        summary["prBody"] = self.app.editor.pr_body()
+        summary["prBody"] = self.app.editor.pr_body(summary)
         summary["checks"] = self.app.checked[1] if self.app.checked else None
         return summary
 
