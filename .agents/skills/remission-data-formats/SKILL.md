@@ -637,6 +637,26 @@ Queries, `CorruptionQueries` (static):
 
 Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; the default `festers_into` map turns grass at 1, trees and foliage at 2 and stone at 3, and the last stage flips the biome; Festering stages, above). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
 
+Team query, `TeamQueries` (static, P4.12): the one answer to "are these two players teammates?". Every Remission rule that involves teammates asks it (DESIGN, Teams and multiplayer); Remission has no teams of its own.
+
+| Method | Returns | Side |
+| --- | --- | --- |
+| `areTeammates(MinecraftServer server, UUID a, UUID b)` | true when `a` equals `b`; otherwise the cached or freshly looked-up answer (`TeamLookupEvent`), false when nothing answers. Either player may be offline | server thread |
+| `areTeammates(Player player, UUID other)` | the same for an online player and a UUID (for example an offline owner); on the client side, true only for the player's own UUID | server (client: self only) |
+| `areTeammates(Player a, Player b)` | the same for two players | server (client: self only) |
+| `invalidate(UUID player)` | drops cached answers involving that player; call it when the player's team changes | server thread |
+| `invalidateAll()` | drops every cached answer; call it for bulk changes (a team deleted, teams reloaded) | server thread |
+| `CACHE_TICKS` (`int`, 100) | how long an answer is reused, in server ticks (5 s) | |
+
+`TeamLookupEvent extends Event` (P4.12, not cancellable): `getServer()`, `getFirst()`, `getSecond()` (`UUID`s, never equal), `hasAnswer()`, `areTeammates()` (false until answered), `setTeammates(boolean)` (replaces any earlier answer). Posted on `NeoForge.EVENT_BUS` from `areTeammates` for two different players when the pair has no fresh cached answer; never for a player and themselves (always teammates). Rules for sources:
+
+- Answer from UUIDs: either player may be offline, so never require a `ServerPlayer`. Leave the event unanswered for players the source does not know; with no answer the players are not teammates, so without a source every player is their own team.
+- Answers must be symmetric: the cache is per unordered pair, so the answer for `(a, b)` is also returned for `(b, a)`.
+- The last `setTeammates` wins. A source that fills gaps checks `hasAnswer()`; one that overrides another listens at a lower priority (FTB Teams answers at `NORMAL`).
+- Answers are cached per pair for `CACHE_TICKS` server ticks. A source whose teams change calls `TeamQueries.invalidate(player)` or `invalidateAll()` so the change shows at once; otherwise it shows within `CACHE_TICKS`. The cache is cleared when the server stops.
+
+FTB Teams source (`integration/ftbteams/`, optional, FTB Teams 2101.1+): when FTB Teams is loaded, players it knows (anyone who has joined the world, online or not) are teammates exactly when FTB Teams puts them in the same team (`TeamManager.getTeamForPlayerID`: the same party, or each alone in their own personal team, which makes two solo players not teammates). Allies are not teammates. Players FTB Teams does not know are left unanswered. It invalidates a player's answers on FTB Teams' `PLAYER_CHANGED` event (every join, leave, party creation and disband) and all answers on team deletion and team manager load or unload. Packs without FTB Teams answer the event from KubeJS once P8.3's bindings exist.
+
 Later items append their events and queries here when built.
 
 ## KubeJS event bindings (planned, P8.3)
