@@ -1,5 +1,6 @@
 package com.cubiecode.remission.harness;
 
+import com.cubiecode.remission.client.FesterFog;
 import com.cubiecode.remission.corruption.Corruption;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.brigadier.StringReader;
@@ -133,6 +134,7 @@ final class SceneRunner {
                 if (mc.getOverlay() == null && mc.screen instanceof TitleScreen) {
                     scene = Scene.load(sceneId);
                     applyOptions(mc.options);
+                    FesterFog.setSuppressed(!scene.festerFog());
                     createWorld(mc);
                     phase = Phase.LOADING;
                 }

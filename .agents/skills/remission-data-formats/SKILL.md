@@ -549,6 +549,21 @@ Changed in P4.6: P4.2 shipped one `#minecraft:base_stone_overworld` entry (stone
 
 Fester biomes are ordinary datapack biomes (`data/<ns>/worldgen/biome/<id>.json`). A biome a chunk flips into only changes colours, sky, fog, music, spawns and precipitation; its features and carvers never run on flipped land.
 
+**Fester biome atmosphere (built, P4.11).** `remission:fester` (datagen `RemissionBiomeProvider`) sets these `effects`; a variant biome inherits none of them, so a pack copies the ones it wants into its own biome file:
+
+```json
+"effects": {
+  "fog_color": 10852272, "sky_color": 9405603, "water_color": 6179438, "water_fog_color": 2826038,
+  "grass_color": 11575422, "foliage_color": 10520728,
+  "ambient_sound": "remission:ambient.fester.loop",
+  "mood_sound": { "sound": "remission:ambient.fester.mood", "tick_delay": 3000, "block_search_extent": 8, "offset": 2.0 },
+  "additions_sound": { "sound": "remission:ambient.fester.additions", "tick_chance": 0.008 },
+  "music": { "sound": "remission:music.fester", "min_delay": 2400, "max_delay": 9600, "replace_current_music": true }
+}
+```
+
+Sound events (`RemissionSounds`; files and subtitles in `assets/remission/sounds.json`, placeholders until P12.2): `remission:ambient.fester.loop` (looping drone), `remission:ambient.fester.mood` (cave-style mood, subtitle `subtitles.remission.ambient.fester.mood`), `remission:ambient.fester.additions` (wet, organic one-shots, subtitle `subtitles.remission.ambient.fester.additions`) and `remission:music.fester` (streamed). A resource pack replaces their sounds through `sounds.json` (`"replace": true`). The client's stage fog is not biome data: it follows the chunk's festering stage in any biome (variant or not) and the last stage in `remission:fester` itself; a variant biome gets the stage fog from its chunk's stage, which the server sends with the chunk (`remission:festering_map`, above).
+
 ## Festering veins and contact infection (built, P4.8)
 
 **Block `remission:festering_vein`** (`world/FesteringVeinBlock`, a vanilla `MultifaceBlock` like glow lichen and sculk veins; block item too): one boolean state property per face (`north`, `east`, `south`, `west`, `up`, `down`; true where the vein covers the neighbouring block's face on that side). No collision, replaceable (blocks can be placed into it), hardness 0.2, `mineable/hoe`, destroyed when pushed by a piston. A face drops off when the block behind it stops holding it, and a vein with no face turns to air. Drops one `remission:festering_vein` per face with silk touch and nothing otherwise (`data/remission/loot_table/blocks/festering_vein.json`, vanilla `createMultifaceBlockDrops`). It never spreads on its own.

@@ -8,6 +8,7 @@ public final class RemissionClientConfig {
 
     public static final ModConfigSpec.DoubleValue HOST_OVERLAY_INTENSITY;
     public static final ModConfigSpec.BooleanValue SHOW_VIRAL_LOAD;
+    public static final ModConfigSpec.DoubleValue FESTER_FOG;
 
     static {
         BUILDER.push("hosts");
@@ -22,6 +23,13 @@ public final class RemissionClientConfig {
                 .comment("Whether the viral load meter shows above the hunger bar while your viral load is above 0.",
                         "Presentation only: viral load and its debuffs apply either way.")
                 .define("showViralLoad", true);
+        BUILDER.pop();
+
+        BUILDER.push("atmosphere");
+        FESTER_FOG = BUILDER
+                .comment("How much the fog thickens in festering land as its stage rises, from 0 (off) to 1 (full).",
+                        "Presentation only: the fester biome's own fog and sky colours stay.")
+                .defineInRange("festerFog", 1.0, 0.0, 1.0);
         BUILDER.pop();
     }
 

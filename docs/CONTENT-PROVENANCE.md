@@ -116,10 +116,17 @@ None yet.
 
 ## Sounds
 
-None yet.
+Sounds carry no audible placeholder marker; these rows are the record (content-provenance).
 
 | Path / ID | Type | Origin | Status | Notes |
 | --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/sounds/ambient/fester/loop.ogg` | sound | ai (Claude Opus 5.5, 2026-10-13; synthesised with ffmpeg lavfi) | placeholder | Fester biome ambient loop (P4.11): 16 s low brown-noise drone with a slow swell over a beating 55/58 Hz hum; mono, 22 kHz. Aim: a wet, breathing, living hum, clearly not the Deep Dark's sculk ambience; loops cleanly. |
+| `mod/src/main/resources/assets/remission/sounds/ambient/fester/mood1.ogg` | sound | ai (Claude Opus 5.5, 2026-10-13; synthesised with ffmpeg lavfi) | placeholder | Fester biome mood sound (P4.11), plays like cave sounds in dark spots: 5 s groan sliding down from 82 Hz with vibrato. Aim: something large and organic settling underground. |
+| `mod/src/main/resources/assets/remission/sounds/ambient/fester/mood2.ogg` | sound | ai (Claude Opus 5.5, 2026-10-13; synthesised with ffmpeg lavfi) | placeholder | Second fester mood variant (P4.11): as `mood1`, starting from 94 Hz. |
+| `mod/src/main/resources/assets/remission/sounds/ambient/fester/additions1.ogg` | sound | ai (Claude Opus 5.5, 2026-10-13; synthesised with ffmpeg lavfi) | placeholder | Fester biome additions (P4.11): 0.9 s band-passed noise squelch. Aim: wet, organic one-shots (squelch, drip, bubbling) heard now and then. |
+| `mod/src/main/resources/assets/remission/sounds/ambient/fester/additions2.ogg` | sound | ai (Claude Opus 5.5, 2026-10-13; synthesised with ffmpeg lavfi) | placeholder | Fester biome additions (P4.11): 0.6 s falling-pitch drip. |
+| `mod/src/main/resources/assets/remission/sounds/ambient/fester/additions3.ogg` | sound | ai (Claude Opus 5.5, 2026-10-13; synthesised with ffmpeg lavfi) | placeholder | Fester biome additions (P4.11): 1.4 s bubbling pops over a short hiss. |
+| `mod/src/main/resources/assets/remission/sounds/music/fester.ogg` | sound | ai (Claude Opus 5.5, 2026-10-13; synthesised with ffmpeg lavfi) | placeholder | Fester biome music (P4.11), streamed: 73 s dissonant pad (detuned minor seconds and a tritone at 110–165 Hz, slow swells, echo). Aim: uneasy, sparse, organic; unlike the Deep Dark and vanilla game music; real tracks in P12.2. |
 
 ## Lang strings
 
@@ -201,6 +208,9 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:message.remission.countermeasure.*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Action bar feedback when a protocol is used (P5.7): countermeasure gained, or already held by the team. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:stat.remission.countermeasures_gained` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Statistics screen name for `remission:countermeasures_gained` (P5.7). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.countermeasure.*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | `/remission countermeasure` grant, revoke and list feedback (P5.7): players changed, held list and its entries, none held. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:subtitles.remission.ambient.fester.*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Subtitles of the fester biome's mood sound ("Festering land groans") and additions ("Something squelches") (P4.11). Short, as vanilla subtitles are. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.atmosphere` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Client config screen section title for the festering fog option (P4.11). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:remission.configuration.festerFog*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Client config label and tooltip for the festering fog strength, an accessibility option (P4.11). |
 
 ## Mod and pack metadata
 

@@ -23,15 +23,17 @@ import net.minecraft.world.phys.Vec3;
 /**
  * A harness scene, read from {@code harness/scenes/<id>.json}. The world itself is fixed by
  * {@link SceneRunner} (superflat, fixed seed, no structures); a scene sets time and weather,
- * runs setup commands with the tick frozen, and lists the shots to take.
+ * runs setup commands with the tick frozen, and lists the shots to take. The festering fog (P4.11) is off unless the
+ * scene sets {@code fester_fog}, so scenes about other things keep their images.
  */
-record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
+record Scene(long time, String weather, boolean festerFog, List<Step> setup, List<Shot> shots) {
     private static final Codec<Step> STEP_CODEC = Codec.either(Codec.STRING, Step.CODEC)
             .xmap(e -> e.map(Step::command, step -> step), Either::right);
 
     static final Codec<Scene> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.LONG.optionalFieldOf("time", 6000L).forGetter(Scene::time),
             Codec.STRING.optionalFieldOf("weather", "clear").forGetter(Scene::weather),
+            Codec.BOOL.optionalFieldOf("fester_fog", false).forGetter(Scene::festerFog),
             STEP_CODEC.listOf().optionalFieldOf("setup", List.of()).forGetter(Scene::setup),
             Shot.CODEC.listOf().fieldOf("shots").forGetter(Scene::shots)
     ).apply(i, Scene::new));
