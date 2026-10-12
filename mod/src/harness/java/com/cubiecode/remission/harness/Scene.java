@@ -88,10 +88,12 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
      * review HUD elements; chat is cleared before the shot.
      * {@code recipes} names a recipe category (e.g. {@code remission:analyzing}) to open in the recipe
      * viewer, EMI when it is loaded, else JEI (P7.2). {@code screen} says a shot command opens a screen (such as
-     * {@code harness player use} on a machine); the shot then waits for it. {@code press} and {@code recipes} imply it.
+     * {@code harness player use} on a machine); the shot then waits for it. {@code map} opens JourneyMap's full-screen map
+     * (P8.2; its key shares J with other mappings, so {@code press} cannot). {@code press}, {@code recipes} and {@code map}
+     * imply {@code screen}.
      */
     record Shot(String name, Camera camera, CameraType view, Optional<String> press, List<String> commands, boolean hud,
-                int guiScale, Optional<ResourceLocation> recipes, boolean screen) {
+                int guiScale, Optional<ResourceLocation> recipes, boolean screen, boolean map) {
         private static final Codec<CameraType> VIEW_CODEC = Codec.STRING.comapFlatMap(
                 v -> Arrays.stream(CameraType.values()).filter(t -> t.name().toLowerCase(Locale.ROOT).equals(v))
                         .findFirst().map(DataResult::success)
@@ -110,12 +112,13 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
                 Codec.BOOL.optionalFieldOf("hud", false).forGetter(Shot::hud),
                 Codec.intRange(0, 8).optionalFieldOf("gui_scale", 0).forGetter(Shot::guiScale),
                 ResourceLocation.CODEC.optionalFieldOf("recipes").forGetter(Shot::recipes),
-                Codec.BOOL.optionalFieldOf("screen", false).forGetter(Shot::screen)
+                Codec.BOOL.optionalFieldOf("screen", false).forGetter(Shot::screen),
+                Codec.BOOL.optionalFieldOf("map", false).forGetter(Shot::map)
         ).apply(i, Shot::new));
 
         /** Whether the shot shows a screen rather than the world. */
         boolean wantsScreen() {
-            return screen || press.isPresent() || recipes.isPresent();
+            return screen || map || press.isPresent() || recipes.isPresent();
         }
     }
 

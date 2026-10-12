@@ -60,7 +60,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * in the main hand, cooldown cleared) through the same server code a real break or scanner use runs, so stats,
  * advancement triggers and quest tasks see a player's action. {@code harness player use <pos>} makes every player use the
  * block with whatever it holds (a machine opens its menu, P7.2). {@code harness fester <from> <to> <level>} sets the
- * Strain level of the chunks a box covers and festers them at once; {@code harness resend <from> <to>} sends the chunks a
+ * Strain level of the chunks a box covers and festers them at once, and {@code harness fester <from> <to>} festers them
+ * at once to the stage they have (P8.2); {@code harness resend <from> <to>} sends the chunks a
  * box covers to clients again (P4.2). {@code harness surge hosts <centre> <count> <radius>} and {@code harness surge
  * clouds <centre> <count>} spawn surge hosts and release miasma clouds through the surge code with a fixed seed (P4.3).
  * {@code harness viral_load <targets> <load> [rising|falling]} sets players' viral load and the trend their HUD shows
@@ -152,6 +153,9 @@ final class HarnessCommands {
                                 .then(Commands.literal("falling").executes(context -> viralLoad(context, ViralLoadState.Trend.FALLING))))))
                 .then(Commands.literal("fester").then(Commands.argument("from", BlockPosArgument.blockPos())
                         .then(Commands.argument("to", BlockPosArgument.blockPos())
+                                .executes(context -> festerAtStage(context.getSource().getLevel(),
+                                        BlockPosArgument.getBlockPos(context, "from"),
+                                        BlockPosArgument.getBlockPos(context, "to")))
                                 .then(Commands.argument("level", IntegerArgumentType.integer(0, ChunkCorruption.MAX_LEVEL))
                                         .executes(context -> fester(context.getSource().getLevel(),
                                                 BlockPosArgument.getBlockPos(context, "from"),
@@ -261,6 +265,23 @@ final class HarnessCommands {
             for (int z = min.z; z <= max.z; z++) {
                 LevelChunk chunk = level.getChunk(x, z);
                 chunk.setData(RemissionAttachments.CHUNK_CORRUPTION, new ChunkCorruption(value, level.getGameTime()));
+                FesteringStages.festerNow(level, chunk);
+                chunks++;
+            }
+        }
+        return chunks;
+    }
+
+    /**
+     * Festers every loaded chunk the box overlaps at once to its current stage, as the budgeted stage work would over a
+     * few ticks (P8.2: after {@code remission region advance}, whose stage events queue that work, so a scene's land is
+     * finished before its shot). Returns the number of loaded chunks.
+     */
+    private static int festerAtStage(ServerLevel level, BlockPos from, BlockPos to) {
+        int chunks = 0;
+        for (ChunkPos pos : ChunkPos.rangeClosed(new ChunkPos(from), new ChunkPos(to)).toList()) {
+            LevelChunk chunk = level.getChunkSource().getChunkNow(pos.x, pos.z);
+            if (chunk != null) {
                 FesteringStages.festerNow(level, chunk);
                 chunks++;
             }

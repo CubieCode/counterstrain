@@ -396,7 +396,8 @@ public final class ViralLoadTests {
 
             ViralLoad.set(player, 0.0F, ViralLoadState.Trend.STEADY, ViralLoadChangedEvent.Cause.OTHER);
             helper.assertTrue(done(player, recovered), "gate back at 0");
-            helper.assertValueEqual(RemissionNetwork.PROTOCOL_VERSION, "2", "protocol version with the viral load payload");
+            // 2 added the viral load payload; later payloads bump it further (3: P8.2's festering map).
+            helper.assertTrue(Integer.parseInt(RemissionNetwork.PROTOCOL_VERSION) >= 2, "protocol version with the viral load payload");
             helper.succeed();
         });
     }

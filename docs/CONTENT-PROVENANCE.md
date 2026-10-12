@@ -190,6 +190,10 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:entity.remission.revenant` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Entity name of a revenant without an owner (P5.3), shown by debug screens, `/summon` and entity-aware mods; glossary term. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:entity.remission.revenant.named` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | A revenant's name, "Revenant of %s" with its owner's name (P5.3): shown in death messages ("was slain by Revenant of Steve") and by entity-aware mods. Should stay short and read naturally after "slain by". |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:stat.remission.revenants_reclaimed` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Statistics screen name for `remission:revenants_reclaimed` (P5.3). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.nidus.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | `/remission nidus seed` feedback and errors (P8.2): the seeded position; a nidus already there; a block a nidus cannot replace (unbreakable or a block entity); a placed nidus that did not take root (block restored). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.region.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | `/remission region advance` feedback and error (P8.2): chunks advanced, radius and centre chunk; no loaded chunk could fester further. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:map.remission.festering` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | JourneyMap hover title of a festering chunk overlay (P8.2): "Festering land, stage %s". Short; it shows over the map. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:map.remission.remission_zone` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | JourneyMap hover title of a remission zone overlay (P8.2): "Remission zone"; glossary term. |
 
 ## Mod and pack metadata
 

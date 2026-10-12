@@ -57,3 +57,12 @@ description='''${mod_description}'''
     versionRange="[9,)"
     ordering="NONE"
     side="BOTH"
+
+# The map overlay (integration/journeymap/, P8.2) is a client plugin built against JourneyMap API 2.0, bundled from
+# JourneyMap 6 on; JourneyMap's versions lead with the Minecraft version (1.21.1-6.0.9).
+[[dependencies.${mod_id}]]
+    modId="journeymap"
+    type="optional"
+    versionRange="[1.21.1-6.0,)"
+    ordering="NONE"
+    side="CLIENT"
