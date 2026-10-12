@@ -15,6 +15,7 @@ Rules for every item after P4.4:
 
 All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a lock), so keep waves at four lanes or fewer. One owner per wave for build/version files, the registry and network spine, contracts (remission-data-formats) and pack membership. Generated files (`mod/src/generated/`, `pack/index.toml`) are regenerated after rebasing, never hand-merged.
 
+- P1.5 (follow-up to P1.4) is next: it can run in any wave or alone, so content can be replaced as features land, and must land before the art pass (P12.2), which uses it.
 - A: P1.1 + P2.1 + P1.4. P2.1 owns the registry and network spine; P1.1 owns the dev-only harness and `tools/run-client-headless.sh`; P1.4 owns the provenance check script and its `docs.yml` step. P1.4 can also run in any later early wave.
 - B: P2.2 + P2.3 + P1.2 + P1.3, after A. P1.2 owns comparison scripts; P1.3 owns `gpu-smoke.yml`; P2.2 owns client rendering; P2.3 owns commands.
 - P2.4 (follow-up to P2.2) can join any wave after B, or run alone. It owns `client/` host rendering and the `corruption/*` scenes and their references.
@@ -23,6 +24,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P4.5 (follow-up to P4.1) runs before P4.3 or alone; it owns `world/SpreadEngine`.
 - P6.3 (follow-up to P6.2) can join any wave or run alone; it owns `research/Bestiary` and the bestiary scene reference.
 - E: P4.2 (done), then P4.3 (after P4.5 and P8.1, both done). P4.3 owns surge scheduling, miasma clouds, its surge API events and the surge survived trigger and stat, and is the remission-data-formats owner while it runs; append-only edits in `api/` and `quest/`.
+- P4.8 (follow-up to P4.6 and P4.7) runs alone or before wave F; it owns the vein block and the contact source and must merge before P5.2.
 - P4.6 and P4.7 (follow-ups to P4.2 and P3.3) can join wave E with P4.3 or run alone. P4.6 owns `world/FesteringStages` and `world/FesterMaps` and runs before P5.2; P4.7 owns `infection/`. With P4.3 in the same wave, appoint one owner for config specs and one for remission-data-formats.
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - P5.3 → P5.4 serially, after P5.1. P5.3 owns the revenant entity, `integration/curios/` and its build-file entries; P5.4 owns its payload and coordinates `integration/journeymap/` with P8.2 (never in the same wave).
@@ -101,7 +103,25 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 - Skills: content-provenance, docs-sync, minecraft-ci-release
 - Parallel: Any early wave; owns its script and the `docs.yml` step
 
-Exit criteria: harness scene `smoke/mob_lineup` runs headlessly, quits by itself, and its screenshots are reviewed and stored as the first reference. The GPU workflow runs it. The provenance check runs in CI.
+### P1.5: Local content editor
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P1.4
+- Scope: A planned small local web app for replacing AI-generated player-facing content without hand-editing files: `tools/content-editor.sh [--port N] [--lan]`, a Python standard library HTTP server (no new dependencies, no root, no build step; plain HTML, CSS and JavaScript served from `tools/content-editor/`). It is built on the provenance ledger: it lists `docs/CONTENT-PROVENANCE.md` rows, filterable by status (`placeholder`, `draft`, `final`), type and roadmap item, and edits the files they point at.
+  - **Text:** for `lang` rows, shows each matching key's current English string (rows with `*` expand to every matching key) with the row's notes as guidance, and saves edits to `en_us.json`, keeping key order and formatting and refusing invalid JSON or a changed set of `%s` arguments. The same page can accept a string unchanged as final.
+  - **Textures:** previews the current PNG at pixel scale, tiled 3×3 (host overlays and block faces must tile) and next to the upload; accepts a PNG upload and checks it before writing: a valid PNG, the same size as the original or the same aspect ratio at a power-of-two scale, an animation strip only with a matching `.mcmeta`, and the 2×2 `#FF00FF` marker present exactly when the chosen status is `placeholder`.
+  - **Models and sounds:** uploads hand-authored block or item model JSON (must parse; every texture it names must exist) and `.ogg` sounds for existing rows. Datagen output under `mod/src/generated/` is never written: those rows are shown read-only with a note that the change belongs in the datagen provider or a hand-authored model under `mod/src/main/resources/`.
+  - **Ledger:** every save updates its row in the same change: origin (`human`, or `licensed` with source and licence), status, and for an accepted draft the reviewer and date in the notes, as P12.2 requires. Rows are never deleted.
+  - **Git:** edits go to a dedicated content worktree and branch (`content/<date>-<slug>`), never to `main` or another lane's worktree. A "Save batch" step runs `tools/check-provenance.sh`, `python3 -I tools/check-docs.py` and `git diff --check`, shows the results, commits with a plain message and can open a PR with `gh pr create --body-file` listing every changed row; it never pushes to `main`, merges or publishes.
+  - **Access:** binds to `127.0.0.1` by default (from a PC, `ssh -L`, as for `tools/pack.sh serve`). `--lan` binds every interface and requires a random token printed at start in every request. Writes only to paths the ledger names (or new rows the user adds under the mod's `assets/` and `pack/`), with an upload size limit.
+  - Quest text and field journal entries are out of scope until their files exist (P11.1, P10.7); the row model must not rule them out.
+- Acceptance: Python `unittest` tests (no network, temporary repository fixture) for lang editing (order, formatting, argument check), texture validation (size, scale, marker against status, `.mcmeta`), refusing generated paths and paths outside the ledger, and ledger row updates; `tools/check-provenance.sh` passes after a scripted edit session. A manual session on foundry, reached from a PC through `ssh -L`, replaces one lang string and one placeholder texture, accepts one draft string, and opens a draft PR from the content branch; the PR is recorded and closed unmerged. Screenshots of the list, text and texture pages in the PR (the GUI is a dev tool, not player-facing, so no ledger rows). Documented in README, docs/DEV-ENVIRONMENT.md and the content-provenance skill.
+- Skills: content-provenance, docs-sync
+- Parallel: Any wave; owns the planned `tools/content-editor.sh`, `tools/content-editor/` and its tests. Content branches it creates follow the serialization gates: a batch that touches `en_us.json` or texture references rebases and reruns its checks before merge.
+
+Exit criteria: harness scene `smoke/mob_lineup` runs headlessly, quits by itself, and its screenshots are reviewed and stored as the first reference. The GPU workflow runs it. The provenance check runs in CI. P1.5, a follow-up added after phase 1 closed, is not part of these exit criteria.
 
 ## Phase 2: Corruption state
 
@@ -282,7 +302,18 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing
 - Parallel: Owns `infection/` and its config section; appends to `api/CorruptionCause`.
 
-Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, P4.6 and P4.7, follow-ups added after P4.4, are not part of these exit criteria.
+### P4.8: Festering veins and contact infection
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.2, P4.6, P4.7
+- Scope: Festering veins: a `remission:festering_vein` multiface block (as vanilla glow lichen and sculk veins) that creeps over the solid faces of blocks in festering chunks from a minimum stage, on the surface and in caves, without replacing them. Veins grow over any solid face, player-built blocks and bases included, so festering land threatens what the player builds; packs keep them off chosen blocks with a block tag (`#remission:vein_resistant`, empty by default). Growth is deterministic, budgeted per tick like the cave pass, resumes after an unload and catches up with the chunk's stage; a vein drops nothing without Silk Touch. Veins must read clearly differently from sculk veins. Contact infection: a `Mob` touching a block in `#remission:infectious` (standing on it, inside it, or against it; Remission ships festering grass, the festered blocks and festering veins) or in water in a festering chunk at or above the minimum stage (fish, squid, drowned, axolotls; the water itself is not replaced, the biome flip already tints it), becomes a host after `[infection] contactTicks` of contact (0 = on first touch), with a new `CorruptionCause` (contact), through the same eligibility and `convert_to` path as P4.7. Festering land exposure (P4.7) is unchanged and stays the slow background source. Players never take contact infection; P5.1 turns contact into viral load gain. Config: veins on/off and minimum stage, contact infection on/off and `contactTicks`. Posts `BlockFesteredEvent` per vein placed. Documents the block, tags, cause and config in remission-data-formats and docs/ARCHITECTURE.md.
+- Acceptance: Gametests: veins grow only from the minimum stage, onto any solid face including placed blocks, never onto `#remission:vein_resistant`; growth is deterministic and resumes after an unload; an eligible mob on, in or against an infectious block, or swimming in water in a festering chunk, becomes a host after `contactTicks` (and on first touch at 0); immune mobs, hosts, players and mobs whose profile sets `conversion.festering_land` to false never do; nothing happens with either source turned off; `convert_to` applies; `HostCorruptedEvent` carries the new cause. Per-tick cost of vein growth and contact checks measured on foundry next to P4.6's cave pass and P4.7's tracker and recorded in the PR. Harness scene `world/veins` (veins over terrain, a cave and a small build, next to sculk veins), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, minecraft-world-generation, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns the vein block and its growth pass, and the contact source in `infection/`; appends to `api/CorruptionCause`, the registry and the `[festering]` and `[infection]` config sections. Do not run alongside P5.2, which must also clear veins.
+
+Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, P4.6, P4.7 and P4.8, follow-ups added after P4.4, are not part of these exit criteria.
 
 ## Phase 5: Viral load and early purification
 
@@ -303,8 +334,8 @@ Goals: the player can survive the Strain and push it back locally.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P4.1, P4.2, P4.4, P8.1
-- Scope: Handheld purifier item, `remission:quarantine_pylon` block with radius, `remission:mendroot` cleansing plant (plantable, so automation can place it); purified chunks enter remission and grant remission zone bonuses (config). Emits block purified and chunk entered remission. Adds the region-cleansed advancement trigger (share of chunks in remission around a point) and a chunks-cleansed stat, following P8.1's conventions.
+- Depends on: P4.1, P4.2, P4.4, P4.8, P8.1
+- Scope: Handheld purifier item, `remission:quarantine_pylon` block with radius (inside it, spread, festering, vein growth and contact infection stop and festered blocks and veins are cleansed; it is the ward a base or the crash site is built around), `remission:mendroot` cleansing plant (plantable, so automation can place it); purified chunks enter remission and grant remission zone bonuses (config). Emits block purified and chunk entered remission. Adds the region-cleansed advancement trigger (share of chunks in remission around a point) and a chunks-cleansed stat, following P8.1's conventions.
 - Acceptance: Gametests for radius, cleansing and remission entry; harness scene `purification/pylon_radius` (before/after). Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
@@ -570,7 +601,7 @@ Goals: Counterstrain becomes a playable pack.
 - Owner:
 - PR:
 - Depends on: P11.1, P10.2, P10.3, P10.4, P10.5, P10.6
-- Scope: Starting structure/map, KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
+- Scope: Starting structure/map (the crash site holds a working quarantine pylon, so the player starts inside a warded radius), KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
 - Acceptance: New world starts at the crash site; gated recipes verified in EMI; each DESIGN integration gate is enforced in a playtest; harness scene `start/crash_site`. Ledger updated; placeholders marked.
 - Skills: kubejs-scripting, minecraft-datapack, minecraft-world-generation, playtesting, visual-checks, content-provenance
 
@@ -605,8 +636,8 @@ Goals: performant, compatible, with final art and writing, published.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P11.3
-- Scope: Replace every `placeholder` and `draft` row in CONTENT-PROVENANCE with human-made or licensed content, or accept a draft as final with a recorded human review (reviewer and date in the row's notes). Remove placeholder markers from replaced textures. Store page copy and gallery images for Modrinth and CurseForge.
+- Depends on: P1.5, P11.3
+- Scope: Using the content editor (P1.5), replace every `placeholder` and `draft` row in CONTENT-PROVENANCE with human-made or licensed content, or accept a draft as final with a recorded human review (reviewer and date in the row's notes). Remove placeholder markers from replaced textures. Store page copy and gallery images for Modrinth and CurseForge.
 - Acceptance: No `placeholder` rows remain for shipped content; every remaining `draft` has a recorded review or is replaced; the provenance check passes; store pages use final art; affected harness scenes re-reviewed.
 - Skills: content-provenance, visual-checks, minecraft-resource-pack
 - Parallel: With P12.1
