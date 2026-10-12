@@ -12,7 +12,9 @@ with zlib). Fails when:
   lacks it while its status is `placeholder`;
 - a row points at a repository file that does not exist, unless its status is
   `removed` (and a `removed` row whose file still exists fails too);
-- a row has an unknown status, or two rows name the same file.
+- a row has an unknown status, or two rows name the same file or the same text ID
+  (an exact `file:key` row overriding a `file:prefix*` row is fine: the most
+  specific row wins).
 
 Scanned trees: mod/src/main/resources/assets/, mod/src/generated/resources/assets/
 and pack/ (except pack/mods/, packwiz metadata). Gitignored files are skipped.
@@ -218,7 +220,7 @@ def check(root, ledger):
     def fail(where, message):
         failures.append(f"{where}: {message}")
 
-    rows = {}
+    rows, text_rows = {}, {}
     for line_no, path_id, ctype, status in parse_ledger(ledger):
         where = f"{ledger_rel}:{line_no}"
         if status not in STATUSES:
@@ -235,7 +237,12 @@ def check(root, ledger):
             fail(where, f"`{file_part}` does not exist; restore it, fix the path, or set status removed "
                         "with a note saying when and why")
         if ":" in path_id:
-            continue  # a text row (file:key) never covers a whole asset file
+            # A text row (file:key) never covers a whole asset file. An exact key row may override a
+            # `*` row (the most specific row wins), but two rows for the same ID are ambiguous.
+            if path_id in text_rows:
+                fail(where, f"`{path_id}` already has a row at line {text_rows[path_id]}; edit that row instead")
+            text_rows.setdefault(path_id, line_no)
+            continue
         if path_id in rows:
             fail(where, f"`{path_id}` already has a row at line {rows[path_id][0]}; edit that row instead")
             continue
