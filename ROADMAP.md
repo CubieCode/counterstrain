@@ -587,7 +587,7 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Owner:
 - PR:
 - Depends on: P4.4, P8.3
-- Scope: Add the verified mods from CurseForge with `packwiz cf add` (PneumaticCraft: Repressurized, Occultism, Serene Seasons, Farmer's Delight, Productive Bees, Iron's Spells 'n Spellbooks, Waystones, Immersive Engineering, Mekanism Generators, Oritech, MineColonies with its required mods, Sophisticated Backpacks and Storage, Simple Voice Chat, Create Aeronautics with Sable, the chosen field journal mod, Biomes O' Plenty, Terralith, and DESIGN's supporting mods: Lootr, Chunk Pregenerator, Naturalist, Sound Physics Remastered, YUNG's Better Dungeons with YUNG's API) and their required dependencies; record versions and IDs; note beta-only files. Re-source the existing Modrinth-sourced pack mods from CurseForge (same files) and drop the separate Better Advanced Tooltips entry (Modrinth-only; KubeJS bundles it), so the CurseForge export embeds no jars it may not redistribute. Add `compileOnly` APIs and dev-runtime entries for every mod-side integration in phase 10 to `mod/build.gradle`/`mod/gradle.properties` and optional dependency entries to the `neoforge.mods.toml` template. Update README stack and the pack changelog.
+- Scope: Add the verified mods from CurseForge with `packwiz cf add` (PneumaticCraft: Repressurized, Occultism, Serene Seasons, Farmer's Delight, Productive Bees, Iron's Spells 'n Spellbooks, Waystones, Immersive Engineering, Mekanism Generators, Oritech, Theurgy, L_Ender's Cataclysm, Mowzie's Mobs, MineColonies with its required mods, Sophisticated Backpacks and Storage, Simple Voice Chat, Create Aeronautics with Sable, the chosen field journal mod, Biomes O' Plenty, Terralith, and DESIGN's supporting mods: Lootr, Artifacts, Chunk Pregenerator, Naturalist, Sound Physics Remastered, YUNG's Better Dungeons with YUNG's API) and their required dependencies; record versions and IDs; note beta-only files. Confirm the CurseForge 1.21.1 NeoForge files for Theurgy and Artifacts, and that every required library of an added mod is on CurseForge; a mod that fails either check is recorded in DESIGN and left out. Re-source the existing Modrinth-sourced pack mods from CurseForge (same files) and drop the separate Better Advanced Tooltips entry (Modrinth-only; KubeJS bundles it), so the CurseForge export embeds no jars it may not redistribute. Add `compileOnly` APIs and dev-runtime entries for every mod-side integration in phase 10 to `mod/build.gradle`/`mod/gradle.properties` and optional dependency entries to the `neoforge.mods.toml` template. Update README stack and the pack changelog.
 - Acceptance: `tools/pack.sh check` passes; `tools/pack.sh export` adds every mod to the CurseForge manifest and embeds none under `overrides/mods/`; the full pack starts headlessly on foundry (dedicated server and client) with the renderer verified; every new file name says neoforge/1.21.1; `./gradlew build runGameTestServer` passes with and without dev-runtime mods.
 - Skills: packwiz-pack, neoforge-mod-dev, playtesting, headless-client
 - Parallel: Runs alone; owns `pack/pack.toml`, `pack/mods/` and build files for the phase
@@ -608,8 +608,8 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Owner:
 - PR:
 - Depends on: P10.1, P4.4, P8.3, P5.2
-- Scope: Ars Nouveau (mod-side): a Cleanse glyph, host summons, unstable source from festering land that can backfire. Occultism (pack-side): rituals harvesting spirits from hosts, bound spirits immune to the Strain working in festering zones.
-- Acceptance: Gametests for the Ars Nouveau hooks; a dev run casts Cleanse and performs a host ritual; harness scene `integration/ars_cleanse`, reviewed. Ledger updated; placeholders marked.
+- Scope: Ars Nouveau (mod-side): a Cleanse glyph, host summons, unstable source from festering land that can backfire. Occultism (pack-side): rituals harvesting spirits from hosts, bound spirits immune to the Strain working in festering zones. Theurgy (pack-side): spagyric recipes breaking Remission samples into alchemical components, as early research before the analyzer.
+- Acceptance: Gametests for the Ars Nouveau hooks; a dev run casts Cleanse, performs a host ritual and processes a sample with Theurgy; harness scene `integration/ars_cleanse`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, kubejs-scripting, visual-checks, content-provenance
 
 ### P10.4: World and survival integrations
@@ -628,8 +628,8 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Owner:
 - PR:
 - Depends on: P10.1, P4.4, P3.3
-- Scope: Iron's Spells 'n Spellbooks: spellcasting host bosses (pack-side mob profiles and loot) and a Strain-themed spell school they drop (mod-side).
-- Acceptance: Gametests for the school registration and drops; a dev run fights a host boss and casts a school spell; harness scene `integration/host_boss`, reviewed. Ledger updated; placeholders marked.
+- Scope: Iron's Spells 'n Spellbooks: spellcasting host bosses (pack-side mob profiles and loot) and a Strain-themed spell school they drop (mod-side). L_Ender's Cataclysm (pack-side): dungeons placed to guard late-region nidi, boss drops in Counterstrain recipes, each boss's immunity recorded. Mowzie's Mobs (pack-side): mob profiles and host loot, each boss's immunity recorded.
+- Acceptance: Gametests for the school registration and drops; a dev run fights a host boss, casts a school spell, clears a festered Cataclysm dungeon and fights a Mowzie's host; harness scene `integration/host_boss`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, remission-data-formats, visual-checks, content-provenance
 
 ### P10.6: Logistics, settlement and aerial integrations
