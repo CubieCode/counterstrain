@@ -44,6 +44,9 @@ class ServiceTest(unittest.TestCase):
         self.assertEqual(fixture.git(self.repo.root, "rev-parse", "--abbrev-ref", "HEAD").strip(), "main")
         with self.assertRaises(RepoError):
             self.editor.workspace.start("Bad Name!")
+        # Starting the same batch again (a double submit) resumes it instead of failing.
+        self.assertEqual(self.editor.workspace.start("surge-text", today=fixture.TODAY), branch)
+        self.assertEqual(self.editor.workspace.branch(), branch)
 
     def test_generated_and_unledgered_paths_are_refused(self):
         self.start()

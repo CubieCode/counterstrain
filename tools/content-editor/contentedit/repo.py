@@ -125,11 +125,16 @@ class Workspace:
             raise RepoError("the batch name must be 1-40 lower-case letters, digits or hyphens")
         name = f"{(today or datetime.date.today()).isoformat()}-{slug}"
         branch = BRANCH_PREFIX + name
-        if fetch:
-            git(self.tool_root, "fetch", "--quiet", "origin", "main", check=False, timeout=60)
         path = os.path.join(self.state_dir, "worktrees", name)
         if os.path.exists(path):
-            raise RepoError(f"{path} already exists; resume it instead")
+            # Starting the same batch twice (a double submit, or the same name later that day) resumes it.
+            existing = git(path, "rev-parse", "--abbrev-ref", "HEAD", check=False).stdout.strip()
+            if existing != branch:
+                raise RepoError(f"{path} exists but is not on {branch}; remove it or pick another name")
+            self.resume(path)
+            return branch
+        if fetch:
+            git(self.tool_root, "fetch", "--quiet", "origin", "main", check=False, timeout=60)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         git(self.tool_root, "worktree", "add", "--quiet", "-b", branch, path, self.upstream())
         self.resume(path)

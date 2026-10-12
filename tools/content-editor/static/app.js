@@ -162,12 +162,15 @@ function startDialog() {
   const dialog = h('dialog', {},
     h('form', { method: 'dialog', class: 'stack', onsubmit: async (e) => {
       e.preventDefault();
+      const submit = dialog.querySelector('button[type="submit"]');
+      if (submit.disabled) return;
+      submit.disabled = true; submit.textContent = 'Starting…';
       await guard(async () => {
         const r = await api('/api/batch/start', { body: { slug: slug.value.trim() } });
         dialog.close(); dialog.remove();
         toast(`Started ${r.branch}`);
         await refresh(); route();
-      });
+      }).catch(() => { submit.disabled = false; submit.textContent = 'Start batch'; });
     } },
       h('h2', {}, 'Start a content batch'),
       h('p', { class: 'dim', style: 'margin:0' }, 'Edits go to a new worktree on content/', STATE.today, '-<name>, made from origin/main. This checkout and main are never written.'),
