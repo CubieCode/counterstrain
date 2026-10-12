@@ -25,15 +25,20 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P6.3 (follow-up to P6.2) can join any wave or run alone; it owns `research/Bestiary` and the bestiary scene reference.
 - E: P4.2 (done), then P4.3 (after P4.5 and P8.1, both done). P4.3 owns surge scheduling, miasma clouds, its surge API events and the surge survived trigger and stat, and is the remission-data-formats owner while it runs; append-only edits in `api/` and `quest/`.
 - P4.8 (follow-up to P4.6 and P4.7) runs alone or before wave F; it owns the vein block and the contact source and must merge before P5.2.
+- P4.9 (follow-up to P4.6 and P5.2) runs alone or alongside items that do not touch `world/`, the `[spread]` config or remission-data-formats; it must merge before P11.2.
+- P4.10 (follow-up to P4.3) runs alone or alongside items that do not touch `world/` nidus code, `surge/` or the nidus contracts; it owns `NidusBlock`, the nidus API events and the `nidus_destroyed` trigger while it runs.
+- P5.5 (follow-up to P5.2) can join any wave or run alone; it owns `RemissionZones` and the `[remission_zones]` config.
+- P4.11 (follow-up to P4.2) can join any wave or run alone; it owns the `remission:fester` biome's effects, the fester sounds and client fog in `client/`.
 - P4.6 and P4.7 (follow-ups to P4.2 and P3.3) can join wave E with P4.3 or run alone. P4.6 owns `world/FesteringStages` and `world/FesterMaps` and runs before P5.2; P4.7 owns `infection/`. With P4.3 in the same wave, appoint one owner for config specs and one for remission-data-formats.
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - P5.3 → P5.4 serially, after P5.1. P5.3 owns the revenant entity, `integration/curios/` and its build-file entries; P5.4 owns its payload and coordinates `integration/journeymap/` with P8.2 (never in the same wave).
-- G: P7.2 → P7.3 serially (recipe types and KubeJS schemas are contracts), after P8.1 (done; later items append their triggers and stats to its contracts).
+- G: P7.2 → P7.3 → P7.4 → P7.5 serially (recipe types, KubeJS schemas and the variant registry are contracts), after P8.1 (done; later items append their triggers and stats to its contracts). P7.4 and P7.5 were added after the phase was planned.
 - H: P8.2 + P9.1, then P8.3 + P9.2. P8.2 owns command syntax; P8.3 owns the KubeJS binding contract.
+- P8.4 (playable slice) runs alone after P4.9, P4.10, P4.11, P5.3, P5.5, P7.4, P7.5 and P8.2, and before wave I; it owns `pack/config/remission-common.toml` and may add Mekanism Generators to the pack ahead of P10.1, owning pack membership while it runs.
 - I: P10.1 alone (owns `pack/pack.toml`, `pack/mods/` and the build-file entries for every mod-side integration).
 - J: P10.2 + P10.3 + P10.4 + P10.5, after P10.1. Each owns its `integration/<modid>/` packages and its pack scripts (`pack/kubejs/**/integrations/<modid>.js`); one remission-data-formats owner per wave (P10.2); none touches build files or `pack/mods/`.
-- K: P10.6 + P10.7. P10.6 extends `integration/create/` after P10.2 has merged.
-- L: P11.1 → P11.2 → P11.3 serially (one pack-content owner).
+- K: P10.6 + P10.7 + P10.8. P10.6 extends `integration/create/` after P10.2 has merged; P10.8 owns `integration/ballistix/`.
+- L: P11.1 → P11.4 → P11.5 → P11.2 → P11.3 serially (one pack-content owner). P11.4 and P11.5 were added after the phase was planned, so their numbers do not follow the run order.
 - M: P12.1 + P12.2, then P12.3.
 
 ## Phase 0: Scaffold
@@ -315,7 +320,40 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Skills: neoforge-mod-dev, minecraft-world-generation, remission-data-formats, minecraft-testing, visual-checks, content-provenance
 - Parallel: Owns the vein block and its growth pass, and the contact source in `infection/`; appends to `api/CorruptionCause`, the registry and the `[festering]` and `[infection]` config sections. Do not run alongside P5.2, which must also clear veins.
 
-Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, P4.6, P4.7 and P4.8, follow-ups added after P4.4, are not part of these exit criteria.
+### P4.9: Initial festering
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.5, P4.6, P5.2
+- Scope: Optional festering from world generation, so a pack can start with the world already taken by the Strain instead of only around nidi. A newly generated chunk in a listed dimension starts with a chunk corruption level set by config: a level at a configurable distance from world spawn, rising to a maximum level further out (a flat level when both are equal), and none within a safe radius in chunks around world spawn. Existing chunks, chunks in remission and chunks inside a quarantine pylon's ward never get an initial level, so turning it on mid-world only affects new land. The existing stage work (P4.2, P4.6) and vein growth (P4.8) turn the level into land on load, budgeted as now; no new worldgen features or surface rules. Land with an initial level and no nidus in reach stays as it is until purified; a nidus in reach takes purified land back by normal spread, so nidi stay the source that must be destroyed before purifying around them means anything. The level is deterministic for a seed and position. Config in `[spread]` (dimensions, default empty = off; safe radius; near and far levels; distance of the ramp), posts `ChunkStageChangedEvent` for each initialised chunk, documented in remission-data-formats and docs/ARCHITECTURE.md. Remission ships it off; Counterstrain turns it on in P11.2.
+- Acceptance: Gametests: a new chunk in a listed dimension gets the configured level by distance and none in the safe radius, unlisted dimensions and old chunks get none, warded and remission chunks get none, the level is deterministic, an initialised chunk with no nidus in reach never rises, and a purified chunk next to a live nidus festers again; nothing changes with the dimension list empty. Per-tick cost and the delay before newly generated land looks festered measured on foundry while flying with elytra over new terrain, recorded in the PR next to P4.2's stage cost. Harness scene `world/initial_festering` (spawn's safe radius and festered land beyond it), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns the initial level hook in `world/` and the new `[spread]` keys; appends to remission-data-formats.
+
+### P4.10: Nidus encounters
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.3, P4.4, P8.1
+- Scope: Destroying a nidus becomes a fight instead of mining one block. A nidus has **nidus vitality** (config, scaled by how long it has grown) and cannot be mined: players wear it down by striking it (damage from the held item's attack damage and attack strength), and projectiles and explosions count at configurable fractions, so TNT alone is not the answer. As vitality falls past thresholds (default 75, 50 and 25%) the nidus fights back: it starts a surge from itself at once with no warning (P4.3), at rising intensity, and lashes nearby players with viral load and knockback. Vitality regenerates when no player has struck it for a while, so a failed attempt has to start over. Nearby players see a boss bar with its vitality, and the block shows its damage (block state or crack overlay). The player who lands the final blow destroys it: the nidus core drops, `NidusDestroyedEvent` gains that player, and `remission:nidus_destroyed` fires for that player only. A new cancellable `NidusDamagedEvent` (with a mutable amount) lets packs and scripts make prepared items or serums deal more (P7.3, P8.3) or protect a story nidus. Creative players and `/setblock` still remove a nidus at once. Config in a new `[nidi]` section (vitality, growth scaling, regeneration, thresholds, the projectile and explosion fractions; vitality 0 restores plain mining). Documents the event, the trigger change and the config in remission-data-formats and docs/ARCHITECTURE.md.
+- Acceptance: Gametests: mining never breaks a nidus; strikes, projectiles and explosions deal their configured damage; each threshold starts one surge from that nidus and lashes players; vitality regenerates after the delay and is saved with the block entity; the final blow drops the core and fires the event and trigger for that player; `NidusDamagedEvent` cancels and scales damage; vitality 0 restores mining. A dev-world fight against a full-grown nidus with iron gear is winnable but costly, noted in the PR. Harness scene `world/nidus_fight` (a damaged nidus at each threshold, the boss bar and a surge under way), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns `NidusBlock` and its block entity, the `[nidi]` config, `NidusDamagedEvent` and the `nidus_destroyed` trigger contract; appends to `api/` and the surge controller's start path.
+
+### P4.11: Festering land atmosphere
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.2
+- Scope: Festering land should feel wrong to stand in, not just look it. The `remission:fester` biome gets its effects (datagen): fog, sky and water fog colours, an ambient loop, mood sounds (as cave sounds), occasional additions sounds (wet, organic noises) and its own music, all clearly unlike the Deep Dark. Client side, fog thickens with the festering stage of the player's chunk (from the biome and blocks the client already has; no new payload), with a client config option to turn it down or off for accessibility. Fester variants (data) inherit nothing automatically, so remission-data-formats documents what a pack sets on its own variant biomes. Sounds are placeholders in the ledger until P12.2.
+- Acceptance: In a dev run, walking from clean land into a stage 4 chunk changes sky, fog, ambience and music, and the fog option works; no new payload. Harness scene `world/atmosphere` (the same view from clean land, a stage 2 chunk and a stage 4 chunk), reviewed. Ledger updated (sounds and music recorded); placeholders marked.
+- Skills: neoforge-mod-dev, minecraft-resource-pack, minecraft-world-generation, visual-checks, content-provenance
+- Parallel: Owns the fester biome's effects in `RemissionBiomeProvider`, `sounds.json` entries for festering land and fog in `client/`; appends to the client config.
+
+Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5 to P4.11, follow-ups added after P4.4, are not part of these exit criteria.
 
 ## Phase 5: Viral load and early purification
 
@@ -365,7 +403,18 @@ Goals: the player can survive the Strain and push it back locally.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 - Parallel: Adds a network payload (one registry and network spine owner per wave) and the JourneyMap build-file entry; P8.2 also uses `integration/journeymap/`, so whichever runs second appends to that package rather than replacing it.
 
-Exit criteria: a player can enter, survive and cleanse festering land in a dev world, leaving chunks in remission; scenes reviewed. P5.3 and P5.4, added later, are not part of these exit criteria.
+### P5.5: Remission zones come back to life
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P5.2
+- Scope: Make reclaimed land visibly worth winning, beyond P5.2's numeric bonuses. **Wildlife returns:** chunks in remission slowly gain passive animals from their restored biome's creature spawn list (vanilla only spawns these when a chunk is generated, so cleansed land would otherwise stay empty), capped per chunk and never as hosts. **Regrowth:** cleansed surfaces gradually regain grass, flowers and saplings suited to the restored biome, budgeted per tick like the other land passes. Both are new `[remission_zones]` settings (on/off, rates, caps), on by default, and deterministic where they place blocks. Documented in remission-data-formats and docs/ARCHITECTURE.md.
+- Acceptance: Gametests: animals from the biome's list appear in a chunk in remission within the configured time and stop at the cap, none outside remission and none with the setting off; regrowth places only biome-appropriate plants on cleansed surfaces, is deterministic and stops with the setting off. Per-tick cost measured on foundry and recorded in the PR. Harness scene `purification/regrowth` (the same patch of land festered, just cleansed and after regrowth), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns `RemissionZones` and the `[remission_zones]` config; appends to remission-data-formats.
+
+Exit criteria: a player can enter, survive and cleanse festering land in a dev world, leaving chunks in remission; scenes reviewed. P5.3, P5.4 and P5.5, added later, are not part of these exit criteria.
 
 ## Phase 6: Research
 
@@ -442,7 +491,27 @@ Goals: the Strain becomes a resource processed by machines into tools for the fi
 - Acceptance: A sample KubeJS script edits each recipe type in a dev run; documented in kubejs-scripting. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, kubejs-scripting, content-provenance
 
-Exit criteria: full chain from sample to serum works in a dev world; machine screenshots reviewed.
+### P7.4: Reclaimers
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P7.3, P5.2
+- Scope: The large powered purifier DESIGN lists between the quarantine pylon and the Counterstrain, so a player can take back a valley in the mid-game. Block `remission:reclaimer`: while it has energy (FE) and purifier fuel (P7.3), fed by hand or through standard item, fluid and energy capabilities, it lowers chunk levels across a square radius larger than a pylon's (config, default 4 chunks, so 9 by 9), nearest chunks first, cleansing festered blocks, veins and biomes through P5.2's chunk cleanse, and chunks it drains enter remission. It does not ward: a live nidus in reach keeps spreading against it, so the land settles where drain and spread meet and a reclaimer cannot clear a nidus chunk while the nidus lives. A screen shows energy, fuel, radius and progress; a comparator reads how much of its area is in remission. Running costs, radius and drain rate are config; packs gate it with recipes (Counterstrain: P10.2 tech tiers). Posts the existing purification and remission events with the reclaimer as the source. Documented in remission-data-formats and docs/ARCHITECTURE.md.
+- Acceptance: Gametests: a powered, fuelled reclaimer drains its radius nearest first and stops without energy or fuel; drained chunks enter remission; a live nidus in reach holds land against it and its own chunk never clears; capabilities accept energy, items and fluids; events carry the source. Per-tick cost measured on foundry and recorded in the PR. Harness scene `purification/reclaimer` (a reclaimer mid-way through a valley, the screen), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+
+### P7.5: Resistant variants
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P7.3, P7.4, P6.1
+- Scope: The Strain adapts to how it is fought, from the mid-game rather than only at the end, so research stays a loop instead of a one-time unlock. Remission records, per nidus, how its land and hosts are being beaten (purification by tool: handheld purifier, pylon, reclaimer, mendroot; host kills by damage type). When one method passes a threshold, that nidus's Strain becomes a **variant** resistant to it: purification by that tool slows in its reach and its hosts (the `CorruptionState` `variant` field, now written) take less damage of that type, with a visible tint. Host and block scans show the variant; sequencing it (P7.2 machines, new default recipes) lets the synthesizer make a matching serum or purifier fuel that restores full effect. Variants are a datapack registry (`remission:variant`: what it resists, by how much, its trigger threshold and tint) with defaults for each tool and damage class. Config `[variants]` (on/off, thresholds); `/remission variant` to set or clear one for quests; cancellable `VariantEmergedEvent`; triggers `remission:variant_emerged` and `remission:variant_sequenced`. Documented in remission-data-formats and docs/ARCHITECTURE.md. P9.1 reuses this for variants that resist Counterstrain prototypes.
+- Acceptance: Gametests: overusing a method near a nidus produces the matching variant and only there; purification and damage are reduced by the configured amount; the variant field saves and syncs; a sequenced variant's serum or fuel restores full effect; the event cancels emergence; the command, triggers and the off switch work. Harness scene `research/variants` (hosts and land of two variants beside the base Strain, and their scans), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+
+Exit criteria: full chain from sample to serum works in a dev world; machine screenshots reviewed. P7.4 and P7.5, added later, are not part of these exit criteria.
 
 ## Phase 8: Quest integration
 
@@ -481,19 +550,29 @@ Goals: quests and scripts can observe and drive Remission.
 - Skills: neoforge-mod-dev, kubejs-scripting, remission-data-formats
 - Parallel: After P8.2 (one contract owner)
 
-Exit criteria: a sample quest chain gates on and fires Remission events; a sample KubeJS script reacts to API events.
+### P8.4: Playable slice of the first region
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.9, P4.10, P4.11, P5.3, P5.5, P7.4, P7.5, P8.2
+- Scope: Find out whether the core loop is fun before phase 10 builds integrations on top of it. Assemble one region end to end from built pieces, with the current pack (vanilla, Mekanism with Mekanism Generators, AE2, Create, JourneyMap, FTB Quests): a fixed-seed world with initial festering on, a quarantine pylon start, one nidus to fight, one hand-placed test structure standing in for a wreck site, purification by hand, pylon and reclaimer, remission zones coming back to life, and one variant. A short draft quest chapter guides it (status `draft` in the ledger; P11.1 replaces it). Play it from start to a cleared region, at least once by a human. Tune the Counterstrain values in `pack/config/remission-common.toml` (spread, initial festering, viral load, nidus vitality, reclaimer, variants) and record each change with its reason. Problems that need more than tuning become roadmap follow-ups, not fixes inside this item.
+- Acceptance: A playtest report in the PR per the playtesting skill: seed, setup, time to each milestone (first shelter, first sample, nidus destroyed, first chunk in remission, region cleared), what was fun, what dragged and what broke, with screenshots reviewed. Tuned config committed with reasons; follow-up items added to the roadmap or reported to the coordinator. Ledger updated; placeholders marked.
+- Skills: playtesting, ftb-quests-authoring, packwiz-pack, headless-client, visual-checks, content-provenance
+
+Exit criteria: a sample quest chain gates on and fires Remission events; a sample KubeJS script reacts to API events. P8.4, added later, is not part of these exit criteria.
 
 ## Phase 9: Endgame cure
 
 Goals: the Counterstrain heals the world.
 
-### P9.1: Counterstrain spread and resistant variants
+### P9.1: Counterstrain spread and its variants
 
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P4.1, P7.3
-- Scope: Reverse spread on the same engine (emitting the purification and remission events); resistant variants (the `CorruptionState` `variant` field) reacting to the player's methods.
+- Depends on: P4.1, P7.3, P7.5
+- Scope: Reverse spread on the same engine (emitting the purification and remission events); P7.5's variants extended to the Counterstrain, so unstable prototypes meet variants that resist them until the final formula.
 - Acceptance: Gametests for reverse spread and adaptation; timings recorded.
 - Skills: neoforge-mod-dev
 
@@ -519,7 +598,7 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Owner:
 - PR:
 - Depends on: P4.4, P8.3
-- Scope: Add the verified mods from CurseForge with `packwiz cf add` (PneumaticCraft: Repressurized, Occultism, Serene Seasons, Farmer's Delight, Productive Bees, Iron's Spells 'n Spellbooks, Waystones, Immersive Engineering, MineColonies with its required mods, Sophisticated Backpacks and Storage, Simple Voice Chat, Create Aeronautics with Sable, the chosen field journal mod, Biomes O' Plenty, Terralith) and their required dependencies; record versions and IDs; note beta-only files. Re-source the existing Modrinth-sourced pack mods from CurseForge (same files) and drop the separate Better Advanced Tooltips entry (Modrinth-only; KubeJS bundles it), so the CurseForge export embeds no jars it may not redistribute. Add `compileOnly` APIs and dev-runtime entries for every mod-side integration in phase 10 to `mod/build.gradle`/`mod/gradle.properties` and optional dependency entries to the `neoforge.mods.toml` template. Update README stack and the pack changelog.
+- Scope: Add the verified mods from CurseForge with `packwiz cf add` (PneumaticCraft: Repressurized, Occultism, Serene Seasons, Farmer's Delight, Productive Bees, Iron's Spells 'n Spellbooks, Waystones, Immersive Engineering, Mekanism Generators, Oritech, Theurgy, L_Ender's Cataclysm, Mowzie's Mobs, Ballistix with Voltaic, MFFS, MineColonies with its required mods, Sophisticated Backpacks and Storage, Simple Voice Chat, Create Aeronautics with Sable, the chosen field journal mod, Biomes O' Plenty, Terralith, and DESIGN's supporting mods: Lootr, Artifacts, Chunk Pregenerator, Naturalist, Sound Physics Remastered, YUNG's Better Dungeons with YUNG's API) and their required dependencies; record versions and IDs; note beta-only files. Confirm the CurseForge 1.21.1 NeoForge files for Theurgy, Artifacts and MFFS, and that every required library of an added mod is on CurseForge; a mod that fails either check is recorded in DESIGN and left out. Re-source the existing Modrinth-sourced pack mods from CurseForge (same files) and drop the separate Better Advanced Tooltips entry (Modrinth-only; KubeJS bundles it), so the CurseForge export embeds no jars it may not redistribute. Add `compileOnly` APIs and dev-runtime entries for every mod-side integration in phase 10 to `mod/build.gradle`/`mod/gradle.properties` and optional dependency entries to the `neoforge.mods.toml` template. Update README stack and the pack changelog.
 - Acceptance: `tools/pack.sh check` passes; `tools/pack.sh export` adds every mod to the CurseForge manifest and embeds none under `overrides/mods/`; the full pack starts headlessly on foundry (dedicated server and client) with the renderer verified; every new file name says neoforge/1.21.1; `./gradlew build runGameTestServer` passes with and without dev-runtime mods.
 - Skills: packwiz-pack, neoforge-mod-dev, playtesting, headless-client
 - Parallel: Runs alone; owns `pack/pack.toml`, `pack/mods/` and build files for the phase
@@ -529,9 +608,9 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P10.1, P4.4, P8.3, P7.3, P5.2
-- Scope: Create (mod-side): fans with a purifying catalyst cleanse blocks in their stream, fan walls act as firebreaks through the spread attempt event, track in festering chunks degrades. PneumaticCraft (pack-side): pressurised miasma analysis recipes; drones planting mendroot. AE2: research data storage and sequencer feeding (pack-side), cable degradation in festering chunks without shielding (mod-side). Mekanism (pack-side): late-game sequencing and Counterstrain stabilisation processing on the P7.1 miasma chemical.
-- Acceptance: Gametests for each mod-side hook; the pack-side recipes appear in EMI; harness scenes `integration/create_fan_purify` and `integration/ae2_cable_decay`, reviewed. Ledger updated; placeholders marked.
+- Depends on: P10.1, P4.4, P8.3, P7.3, P7.4, P5.2
+- Scope: Create (mod-side): fans with a purifying catalyst cleanse blocks in their stream, fan walls act as firebreaks through the spread attempt event, track in festering chunks degrades. PneumaticCraft (pack-side): pressurised miasma analysis recipes; drones planting mendroot. AE2: research data storage and sequencer feeding (pack-side), cable degradation in festering chunks without shielding (mod-side). Mekanism (pack-side): late-game sequencing and Counterstrain stabilisation processing on the P7.1 miasma chemical; the reclaimer (P7.4) recipe gated on Mekanism tiers and its running cost tuned to Mekanism Generators output. Oritech: a viral load resistance augment (pack-side if its augments are data-driven, otherwise mod-side in `integration/oritech/`; record which and why), a particle accelerator product required by the final Counterstrain formula (pack-side), and drone ports for cargo between bases (no code; checked in the playtest).
+- Acceptance: Gametests for each mod-side hook; the pack-side recipes appear in EMI; a dev run applies the Oritech augment and its viral load gain drops by the configured amount; harness scenes `integration/create_fan_purify`, `integration/ae2_cable_decay` and `integration/oritech_augment`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, kubejs-scripting, remission-data-formats, visual-checks, content-provenance
 
 ### P10.3: Magic integrations
@@ -540,8 +619,8 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Owner:
 - PR:
 - Depends on: P10.1, P4.4, P8.3, P5.2
-- Scope: Ars Nouveau (mod-side): a Cleanse glyph, host summons, unstable source from festering land that can backfire. Occultism (pack-side): rituals harvesting spirits from hosts, bound spirits immune to the Strain working in festering zones.
-- Acceptance: Gametests for the Ars Nouveau hooks; a dev run casts Cleanse and performs a host ritual; harness scene `integration/ars_cleanse`, reviewed. Ledger updated; placeholders marked.
+- Scope: Ars Nouveau (mod-side): a Cleanse glyph, host summons, unstable source from festering land that can backfire. Occultism (pack-side): rituals harvesting spirits from hosts, bound spirits immune to the Strain working in festering zones. Theurgy (pack-side): spagyric recipes breaking Remission samples into alchemical components, as early research before the analyzer.
+- Acceptance: Gametests for the Ars Nouveau hooks; a dev run casts Cleanse, performs a host ritual and processes a sample with Theurgy; harness scene `integration/ars_cleanse`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, kubejs-scripting, visual-checks, content-provenance
 
 ### P10.4: World and survival integrations
@@ -560,8 +639,8 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Owner:
 - PR:
 - Depends on: P10.1, P4.4, P3.3
-- Scope: Iron's Spells 'n Spellbooks: spellcasting host bosses (pack-side mob profiles and loot) and a Strain-themed spell school they drop (mod-side).
-- Acceptance: Gametests for the school registration and drops; a dev run fights a host boss and casts a school spell; harness scene `integration/host_boss`, reviewed. Ledger updated; placeholders marked.
+- Scope: Iron's Spells 'n Spellbooks: spellcasting host bosses (pack-side mob profiles and loot) and a Strain-themed spell school they drop (mod-side). L_Ender's Cataclysm (pack-side): dungeons placed to guard late-region nidi, boss drops in Counterstrain recipes, each boss's immunity recorded. Mowzie's Mobs (pack-side): mob profiles and host loot, each boss's immunity recorded.
+- Acceptance: Gametests for the school registration and drops; a dev run fights a host boss, casts a school spell, clears a festered Cataclysm dungeon and fights a Mowzie's host; harness scene `integration/host_boss`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, remission-data-formats, visual-checks, content-provenance
 
 ### P10.6: Logistics, settlement and aerial integrations
@@ -584,6 +663,16 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Acceptance: Gametest for the voice hook's config gate; journal entries unlock in a dev run; harness scenes `integration/field_journal` and `integration/fester_variants`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, minecraft-world-generation, visual-checks, content-provenance
 
+### P10.8: Defence integrations: Ballistix and MFFS
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P10.1, P4.3, P4.4, P4.10, P5.2
+- Scope: Two throwback mods as the pack's answer to surges and remote nidi. Ballistix: missiles reach remote nidi and clear hosts during surges, but explosions only damage a nidus at P4.10's explosion fraction, so a missile softens a nidus and a player still lands the final blow (Counterstrain sets the fraction). A cleansing warhead that purifies festered blocks and lowers chunk levels where it lands, like a handheld purifier at range (mod-side in `integration/ballistix/` if Ballistix's blast types are Java registrations, otherwise pack-side; record which). Anti-air defences shoot down miasma clouds if they can target them; if not, decide whether a small mod-side hook makes clouds targetable or leave it out, and record why. Recipes gated mid- to late-game; world-destroying explosives (nuclear, antimatter and the like) disabled or gated at the endgame in Counterstrain's config for multiplayer. MFFS (pack-side): force fields as physical base defence, distinct from pylons, which stop the Strain spreading: fields keep hosts, surge waves and miasma clouds out, and field blocks join `#remission:vein_resistant` so veins never creep over them. Recipes gated on mid-game tech.
+- Acceptance: Gametests for any mod-side hook; a dev run softens a nidus with a missile and finishes it by hand, cleanses land with the warhead, holds a surge behind a force field and (if built) shoots down a miasma cloud; disabled explosives cannot be crafted. Harness scenes `integration/ballistix_warhead` and `integration/mffs_surge`, reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, kubejs-scripting, minecraft-datapack, minecraft-testing, visual-checks, content-provenance
+
 Exit criteria: every available integration in DESIGN's table loads, its gate works in a dev run of the full pack, mod-side hooks pass gametests, and the listed scenes are reviewed. Remission still loads with none of these mods installed.
 
 ## Phase 11: Pack assembly
@@ -596,8 +685,8 @@ Goals: Counterstrain becomes a playable pack.
 - Owner:
 - PR:
 - Depends on: P8.1, P10.7
-- Scope: Lore, chapters (locate the nidus → research → gear up → destroy the nidus → purify → next region → Counterstrain), field journal text.
-- Acceptance: Full quest line completable in a playtest. Ledger updated for every quest, lore and journal text block (status `draft`).
+- Scope: Lore, chapters (locate the nidus → research → gear up → destroy the nidus → purify → next region → Counterstrain), field journal text. Answer LORE's open questions (who built the payload and why, whether anyone else survived, how the story splits between quest text and found items) and record the answers in LORE. The story deepens as the player explores: chapters set up questions that lab logs found at wreck sites (P11.4) answer, so not every revelation sits in a quest. Write the beats and log texts P11.4 places, and the relay's part in the story and the standing branches P11.5 implements (some quest text and the ending change with standing). The relay is a working concept; renaming it updates the glossary.
+- Acceptance: Full quest line completable in a playtest; LORE has no open questions left about the premise; every lab log and standing branch has its text. Ledger updated for every quest, lore and journal text block (status `draft`).
 - Skills: ftb-quests-authoring, playtesting, content-provenance
 
 ### P11.2: Crash-site start, recipe gating and worldgen
@@ -605,9 +694,9 @@ Goals: Counterstrain becomes a playable pack.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P11.1, P10.2, P10.3, P10.4, P10.5, P10.6
-- Scope: Starting structure/map (the crash site holds a working quarantine pylon, so the player starts inside a warded radius), KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
-- Acceptance: New world starts at the crash site; gated recipes verified in EMI; each DESIGN integration gate is enforced in a playtest; harness scene `start/crash_site`. Ledger updated; placeholders marked.
+- Depends on: P4.9, P11.1, P11.4, P11.5, P10.2, P10.3, P10.4, P10.5, P10.6
+- Scope: Starting structure/map (the crash site holds a working quarantine pylon, so the player starts inside a warded radius). A choice of crash sites: several starts that differ in difficulty (distance to the first nidus, festering around the site, salvage), chosen when a world is created or on first join, with one default for servers and quick starts. Pressure to reclaim (DESIGN): initial festering (P4.9) on for the overworld, with the safe radius around the crash sites and the level rising with distance, and a world border set from the pack (start at a few thousand blocks across, sized in P11.3) so curing the world is a finishable goal. Variants (P7.5) are held back in the first region and allowed from the second onward, so each region after the first forces a return to research. The quest book shows how much of the land inside the border is in remission, with reward quests at milestones (for example 10, 25, 50 and 75%), and the chapters that unlock waystones, colonies and other P10.6 settlement content point the player at reclaimed land as where to build them. KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
+- Acceptance: New world starts at the chosen crash site, and each crash site is playable to the first nidus; a playtest that heads away from the crash site finds festering land rising in level up to the border, never clean land; the remission share in the quest book matches the land cleansed and its milestone quests complete; gated recipes verified in EMI; each DESIGN integration gate is enforced in a playtest; harness scene `start/crash_site` for each crash site. Ledger updated; placeholders marked.
 - Skills: kubejs-scripting, minecraft-datapack, minecraft-world-generation, playtesting, visual-checks, content-provenance
 
 ### P11.3: Balancing pass
@@ -616,9 +705,29 @@ Goals: Counterstrain becomes a playable pack.
 - Owner:
 - PR:
 - Depends on: P11.2
-- Scope: Spread rates, viral load, recipe costs, quest rewards, integration gate costs.
+- Scope: Spread rates, viral load, recipe costs, quest rewards, integration gate costs, wreck site and sealed cache loot, remission milestone rewards, nidus vitality, reclaimer costs and radius, variant thresholds, supply drop costs and standing, crash site difficulty, initial festering levels, and the world border's size (ores and other finite resources inside it must last a full playthrough).
 - Acceptance: A documented playtest from start to Counterstrain.
 - Skills: playtesting
+
+### P11.4: Wreck sites and lab logs
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P11.1, P10.7, P8.3
+- Scope: Hand-built places worth exploring between nidi, as structures in the pack datapack: wreck sites (pieces of the survey ship scattered by the crash, including the ship's lab), survivor camps and caches guarded by hosts, at least one per region and some placed inside or next to festering land. Each has its own loot table (salvage, samples and items that shortcut early gates, tuned in P11.3) and carries lab logs: found items with P11.1's text that unlock field journal entries (P10.7) and, where a chapter needs them, quest tasks. Some wreck sites hold **sealed caches** that stay shut until their chunk enters remission (KubeJS on P8.3's bindings), so the best loot is a reward for reclaiming land, not for running in. Structures fester and grow veins like any other build unless warded. Pack-side only: Remission gains no structure or log code.
+- Acceptance: Every structure generates in a fresh world and is reachable; `/locate structure` finds each type; every lab log is obtainable and unlocks its journal entry; a sealed cache stays shut while its chunk is festering and opens once it is in remission; loot tables pass `tools/pack.sh check`; harness scene `explore/wreck_sites` (each structure type, clean and festering), reviewed. Ledger updated; placeholders marked.
+- Skills: minecraft-world-generation, minecraft-datapack, kubejs-scripting, ftb-quests-authoring, visual-checks, content-provenance
+
+### P11.5: Supply drops and standing
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P11.1, P8.1
+- Scope: The relay (a surviving piece of the survey ship in orbit, per P11.1) answers supply requests: the player spends a quest reward choice or a crafted beacon to call a supply drop, a crate that lands near them after a delay, telegraphed like a surge and drawing nearby hosts. Each request costs standing with the relay; completing chapters, sending scans and reclaiming land earn it back. Standing is a per-team KubeJS scoreboard value (FTB Teams), shown in the quest book, and sets the stages that switch P11.1's standing branches (some quest text and the ending). Pack-side only.
+- Acceptance: Requesting a drop spends standing and delivers its crate in a playtest; standing rises from each earning source; each standing branch is reachable in a playtest or by setting the score; crate contents from loot tables pass `tools/pack.sh check`; harness scene `explore/supply_drop`, reviewed. Ledger updated; placeholders marked.
+- Skills: kubejs-scripting, ftb-quests-authoring, minecraft-datapack, playtesting, visual-checks, content-provenance
 
 Exit criteria: complete playthrough recorded; screenshots of each chapter milestone reviewed.
 
