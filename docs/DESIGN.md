@@ -181,6 +181,20 @@ Each tie-in creates a progression gate. **Pack-side** means KubeJS scripts and d
 | Patchouli or Modonomicon | An in-game field journal that fills in as you scan hosts, find logs and destroy nidi, carrying the story alongside quests | Lore delivery tied to research progress | Pack-side: books and unlocks are data keyed on Remission advancements. Which book mod is decided in P10.7. |
 | Biomes O' Plenty / Terralith | More biome variety for the Strain to fester through, each with its own fester variant | Worldgen variety, no gate | Pack-side: per-biome fester variants are data. Biomes O' Plenty's 1.21.1 NeoForge files are marked beta. |
 
+### Supporting mods
+
+Mods that support a Counterstrain feature without a tie-in of their own: no Remission code and no progression gate. Availability (a 1.21.1 NeoForge file on CurseForge) was checked on 2026-10-13; added in P10.1.
+
+| Mod | Supports | Notes |
+| --- | --- | --- |
+| Lootr | Wreck sites and sealed caches (P11.4): every player or team gets its own loot from the same container, so co-op players do not take each other's rewards | Pack-side: wreck site containers use Lootr's containers or its loot table replacement. |
+| Chunk Pregenerator | World border and initial festering (P11.2, P4.9): generates the land inside the border ahead of play, so new land is not still catching up on festering when players reach it and its server cost is measured before release | Server/admin tool; the pack documents a pregeneration step rather than running it on first join. |
+| Naturalist | Wildlife returning to remission zones (P5.5) and a wider bestiary: its animals spawn in the restored biomes and become hosts like any other mob | No tie-in needed; checks that its mobs work as hosts happen in P11.3. |
+| Sound Physics Remastered | Festering land atmosphere (P4.11): echo and muffling in caves and festering land | Client-side; the CurseForge 1.21.1 NeoForge file is 1.4.10 (newer 1.21.1 builds are Modrinth-only alphas). |
+| YUNG's Better Dungeons (with YUNG's API) | More places to explore beside the pack's own wreck sites; its dungeons fester like any other structure | Optional; wreck sites stay the main exploration content. |
+
+Considered and not added: AmbientSounds (would suit P4.11, but its 1.21.1 NeoForge builds were found only on Modrinth, so the [distribution](#distribution) policy rules it out until a CurseForge file or redistribution permission is confirmed) and Chunky (no 1.21.1 file confirmed on CurseForge; Chunk Pregenerator covers it).
+
 ### Considered and unavailable on 1.21.1
 
 Not proposed again unless an official 1.21.1 NeoForge release appears. Unofficial ports are not used.
