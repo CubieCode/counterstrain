@@ -1,5 +1,7 @@
 package com.cubiecode.remission.data;
 
+import com.cubiecode.remission.api.StrainHazards;
+import com.cubiecode.remission.countermeasure.CountermeasureProtocolItem;
 import com.cubiecode.remission.registry.RemissionBlocks;
 import com.cubiecode.remission.registry.RemissionDataComponents;
 import com.cubiecode.remission.registry.RemissionFluids;
@@ -15,6 +17,7 @@ import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.data.recipes.ShapelessRecipeBuilder;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
@@ -33,6 +36,7 @@ public final class RemissionRecipeProvider extends RecipeProvider {
         analyzing(output);
         sequencing(output);
         synthesizing(output);
+        countermeasureProtocols(output);
     }
 
     /** The machines themselves, from vanilla parts, so they work in any pack (P7.2). */
@@ -119,6 +123,24 @@ public final class RemissionRecipeProvider extends RecipeProvider {
                 .fluid(RemissionFluids.MIASMA.get(), 500)
                 .result(new ItemStack(RemissionItems.HOST_TISSUE.get(), 2))
                 .save(output, "host_tissue");
+    }
+
+    /**
+     * One countermeasure protocol per built Remission hazard (P5.7): a strain sequence, a sample of what carries the
+     * hazard and paper to write the protocol on, in miasma. Later hazards add theirs here; packs replace them.
+     */
+    private static void countermeasureProtocols(RecipeOutput output) {
+        countermeasureProtocol(output, StrainHazards.CONTACT, RemissionItems.FESTERED_SOIL.get());
+    }
+
+    private static void countermeasureProtocol(RecipeOutput output, ResourceLocation hazard, ItemLike sample) {
+        MachineRecipeBuilder.of(MachineKind.SYNTHESIZER, 8000, 400)
+                .ingredient(RemissionItems.STRAIN_SEQUENCE.get())
+                .ingredient(sample)
+                .ingredient(Items.PAPER)
+                .fluid(RemissionFluids.MIASMA.get(), 1000)
+                .result(CountermeasureProtocolItem.of(RemissionItems.COUNTERMEASURE_PROTOCOL.get(), hazard))
+                .save(output, "countermeasure_protocol_" + hazard.getPath());
     }
 
     private static ItemStack blockScan(Block block) {

@@ -31,6 +31,9 @@ public final class RemissionStats {
     /** Chunks that entered remission near a player (P5.2). */
     public static final Supplier<ResourceLocation> CHUNKS_CLEANSED = register("chunks_cleansed");
 
+    /** Countermeasures a player gained, by protocol, from a teammate or by command (P5.7). */
+    public static final Supplier<ResourceLocation> COUNTERMEASURES_GAINED = register("countermeasures_gained");
+
     private RemissionStats() {
     }
 

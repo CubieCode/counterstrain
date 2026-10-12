@@ -1,5 +1,6 @@
 package com.cubiecode.remission.api;
 
+import com.cubiecode.remission.countermeasure.Countermeasures;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -67,14 +68,22 @@ public final class TeamQueries {
         return areTeammates(a, b.getUUID());
     }
 
-    /** Drops every cached answer involving {@code player}; call it when that player's team changes. */
+    /**
+     * Drops every cached answer involving {@code player}; call it when that player's team changes. Also pools the
+     * player's countermeasures with their new online teammates on the next server tick (P5.7).
+     */
     public static void invalidate(UUID player) {
         CACHE.keySet().removeIf(pair -> pair.low().equals(player) || pair.high().equals(player));
+        Countermeasures.teamChanged(player);
     }
 
-    /** Drops every cached answer; call it when teams change in bulk (a team deleted, teams reloaded). */
+    /**
+     * Drops every cached answer; call it when teams change in bulk (a team deleted, teams reloaded). Also pools every
+     * online team's countermeasures on the next server tick (P5.7).
+     */
     public static void invalidateAll() {
         CACHE.clear();
+        Countermeasures.teamsChanged();
     }
 
     private static boolean lookup(MinecraftServer server, UUID a, UUID b) {

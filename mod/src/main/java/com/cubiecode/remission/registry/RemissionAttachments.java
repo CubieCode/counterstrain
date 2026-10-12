@@ -3,6 +3,8 @@ package com.cubiecode.remission.registry;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.behaviour.AppliedHostGoals;
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.countermeasure.CountermeasureSet;
+import com.cubiecode.remission.countermeasure.Countermeasures;
 import com.cubiecode.remission.research.Bestiary;
 import com.cubiecode.remission.research.BestiaryProgress;
 import com.cubiecode.remission.revenant.RevenantDrop;
@@ -113,6 +115,18 @@ public final class RemissionAttachments {
     public static final Supplier<AttachmentType<RevenantDrop>> REVENANT_DROP = ATTACHMENT_TYPES.register("revenant_drop",
             () -> AttachmentType.builder(() -> new RevenantDrop(Util.NIL_UUID, 0L, 0L))
                     .serialize(RevenantDrop.CODEC)
+                    .build());
+
+    /**
+     * The Strain hazards a player holds a countermeasure for (P5.7). Saved with the player (never empty), copied on
+     * death and synced to its owner only (updates; NeoForge's initial tracking sync ignores the predicate, as for the
+     * bestiary). Written only through {@code Countermeasures}, which mirrors it for offline lookups.
+     */
+    public static final Supplier<AttachmentType<CountermeasureSet>> COUNTERMEASURES = ATTACHMENT_TYPES.register("countermeasures",
+            () -> AttachmentType.builder(() -> CountermeasureSet.EMPTY)
+                    .serialize(CountermeasureSet.CODEC, set -> !set.isEmpty())
+                    .copyOnDeath()
+                    .sync(Countermeasures::syncsTo, CountermeasureSet.STREAM_CODEC)
                     .build());
 
     private RemissionAttachments() {

@@ -4,6 +4,7 @@ import com.cubiecode.remission.registry.RemissionStats;
 import com.cubiecode.remission.registry.RemissionTriggers;
 import com.cubiecode.remission.research.Bestiary;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
@@ -93,5 +94,14 @@ public final class QuestProgress {
             return;
         }
         RemissionTriggers.VIRAL_LOAD_CHANGED.get().trigger(player, viralLoad);
+    }
+
+    /** The player gained the countermeasure for {@code hazard}; it is already stored (P5.7). */
+    public static void countermeasureGained(ServerPlayer player, ResourceLocation hazard) {
+        if (player instanceof FakePlayer) {
+            return;
+        }
+        player.awardStat(RemissionStats.COUNTERMEASURES_GAINED.get());
+        RemissionTriggers.COUNTERMEASURE_GAINED.get().trigger(player, hazard);
     }
 }

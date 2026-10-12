@@ -52,6 +52,7 @@ Placeholder block, item and entity textures carry the 2×2 `#FF00FF` marker in t
 | `mod/src/main/resources/assets/remission/textures/block/quarantine_pylon_side.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel-map script, not kept) | placeholder | Quarantine pylon side (P5.2): a dark steel column with a glowing mint-white core strip in bands. The art pass may make it taller than a block or animate the core; keep the cleansing palette shared with the purifier. |
 | `mod/src/main/resources/assets/remission/textures/block/quarantine_pylon_top.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel-map script, not kept) | placeholder | Quarantine pylon top (P5.2): a steel cap with a round glowing mint emitter. |
 | `mod/src/main/resources/assets/remission/textures/block/mendroot.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel-map script, not kept) | placeholder | Mendroot (P5.2), also the item icon: a cross plant of pale green stems with white root tendrils and small pale blue-white flowers on a transparent background. Should read as a healing plant, clearly not a festering one, and sit on grass or festering grass. |
+| `mod/src/main/resources/assets/remission/textures/item/countermeasure_protocol.png` | texture | ai (Claude Opus 5.5, 2026-10-13; pixel-map script, not kept) | placeholder | Countermeasure protocol (P5.7): a cream protocol sheet with a dark outline, a folded corner, two ruled lines and a mint ward emblem. Should read as a synthesized research document, paired with the strain sequence card, its cleansing mint the opposite of the Strain's violet. |
 
 ## Models
 
@@ -95,6 +96,7 @@ Datagen block and item models are `procedural (datagen)` and follow their textur
 | `mod/src/generated/resources/assets/remission/models/block/mendroot.json` | model | procedural (datagen) | draft | Vanilla `cross` from the mendroot texture, `cutout`, offset per position like grass; `remission:mendroot` (P5.2). |
 | `mod/src/generated/resources/assets/remission/models/item/mendroot.json` | model | procedural (datagen) | draft | Mendroot item model: `item/generated` from the block texture (as saplings). |
 | `mod/src/generated/resources/assets/remission/models/item/handheld_purifier.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:handheld_purifier` (P5.2). |
+| `mod/src/generated/resources/assets/remission/models/item/countermeasure_protocol.json` | model | procedural (datagen) | draft | `item/generated` model for `remission:countermeasure_protocol` (P5.7). |
 
 ## GUI art, icons and logos
 
@@ -194,6 +196,11 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.region.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | `/remission region advance` feedback and error (P8.2): chunks advanced, radius and centre chunk; no loaded chunk could fester further. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:map.remission.festering` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | JourneyMap hover title of a festering chunk overlay (P8.2): "Festering land, stage %s". Short; it shows over the map. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:map.remission.remission_zone` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | JourneyMap hover title of a remission zone overlay (P8.2): "Remission zone"; glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.countermeasure_protocol*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Countermeasure protocol name and tooltip (P5.7): "Countermeasure: %s" with the hazard name, a use hint, and the line for a protocol naming no hazard; glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:hazard.remission.contact` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Display name of the Strain hazard `remission:contact` (P5.7): "Contact viral load", shown in protocol tooltips, messages and commands. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:message.remission.countermeasure.*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Action bar feedback when a protocol is used (P5.7): countermeasure gained, or already held by the team. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:stat.remission.countermeasures_gained` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Statistics screen name for `remission:countermeasures_gained` (P5.7). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.countermeasure.*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | `/remission countermeasure` grant, revoke and list feedback (P5.7): players changed, held list and its entries, none held. |
 
 ## Mod and pack metadata
 

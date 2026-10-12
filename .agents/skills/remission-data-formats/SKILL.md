@@ -119,7 +119,7 @@ Cost (foundry, `ExposureBenchmark`, `REMISSION_EXPOSURE_BENCHMARK=1`): see docs/
 - **Altitude factor:** the height above the ground is the player's feet Y minus the top of the highest block in their column that blocks motion, leaves excluded and fluids included (`Heightmap.Types.MOTION_BLOCKING_NO_LEAVES`). At or below `falloffStart` (so always on the ground, in water at the surface, in caves, tunnels and bases below the surface, and under any roof) the factor is 1; at or above `falloffEnd` it is `falloffMinimum`; in between it follows `falloffCurve` from 1 down to the minimum. With `altitudeFalloff` off it is always 1.
 - **Water:** feet or eyes in water in a chunk at festering stage 1 or higher (swimming, wading, diving): `waterGain`, on top of land gain, no altitude factor.
 - **Miasma clouds:** the player's bounding box overlaps a `remission:miasma_cloud`'s bounding box (Surges and miasma clouds, below): `cloudGain`, at any height and over any land.
-- **Contact (P5.2):** while a block in `#remission:infectious` touches the player (standing on it, inside it or pressed against it; the contact query of Festering veins and contact infection, below), `contactGain`, anywhere, festering chunk or not, on top of land gain, no altitude factor. Water never counts as contact here: swimming in festering water is `waterGain` only.
+- **Contact (P5.2):** while a block in `#remission:infectious` touches the player (standing on it, inside it or pressed against it; the contact query of Festering veins and contact infection, below), `contactGain`, anywhere, festering chunk or not, on top of land gain, no altitude factor. Water never counts as contact here: swimming in festering water is `waterGain` only. Since P5.7 this is the Strain hazard `remission:contact`: it adds nothing for a player whose team holds that countermeasure or for whom a `StrainHazardEvent` listener holds it back (Strain hazards and countermeasures, below).
 - **Drinking:** finishing a water bottle (`minecraft:potion` holding `minecraft:water`) while standing in a chunk at festering stage 1 or higher adds `drinkDose` at once. Where the bottle was filled is not tracked (bottle origin and contaminated items are P10.6).
 
 After the gain or decay, each `debuffs` entry whose viral load is reached applies its effect (highest amplifier per effect) for 240 ticks as an ambient effect without particles, refreshed every update; at or above `damageAt` the player takes `damage` per second of damage type `remission:viral_load`. Players in creative or spectator gain nothing and take no debuffs; their viral load still decays. Death resets it: a respawned player starts at 0.
@@ -176,6 +176,50 @@ Saved data `remission_revenants` (`RevenantIndex`, `data/remission_revenants.dat
 Curios (optional, `integration/curios/`, `compileOnly`): no Curios code is needed for Curios items to go into a revenant (above); the integration only gives gametests a slot to fill.
 
 Trigger `remission:revenant_reclaimed` and stat `remission:revenants_reclaimed` (Advancement triggers and stats, below); `RevenantRisenEvent`, `RevenantSlainEvent`, `CorruptionCause.REVENANT` and `CorruptionQueries.isRevenant` (Public API, below). Who counts as a teammate is the team query's answer (FTB Teams parties through `integration/ftbteams/` when FTB Teams is loaded; packs answer `TeamLookupEvent` otherwise), so revenants need no pack script. Gametests: `RevenantTests`.
+
+## Strain hazards and countermeasures (built, P5.7)
+
+`com.cubiecode.remission.countermeasure` (internal) behind the API class `StrainHazards`; server authoritative. Rules: DESIGN "Hazards and countermeasures".
+
+**Hazard IDs** are plain resource locations with no registry: any id works, and integrations use their own namespace. Remission's: `remission:contact` (contact viral load, P5.2; built), reserved `remission:shedding` (P5.6), `remission:fouling` and `remission:rot` (P7.7), `remission:containment` (P7.8), `remission:contamination` (P10.6). Display name: lang key `hazard.<namespace>.<path>`, falling back to the id (`StrainHazards.displayName`). Danger (surges, nidi, hosts, variants, budding) is never a hazard.
+
+**Player attachment `remission:countermeasures`** (`CountermeasureSet`): a list of hazard ids, `["remission:contact"]`, sorted, inside the player's `neoforge:attachments`; omitted when empty; copied on death; synced to its owner through NeoForge attachment sync (wire format: a var-int count, then each id as a string; no custom payload). Saved data `remission_countermeasures` (`data/remission_countermeasures.dat` in the overworld folder): `players`, a map of player UUID (string) to the same list, a copy of every player's set written on each change and on login, so a team's countermeasures are known while its players are offline; `revoked` (omitted when empty), the same map of pending revocations: countermeasures revoked from a team while that member was offline, removed from their attachment at their next login unless the team holds them again by then, then cleared. Edit countermeasures with the command or the API, never the files.
+
+**Team sharing** (the team query, P4.12): a grant reaches the player's online teammates; a player who logs in, or whose team changes (`TeamQueries.invalidate` or `invalidateAll`, which team sources call), pools countermeasures with their online teammates on the next server tick, both ways. A team **holds** a countermeasure when any player in the saved data who is a teammate (online or not) holds it.
+
+**Queries** (`StrainHazards`, server thread unless noted):
+
+| Method | Returns |
+| --- | --- |
+| `applies(ServerPlayer, ResourceLocation hazard)` | Player hazards: false when the player or their team holds the countermeasure; otherwise false when a `StrainHazardEvent` listener cancels; otherwise true. |
+| `appliesAtBlock(ServerLevel, BlockPos, @Nullable UUID placer, ResourceLocation hazard)` | Block hazards: false unless the presence rule of `blockHazards` (below) is met; then false when the placer's team holds the countermeasure; then the event. A block with no known placer needs any non-spectator player in the level within 128 blocks (`Countermeasures.NEARBY_RADIUS`) whatever the mode, and the nearest such player's team stands in for the placer's. |
+| `holds(Player, hazard)`, `countermeasures(Player)` | The player's own countermeasures (both sides; a client knows only its own). |
+| `teamHolds(MinecraftServer, UUID, hazard)` | Whether that player (online or not) or a teammate holds it. |
+| `grant(ServerPlayer, hazard)`, `revoke(ServerPlayer, hazard)` | Grant to the player and their online teammates (cause `OTHER`), or take it from their whole team (offline members at their next login, as the revoke command); the number of players changed. |
+| `displayName(hazard)` | The hazard's name component (either side). |
+
+**Events** (Public API, below): `StrainHazardEvent` (cancellable) and `CountermeasureGrantedEvent`.
+
+Config `config/remission-common.toml`, `[countermeasures]`:
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `blockHazards` | `TEAM_ONLINE`, `PLAYER_NEARBY`, `ALWAYS` (case-insensitive) | `TEAM_ONLINE` | When block hazards may strike a placed block: while a player of the placer's team is online anywhere; while one is in the block's level within 128 blocks; or always. Read on every block query. |
+
+**Item `remission:countermeasure_protocol`** with data component **`remission:hazard`** (a hazard id, saved and synced): using it grants that countermeasure to the user and their online teammates and uses one up; a protocol for a countermeasure the user's team already holds (offline members included), or without the component, does nothing. Its tooltip names the hazard. Give one with `/give @p remission:countermeasure_protocol[remission:hazard="remission:contact"]`. Default recipes (Machine recipes, above): `remission:synthesizing/countermeasure_protocol_<hazard path>`, one per built Remission hazard; packs override or remove them by id and add their own for any hazard:
+
+```json
+{
+  "type": "remission:synthesizing",
+  "ingredients": [{ "item": "remission:strain_sequence" }, { "item": "remission:festered_soil" }, { "item": "minecraft:paper" }],
+  "fluid_ingredient": { "fluid": "remission:miasma", "amount": 1000 },
+  "results": [{ "id": "remission:countermeasure_protocol", "count": 1, "components": { "remission:hazard": "remission:contact" } }],
+  "energy": 8000,
+  "time": 400
+}
+```
+
+Trigger `remission:countermeasure_gained` and stat `remission:countermeasures_gained` (Advancement triggers and stats, below); `/remission countermeasure` (below).
 
 ## Entity tag `#remission:immune` (built, P3.3)
 
@@ -302,6 +346,7 @@ A recipe needs `results` or a `fluid_result`; fluid amounts are at most the tank
 | `analyzing/nidus_core` | `remission:nidus_core` | `remission:block_scan` of `remission:nidus`, 1000 mB miasma | 8000 FE, 200 ticks |
 | `sequencing/strain_sequence` | `#remission:scans`, `remission:host_tissue`, 250 mB miasma | `remission:strain_sequence` | 6000 FE, 200 ticks |
 | `synthesizing/host_tissue` | `remission:strain_sequence`, `remission:host_tissue`, 500 mB miasma | 2 `remission:host_tissue` | 4000 FE, 200 ticks |
+| `synthesizing/countermeasure_protocol_contact` (P5.7) | `remission:strain_sequence`, `remission:festered_soil`, `minecraft:paper`, 1000 mB miasma | `remission:countermeasure_protocol` with `remission:hazard` `remission:contact` | 8000 FE, 400 ticks |
 
 The synthesizing default is a placeholder until serums: no default recipe makes `remission:nidus_core` (cores stay a rare sample). Crafting recipes `remission:analyzer`, `remission:sequencer`, `remission:synthesizer` (iron, glass, redstone around a spyglass, comparator or brewing stand) make the machines from vanilla parts.
 
@@ -325,6 +370,7 @@ Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired f
 | `remission:viral_load_changed` (P5.1) | The player's viral load changed (Viral load, above): at most once per update (once a second) plus once per drink, never when only the trend changed, nor for the reset on death. | `viral_load`: float range, the new viral load (0–100): `{"min": 50}` for a player who reached 50, `{"max": 0}` for one whose viral load fell back to 0. |
 | `remission:region_cleansed` (P5.2) | A chunk entered remission (Purification and remission zones, below) while the player was alive, not a spectator, in the same level and within 8 chunks (Chebyshev) of it. Fires once per chunk entering remission. | `radius`: int 0–16, default 4: the square of chunks around the player's own chunk the region covers; `share`: float range, the share (0–1) of the region's affected loaded chunks (in remission or festering) that are in remission (0 when none are affected); `chunks`: int range, how many of its loaded chunks are in remission. |
 | `remission:revenant_reclaimed` (P5.3) | A player killed a revenant whose items they may pick up: their own, or a teammate's (the team query). A kill by anyone else, or by a command, fires nothing. | `own`: boolean, whether the revenant was the player's own; false means a teammate's (absent matches both). |
+| `remission:countermeasure_gained` (P5.7) | A player gained a countermeasure: by protocol, from a teammate (a grant, or pooling on login or a team change) or by command; once per player who gained it, never for one already held. | `hazard`: the hazard id (absent matches every hazard). |
 | `remission:surge_survived` (P4.3) | A surge ends (any reason) and the player was caught in it: inside its area at one of its 20-tick checks while it ran, not dead since, and online and alive at the end (Surges and miasma clouds, below). A surge stopped during its warning never started and awards nothing. | `intensity`: int range, the surge's intensity (1–10). |
 
 ```json
@@ -333,6 +379,7 @@ Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired f
 {"criteria": {"ten": {"trigger": "remission:host_scanned", "conditions": {"bestiary_types": {"min": 10}}}}}
 {"criteria": {"found": {"trigger": "remission:block_scanned", "conditions": {"location": {"block": {"blocks": "remission:nidus"}}}}}}
 {"criteria": {"storm": {"trigger": "remission:surge_survived", "conditions": {"intensity": {"min": 2}}}}}
+{"criteria": {"cured": {"trigger": "remission:countermeasure_gained", "conditions": {"hazard": "remission:contact"}}}}
 {"criteria": {"exposed": {"trigger": "remission:viral_load_changed", "conditions": {"viral_load": {"min": 50}}}}}
 {"criteria": {"back": {"trigger": "remission:revenant_reclaimed", "conditions": {"own": true}}}}
 {"criteria": {"reclaimed": {"trigger": "remission:region_cleansed", "conditions": {"radius": 6, "share": {"min": 0.75}}}}}
@@ -349,8 +396,9 @@ Custom stats (registry `minecraft:custom_stat`, holder `RemissionStats`, formatt
 | `remission:surges_survived` | surges survived (as `surge_survived`; P4.3) |
 | `remission:revenants_reclaimed` | revenants reclaimed (as `revenant_reclaimed`, own or not; P5.3) |
 | `remission:chunks_cleansed` | chunks that entered remission within 8 chunks of the player (as `region_cleansed`; P5.2) |
+| `remission:countermeasures_gained` | countermeasures the player gained (as `countermeasure_gained`; P5.7) |
 
-Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above); `SurgeTests` for `surge_survived` and its stat; `ViralLoadTests` for `viral_load_changed`; `RevenantTests` for `revenant_reclaimed` and its stat; `PurificationTests` for `region_cleansed` and `chunks_cleansed`.
+Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above); `SurgeTests` for `surge_survived` and its stat; `ViralLoadTests` for `viral_load_changed`; `RevenantTests` for `revenant_reclaimed` and its stat; `PurificationTests` for `region_cleansed` and `chunks_cleansed`; `CountermeasureTests` for `countermeasure_gained` and `countermeasures_gained`.
 
 "Variant" is reserved for resistant mutations; triggers and stats for systems that are not built yet arrive with them. P8.1 deferred surge survived to P4.3 and viral load to P5.1, which built them (P5.1 adds a trigger and no stat: viral load is a level, not a count); region % cleansed is P5.2's `region_cleansed`.
 
@@ -390,6 +438,18 @@ Registered with the `/remission` tree (`commands/NidusCommands`, `commands/Regio
 Errors: `commands.remission.nidus.seed.failed.present` when a nidus is already at `pos`; `commands.remission.nidus.seed.failed.blocked` on an unbreakable block (bedrock, barriers; destroy speed below 0) or a block entity, which a quest must not destroy; `commands.remission.nidus.seed.failed.not_indexed` when the placed nidus did not reach the index (something replaced it at once; the old block is put back); vanilla `argument.pos.unloaded` / `argument.pos.outofworld` for an unloaded or out-of-world `pos`; `commands.remission.region.advance.failed` when no loaded chunk in reach could rise.
 
 FTB Quests command rewards run as the claiming player at the reward's `permission_level` (set 2), so relative coordinates are the player's position, and the command text may use `{p}`, `{x}`, `{y}`, `{z}`. Example rewards (verified in a dev run, P8.2): `/remission nidus seed 0 -60 -8`, `/remission region advance 0 -60 -8 1 2`, `/remission surge start 0 -60 -8 2`. To seed on the surface near the player: `/execute positioned ~24 ~ ~ positioned over world_surface run remission nidus seed ~ ~ ~`.
+
+## Countermeasure commands `/remission countermeasure` (built, P5.7)
+
+Registered with the `/remission` tree (`commands/CountermeasureCommands`), same permission level 2. `hazard` is any resource location (Remission's hazards and every hazard an online player holds are suggested). Strain hazards and countermeasures: above.
+
+| Syntax | Effect | Result | Feedback |
+| --- | --- | --- | --- |
+| `/remission countermeasure grant <targets> <hazard>` | `targets`: player selector. Grants the countermeasure to each target and their online teammates (event cause `COMMAND` for targets, `TEAM` for teammates), firing the trigger and stat for each player who gained it. | players who gained it | `commands.remission.countermeasure.grant.success` (hazard name, count); broadcast to ops |
+| `/remission countermeasure revoke <targets> <hazard>` | Takes it from each target's whole team: online members at once, offline members' records at once and their attachments at their next login (unless the team holds it again by then), so the team no longer holds it. | players who lost it, offline ones included | `commands.remission.countermeasure.revoke.success` (hazard name, count); broadcast to ops |
+| `/remission countermeasure list <target>` | One player. Reports their countermeasures; changes nothing. | countermeasures held | `commands.remission.countermeasure.list.success` (name, count, list of `.list.entry` (hazard name, id)) or `.list.none` (name) |
+
+Example (an FTB Quests command reward, run as the claiming player at permission level 2): `/remission countermeasure grant @s remission:contact`.
 
 ## Map overlay payload `remission:festering_map` (built, P8.2)
 
@@ -653,6 +713,8 @@ Conventions, for every event here and every event later items add:
 | `ViralLoadChangedEvent extends PlayerEvent` (P5.1) | `getEntity()` (the `ServerPlayer`), `getOldLoad()`, `getNewLoad()` (floats 0–100), `getCause()` (`EXPOSURE`: land, water or a miasma cloud; `DRINK`; `DECAY`; `OTHER`; treat unknown values as `OTHER`), `isRising()` | After a player's viral load changed and was stored (Viral load, above): at most once per player per update (once a second) plus once per drink. Not when only the trend changed, nor for the reset to 0 on death. | no |
 | `RevenantRisenEvent extends RevenantEvent` (P5.3) | `getEntity()` (the revenant), `getOwner()`, `getPlayer()` (the dead `ServerPlayer`, not yet respawned), `getSource()` (the killing `DamageSource`), `getDeathPos()`, `getItems()` (copies of the held stacks), `getExperience()` | After a player's Strain death raised a revenant (Revenants, above): it is in the level as a host and in the index. | no |
 | `RevenantSlainEvent extends RevenantEvent` (P5.3) | `getEntity()`, `getOwner()`, `getSource()`, `getKiller()` (the `ServerPlayer`, or null for a command), `isReclaimed()` (the killer may pick its items up: the owner or a teammate by the team query) | After a revenant with an owner died: its items and experience are dropped, it left the index, and a reclaim was awarded. | no |
+| `StrainHazardEvent extends Event` (P5.7) | `getServer()`, `getHazard()`, `getPlayer()` (`Optional<ServerPlayer>`: always present for a player hazard; for a block hazard the placer or an online teammate, or the nearest player for a block with no placer, empty under `ALWAYS` with nobody of the team online), `getLevel()`, `getPos()` (`Optional`s, present for a block hazard), `getPlacer()` (`Optional<UUID>`), `isBlockHazard()` | Before a hazard applies, from `StrainHazards.applies` and `appliesAtBlock`, only when nothing ruled it out already (the team holds no countermeasure; for a block, the presence rule is met). Hazard systems may ask every tick: keep listeners cheap. | yes: cancelling holds the hazard back (`applies` returns false). A listener cannot force a hazard past a countermeasure: it is not asked then |
+| `CountermeasureGrantedEvent extends PlayerEvent` (P5.7) | `getEntity()` (the `ServerPlayer`), `getHazard()`, `getCause()` (`PROTOCOL`, `TEAM`, `COMMAND`, `OTHER`; treat unknown values as `OTHER`) | After a player gained a countermeasure and it was stored, once per player who gained it (a grant posts for the player, then for each online teammate with `TEAM`). Never for one already held. | no |
 | `StrainSpreadAttemptEvent extends FesteringLandEvent` | `getLevel()`, `getFrom()`, `getTo()` (`ChunkPos`), `getAmount()` (level gain at multiplier 1, capped at the target), `isCatchUp()`, `getRateMultiplier()`/`setRateMultiplier(double)` (default 1; negative or NaN become 0) | Before every chunk-to-chunk step: each live step into a loaded chunk below its target whose parent passed the threshold, and once per nidus in reach when a reloaded chunk catches up (`isCatchUp()`, `getAmount()` covers every missed pass, `getFrom()` may be unloaded). The growth of a nidus's own chunk is not a spread attempt, and a step from a loaded parent below the threshold is held without an event (live and catch-up). | yes: cancelling (or multiplier 0) stops this step; chunks reached through it stay clean while the cancelled chunk is loaded. A step from an unloaded parent is not held (the parent counts as at its target), so keep a firebreak chunk loaded or cancel the steps behind it too |
 
 Spread rate: the gain is `amount * multiplier`, capped at the chunk's target. A fractional part is added as one more level with that probability, drawn from a hash of the two chunks and the game time, so slowed spread still advances on average and the same state and ticks give the same levels. Listeners compose by multiplying (`event.setRateMultiplier(event.getRateMultiplier() * 0.5)`). `last_update_game_time` moves to now only when a catch-up changed the chunk's level: passes shortened by a multiplier below 1 are then not credited again (the chunk ends below where full-rate spread would have taken it and continues from there), while a catch-up whose steps were all cancelled, scaled to 0 or held keeps the old time, so a later reload credits that history again, still capped at the target. A parent caught up first (see the rules above) contributes its level after its own catch-up, which converges on the same targets as live spread rather than replaying exact history.
@@ -697,6 +759,8 @@ Team query, `TeamQueries` (static, P4.12): the one answer to "are these two play
 - Answers are cached per pair for `CACHE_TICKS` server ticks. A source whose teams change calls `TeamQueries.invalidate(player)` or `invalidateAll()` so the change shows at once; otherwise it shows within `CACHE_TICKS`. The cache is cleared when the server stops.
 
 FTB Teams source (`integration/ftbteams/`, optional, FTB Teams 2101.1+): when FTB Teams is loaded, players it knows (anyone who has joined the world, online or not) are teammates exactly when FTB Teams puts them in the same team (`TeamManager.getTeamForPlayerID`: the same party, or each alone in their own personal team, which makes two solo players not teammates). Allies are not teammates. Players FTB Teams does not know are left unanswered. It invalidates a player's answers on FTB Teams' `PLAYER_CHANGED` event (every join, leave, party creation and disband) and all answers on team deletion and team manager load or unload. Packs without FTB Teams answer the event from KubeJS once P8.3's bindings exist.
+
+Hazard queries, `StrainHazards` (P5.7): see Strain hazards and countermeasures, above.
 
 Later items append their events and queries here when built.
 
