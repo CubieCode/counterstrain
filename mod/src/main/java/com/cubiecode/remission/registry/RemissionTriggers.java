@@ -4,6 +4,7 @@ import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.quest.HostScannedTrigger;
 import com.cubiecode.remission.quest.LocationTrigger;
 import com.cubiecode.remission.quest.SurgeSurvivedTrigger;
+import com.cubiecode.remission.quest.ViralLoadTrigger;
 import java.util.function.Supplier;
 import net.minecraft.advancements.CriterionTrigger;
 import net.minecraft.core.registries.Registries;
@@ -22,6 +23,8 @@ public final class RemissionTriggers {
             TRIGGER_TYPES.register("block_scanned", LocationTrigger::new);
     public static final Supplier<SurgeSurvivedTrigger> SURGE_SURVIVED =
             TRIGGER_TYPES.register("surge_survived", SurgeSurvivedTrigger::new);
+    public static final Supplier<ViralLoadTrigger> VIRAL_LOAD_CHANGED =
+            TRIGGER_TYPES.register("viral_load_changed", ViralLoadTrigger::new);
 
     private RemissionTriggers() {
     }

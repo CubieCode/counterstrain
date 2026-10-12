@@ -18,7 +18,7 @@ Policy: docs/DESIGN.md, "AI-generated content policy". Ledger: `docs/CONTENT-PRO
 
 **Placeholder markers:**
 - Block, item and entity textures: a 2×2 pixel `#FF00FF` square in the top-left corner of a 16×16 texture, scaled proportionally for larger ones (4×4 at 32×32, 8×8 at 64×64). Draw it last, on top of the art; keep alpha 255. It is not the black/magenta missing-texture checkerboard.
-- GUI art, icons, logos, gallery and promo images: a visible "PLACEHOLDER" label or watermark.
+- GUI art, icons, logos, gallery and promo images: a visible "PLACEHOLDER" label or watermark. HUD sprites too small for a label (the 9×9 viral load icon) take the texture marker instead and a `texture` row, so the check covers them.
 - Sounds: no audible marker; the ledger row is the record.
 - AI-written text: status `draft`, no in-game marker.
 - A marker on a `final` row, or no marker on a `placeholder` row, is a bug. `tools/check-provenance.sh` enforces this for `texture` rows; check GUI labels by eye in harness screenshots (visual-checks).

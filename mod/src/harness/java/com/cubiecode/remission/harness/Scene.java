@@ -84,9 +84,11 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
      * camera is in place; the shot then waits for the screen it opens, which closes before the
      * next shot. {@code commands} are server commands (no leading slash) run right after the
      * camera move, before the shot settles: changes to chunks an earlier shot already loaded
-     * on the client.
+     * on the client. {@code hud} shows the GUI (hidden otherwise) at {@code gui_scale} (0, the default, is auto), to
+     * review HUD elements; chat is cleared before the shot.
      */
-    record Shot(String name, Camera camera, CameraType view, Optional<String> press, List<String> commands) {
+    record Shot(String name, Camera camera, CameraType view, Optional<String> press, List<String> commands, boolean hud,
+                int guiScale) {
         private static final Codec<CameraType> VIEW_CODEC = Codec.STRING.comapFlatMap(
                 v -> Arrays.stream(CameraType.values()).filter(t -> t.name().toLowerCase(Locale.ROOT).equals(v))
                         .findFirst().map(DataResult::success)
@@ -101,7 +103,9 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
                 Camera.CODEC.fieldOf("camera").forGetter(Shot::camera),
                 VIEW_CODEC.optionalFieldOf("view", CameraType.FIRST_PERSON).forGetter(Shot::view),
                 Codec.STRING.optionalFieldOf("press").forGetter(Shot::press),
-                Codec.STRING.listOf().optionalFieldOf("commands", List.of()).forGetter(Shot::commands)
+                Codec.STRING.listOf().optionalFieldOf("commands", List.of()).forGetter(Shot::commands),
+                Codec.BOOL.optionalFieldOf("hud", false).forGetter(Shot::hud),
+                Codec.intRange(0, 8).optionalFieldOf("gui_scale", 0).forGetter(Shot::guiScale)
         ).apply(i, Shot::new));
     }
 

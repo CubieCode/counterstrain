@@ -4,22 +4,27 @@ import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
 import com.cubiecode.remission.registry.RemissionAttachments;
+import com.cubiecode.remission.viralload.ViralLoad;
+import com.cubiecode.remission.viralload.ViralLoadState;
 import com.cubiecode.remission.world.ChunkCorruption;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
- * Read-only queries over Remission's state. Entity queries work on both sides (hosts are synced to tracking clients);
- * land queries are server only, because chunk Strain levels are not synced, and read loaded chunks only (an unloaded
- * chunk reports level and stage 0; it never loads one).
+ * Read-only queries over Remission's state. Entity queries work on both sides (hosts are synced to tracking clients,
+ * viral load only to its own player); land queries are server only, because chunk Strain levels are not synced, and read
+ * loaded chunks only (an unloaded chunk reports level and stage 0; it never loads one).
  */
 public final class CorruptionQueries {
     /** Highest Strain level of an entity or a chunk. */
     public static final int MAX_LEVEL = CorruptionState.MAX_LEVEL;
+    /** Highest viral load of a player. */
+    public static final int MAX_VIRAL_LOAD = ViralLoadState.MAX;
 
     private CorruptionQueries() {
     }
@@ -76,5 +81,13 @@ public final class CorruptionQueries {
     /** The highest festering stage the current config allows (the number of thresholds). */
     public static int maxChunkStage() {
         return RemissionCommonConfig.FESTERING_STAGE_THRESHOLDS.get().size();
+    }
+
+    /**
+     * A player's viral load, 0 to {@link #MAX_VIRAL_LOAD} (P5.1). On the server, any player; on a client, only the local
+     * player's own value is synced, so other players read 0.
+     */
+    public static float viralLoad(Player player) {
+        return ViralLoad.get(player);
     }
 }

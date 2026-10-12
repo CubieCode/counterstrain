@@ -1,6 +1,8 @@
 package com.cubiecode.remission.config;
 
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.viralload.ViralLoadSettings;
+import com.cubiecode.remission.viralload.ViralLoadState;
 import java.util.List;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
@@ -33,6 +35,20 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.IntValue SURGE_HOST_LEVEL;
     public static final ModConfigSpec.IntValue SURGE_MAX_HOSTS;
     public static final ModConfigSpec.IntValue SURGE_CLOUDS;
+    public static final ModConfigSpec.BooleanValue VIRAL_LOAD_ENABLED;
+    public static final ModConfigSpec.ConfigValue<List<? extends Number>> VIRAL_LOAD_LAND_GAIN;
+    public static final ModConfigSpec.DoubleValue VIRAL_LOAD_WATER_GAIN;
+    public static final ModConfigSpec.DoubleValue VIRAL_LOAD_DRINK_DOSE;
+    public static final ModConfigSpec.DoubleValue VIRAL_LOAD_CLOUD_GAIN;
+    public static final ModConfigSpec.DoubleValue VIRAL_LOAD_DECAY;
+    public static final ModConfigSpec.BooleanValue VIRAL_LOAD_ALTITUDE_FALLOFF;
+    public static final ModConfigSpec.DoubleValue VIRAL_LOAD_FALLOFF_START;
+    public static final ModConfigSpec.DoubleValue VIRAL_LOAD_FALLOFF_END;
+    public static final ModConfigSpec.DoubleValue VIRAL_LOAD_FALLOFF_MINIMUM;
+    public static final ModConfigSpec.EnumValue<ViralLoadSettings.FalloffCurve> VIRAL_LOAD_FALLOFF_CURVE;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> VIRAL_LOAD_DEBUFFS;
+    public static final ModConfigSpec.DoubleValue VIRAL_LOAD_DAMAGE_AT;
+    public static final ModConfigSpec.DoubleValue VIRAL_LOAD_DAMAGE;
 
     static {
         BUILDER.push("hosts");
@@ -140,6 +156,61 @@ public final class RemissionCommonConfig {
         SURGE_CLOUDS = BUILDER
                 .comment("Miasma clouds a surge releases above festering land when it starts, times the intensity (at most 32).")
                 .defineInRange("clouds", 3, 0, 32);
+        BUILDER.pop();
+
+        BUILDER.push("viral_load");
+        VIRAL_LOAD_ENABLED = BUILDER
+                .comment("Whether players build up viral load. While off, viral load and its debuffs are frozen.")
+                .define("enabled", true);
+        VIRAL_LOAD_LAND_GAIN = BUILDER
+                .comment("Viral load (0-" + ViralLoadState.MAX + ") gained per minute standing in festering land, by festering stage:",
+                        "the first entry is stage 1, the second stage 2 and so on; stages past the end use the last entry.",
+                        "Reduced by height above the ground when altitudeFalloff is on; full strength at and below ground level.")
+                .defineList(List.of("landGain"), () -> List.<Number>of(1.0, 3.0, 6.0, 12.0), () -> 1.0,
+                        value -> value instanceof Number n && n.doubleValue() >= 0.0 && n.doubleValue() <= 6000.0,
+                        ModConfigSpec.Range.of(1, 8));
+        VIRAL_LOAD_WATER_GAIN = BUILDER
+                .comment("Viral load gained per minute in water (swimming, wading or diving) in festering land, on top of landGain.")
+                .defineInRange("waterGain", 20.0, 0.0, 6000.0);
+        VIRAL_LOAD_DRINK_DOSE = BUILDER
+                .comment("Viral load gained at once from drinking a water bottle in festering land.")
+                .defineInRange("drinkDose", 10.0, 0.0, 100.0);
+        VIRAL_LOAD_CLOUD_GAIN = BUILDER
+                .comment("Viral load gained per minute inside a miasma cloud, at any height and over any land.")
+                .defineInRange("cloudGain", 30.0, 0.0, 6000.0);
+        VIRAL_LOAD_DECAY = BUILDER
+                .comment("Viral load lost per minute while nothing adds any.")
+                .defineInRange("decay", 5.0, 0.0, 6000.0);
+        VIRAL_LOAD_ALTITUDE_FALLOFF = BUILDER
+                .comment("Whether land gain falls off with height above the ground (the highest block that blocks motion,",
+                        "leaves excluded). Players at or below ground level, in caves or under any roof, always gain in full.")
+                .define("altitudeFalloff", true);
+        VIRAL_LOAD_FALLOFF_START = BUILDER
+                .comment("Blocks above the ground where land gain starts to fall off.")
+                .defineInRange("falloffStart", 4.0, 0.0, 512.0);
+        VIRAL_LOAD_FALLOFF_END = BUILDER
+                .comment("Blocks above the ground where land gain reaches falloffMinimum. At or below falloffStart, there is no falloff.")
+                .defineInRange("falloffEnd", 40.0, 0.0, 512.0);
+        VIRAL_LOAD_FALLOFF_MINIMUM = BUILDER
+                .comment("Fraction of land gain left at and above falloffEnd (0 = none, 1 = no falloff).")
+                .defineInRange("falloffMinimum", 0.1, 0.0, 1.0);
+        VIRAL_LOAD_FALLOFF_CURVE = BUILDER
+                .comment("Shape of the falloff between falloffStart and falloffEnd: LINEAR, QUADRATIC (drops fast, then levels out)",
+                        "or SMOOTH (eases in and out).")
+                .defineEnum("falloffCurve", ViralLoadSettings.FalloffCurve.LINEAR);
+        VIRAL_LOAD_DEBUFFS = BUILDER
+                .comment("Debuffs by viral load, each \"<viral load> <effect id> <amplifier>\": the effect applies while viral load is",
+                        "at or above the value (amplifier 0 is level I). Where several entries name one effect, the highest",
+                        "amplifier reached wins. Refreshed every second; effects wear off about 12 seconds after dropping below.")
+                .defineList(List.of("debuffs"), () -> List.of("25 minecraft:hunger 0", "50 minecraft:weakness 0",
+                                "50 minecraft:mining_fatigue 0", "75 minecraft:slowness 0", "75 minecraft:hunger 1"),
+                        () -> "50 minecraft:weakness 0", ViralLoadSettings.Debuff::isValid, ModConfigSpec.Range.of(0, 64));
+        VIRAL_LOAD_DAMAGE_AT = BUILDER
+                .comment("Viral load at and above which players take viral load damage (damage type remission:viral_load).")
+                .defineInRange("damageAt", 100.0, 0.0, 100.0);
+        VIRAL_LOAD_DAMAGE = BUILDER
+                .comment("Damage per second at or above damageAt (2 = one heart). 0 turns viral load damage off.")
+                .defineInRange("damage", 1.0, 0.0, 100.0);
         BUILDER.pop();
     }
 

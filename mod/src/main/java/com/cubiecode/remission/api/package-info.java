@@ -12,7 +12,7 @@
  *   pass, unless the event is block-scoped.</li>
  *   <li>Host events extend {@link HostEvent} (a NeoForge {@code LivingEvent}); land events extend
  *   {@link FesteringLandEvent}, which carries the {@code ServerLevel}. Both bases are abstract: listen to the concrete
- *   events.</li>
+ *   events. {@link ViralLoadChangedEvent} extends NeoForge's {@code PlayerEvent} directly.</li>
  * </ul>
  *
  * <p>Queries live in {@link CorruptionQueries}. Field-level contract: the remission-data-formats skill, "Public API

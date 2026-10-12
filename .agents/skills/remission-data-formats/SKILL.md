@@ -111,6 +111,47 @@ Config `config/remission-common.toml`, section `[infection]` (read at the start 
 
 Cost (foundry, `ExposureBenchmark`, `REMISSION_EXPOSURE_BENCHMARK=1`): see docs/ARCHITECTURE.md (Festering land infection).
 
+## Viral load (built, P5.1)
+
+`com.cubiecode.remission.viralload`, server authoritative. A player's **viral load** is a float from 0 to 100 (`CorruptionQueries.MAX_VIRAL_LOAD`). Every 20 ticks of a living player in survival or adventure (`ViralLoadSettings.INTERVAL_TICKS`; not while the level's ticks are frozen by `/tick freeze`, and never for fake players) an update adds the sum of these rates for the 20 ticks, or, when they add nothing, takes off `decay`:
+
+- **Land:** in a chunk at festering stage 1 or higher, `landGain` for that stage, times the altitude factor.
+- **Altitude factor:** the height above the ground is the player's feet Y minus the top of the highest block in their column that blocks motion, leaves excluded and fluids included (`Heightmap.Types.MOTION_BLOCKING_NO_LEAVES`). At or below `falloffStart` (so always on the ground, in water at the surface, in caves, tunnels and bases below the surface, and under any roof) the factor is 1; at or above `falloffEnd` it is `falloffMinimum`; in between it follows `falloffCurve` from 1 down to the minimum. With `altitudeFalloff` off it is always 1.
+- **Water:** feet or eyes in water in a chunk at festering stage 1 or higher (swimming, wading, diving): `waterGain`, on top of land gain, no altitude factor.
+- **Miasma clouds:** the player's bounding box overlaps a `remission:miasma_cloud`'s bounding box (Surges and miasma clouds, below): `cloudGain`, at any height and over any land.
+- **Drinking:** finishing a water bottle (`minecraft:potion` holding `minecraft:water`) while standing in a chunk at festering stage 1 or higher adds `drinkDose` at once. Where the bottle was filled is not tracked (bottle origin and contaminated items are P10.6).
+
+After the gain or decay, each `debuffs` entry whose viral load is reached applies its effect (highest amplifier per effect) for 240 ticks as an ambient effect without particles, refreshed every update; at or above `damageAt` the player takes `damage` per second of damage type `remission:viral_load`. Players in creative or spectator gain nothing and take no debuffs; their viral load still decays. Death resets it: a respawned player starts at 0.
+
+Config `config/remission-common.toml`, section `[viral_load]` (read at every update and drink):
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `enabled` | bool | true | Off freezes every player's viral load and stops its debuffs and damage. |
+| `landGain` | list of 1–8 numbers 0–6000 | `[1.0, 3.0, 6.0, 12.0]` | Viral load per minute in festering land by festering stage: the first entry is stage 1; stages past the end use the last entry. |
+| `waterGain` | number 0–6000 | 20.0 | Per minute in water in festering land. |
+| `drinkDose` | number 0–100 | 10.0 | At once per water bottle drunk in festering land. |
+| `cloudGain` | number 0–6000 | 30.0 | Per minute inside a miasma cloud. |
+| `decay` | number 0–6000 | 5.0 | Lost per minute while nothing adds viral load. |
+| `altitudeFalloff` | bool | true | Whether land gain falls off with height above the ground. |
+| `falloffStart` | number 0–512 | 4.0 | Height above the ground where the falloff starts. |
+| `falloffEnd` | number 0–512 | 40.0 | Height where it reaches `falloffMinimum`. |
+| `falloffMinimum` | number 0–1 | 0.1 | Share of land gain left at and above `falloffEnd`. |
+| `falloffCurve` | `LINEAR`, `QUADRATIC`, `SMOOTH` | `LINEAR` | Shape between start and end, with `t` from 0 at the start to 1 at the end: `1 - t`, `(1 - t)²` (drops fast, then levels out), `1 - t²(3 - 2t)` (eases in and out). |
+| `debuffs` | list of 0–64 strings `"<viral load> <effect id> <amplifier>"` | `["25 minecraft:hunger 0", "50 minecraft:weakness 0", "50 minecraft:mining_fatigue 0", "75 minecraft:slowness 0", "75 minecraft:hunger 1"]` | Effect while viral load is at or above the value; amplifier 0 is level I. Unknown effect ids are skipped with one warning. |
+| `damageAt` | number 0–100 | 100.0 | Viral load at and above which players take viral load damage. |
+| `damage` | number 0–100 | 1.0 | Damage per second there (2 is one heart); 0 turns it off. |
+
+With the defaults, standing on stage 4 land fills the meter in about 8 minutes (hunger after about 2), stage 1 land in about 100 minutes, and a full meter decays in 20.
+
+Player attachment `remission:viral_load` (`RemissionAttachments.VIRAL_LOAD`, `ViralLoadState`): the load is codec-serialized with the player (`neoforge:attachments`, a float, skipped at 0); the trend (`STEADY`, `RISING`, `FALLING`, what the last update did) is not saved. Not copied on death. Not attachment-synced: the server sends payload `remission:viral_load` (`ViralLoadPayload`: float load, var-int trend ordinal) to its own player only, when the state changes and on login, respawn and dimension change (`RemissionNetwork.PROTOCOL_VERSION` 2). The client stores it on the local player for the HUD meter and the query.
+
+Damage type `remission:viral_load` (`data/remission/damage_type/viral_load.json`, datagen `RemissionDamageTypeProvider`): message id `remission.viral_load` (lang `death.attack.remission.viral_load`, `.player` when a killer is credited), scaling `never`, exhaustion 0; in `#minecraft:bypasses_armor` (datagen `RemissionDamageTypeTagsProvider`). Packs and revenants (P5.3) recognise viral load deaths by this type.
+
+Client config `config/remission-client.toml`, `[hud] showViralLoad` (default true): the meter (an icon, a bar whose colour steps up every quarter, an arrow while rising or falling) shows one row above the hunger bar, stacked like vanilla's rows, while viral load is above 0, in survival and adventure. Presentation only.
+
+Trigger `remission:viral_load_changed` (Advancement triggers and stats, below) and `ViralLoadChangedEvent` and `CorruptionQueries.viralLoad` (Public API, below). Gametests: `ViralLoadTests`.
+
 ## Entity tag `#remission:immune` (built, P3.3)
 
 `data/<ns>/tags/entity_type/immune.json`, standard tag JSON (`{"replace": false, "values": ["minecraft:wither", "#c:bosses", {"id": "othermod:x", "required": false}]}`); Java `Corruption.IMMUNE`. An immune entity never becomes a host by any route: `Corruption.set` ignores levels above 0, infection on kill and `convert_to` skip it, and `/remission infect` skips it. A type added to the tag after it already carries the Strain keeps its state until cleansed. Remission ships only `#c:bosses` (ender dragon, wither, and whatever other mods tag); the pack extends it. Players are deliberately not immune: they can carry the Strain (`/remission infect`, rendered by the host overlay, scannable), but infection on kill never takes them because it only converts `Mob`s.
@@ -217,6 +258,7 @@ Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired f
 | `remission:nidus_destroyed` | A player breaks a `remission:nidus` (survival or creative, harvested or not; `onDestroyedByPlayer`). Other removals (explosions, `/setblock`, pistons, edits) post `NidusDestroyedEvent` but fire no trigger. | `location`: vanilla location predicate, tested at the centre of the nidus's block after removal (a `block` or `fluid` predicate sees what replaced it). |
 | `remission:host_scanned` | A player takes a host scan with the scanner (a host; a non-host gives no scan and no trigger). | `entity`: entity predicate (or loot conditions) on the scanned host; `stage`: int range, the host stage scanned; `bestiary_types`: int range, the number of host types in the player's bestiary after this scan (`Bestiary`; types it does not list are not counted). |
 | `remission:block_scanned` | A player takes a block scan with the scanner. | `location`: vanilla location predicate at the centre of the scanned block (its `block` predicate sees the scanned block). |
+| `remission:viral_load_changed` (P5.1) | The player's viral load changed (Viral load, above): at most once per update (once a second) plus once per drink, never when only the trend changed, nor for the reset on death. | `viral_load`: float range, the new viral load (0–100): `{"min": 50}` for a player who reached 50, `{"max": 0}` for one whose viral load fell back to 0. |
 | `remission:surge_survived` (P4.3) | A surge ends (any reason) and the player was caught in it: inside its area at one of its 20-tick checks while it ran, not dead since, and online and alive at the end (Surges and miasma clouds, below). A surge stopped during its warning never started and awards nothing. | `intensity`: int range, the surge's intensity (1–10). |
 
 ```json
@@ -225,6 +267,7 @@ Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired f
 {"criteria": {"ten": {"trigger": "remission:host_scanned", "conditions": {"bestiary_types": {"min": 10}}}}}
 {"criteria": {"found": {"trigger": "remission:block_scanned", "conditions": {"location": {"block": {"blocks": "remission:nidus"}}}}}}
 {"criteria": {"storm": {"trigger": "remission:surge_survived", "conditions": {"intensity": {"min": 2}}}}}
+{"criteria": {"exposed": {"trigger": "remission:viral_load_changed", "conditions": {"viral_load": {"min": 50}}}}}
 ```
 
 Custom stats (registry `minecraft:custom_stat`, holder `RemissionStats`, formatter `DEFAULT`), awarded at the same moments as the triggers; lang keys `stat.remission.<name>`:
@@ -236,9 +279,9 @@ Custom stats (registry `minecraft:custom_stat`, holder `RemissionStats`, formatt
 | `remission:blocks_scanned` | block scans taken (as `block_scanned`) |
 | `remission:surges_survived` | surges survived (as `surge_survived`; P4.3) |
 
-Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above); `SurgeTests` for `surge_survived` and its stat.
+Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above); `SurgeTests` for `surge_survived` and its stat; `ViralLoadTests` for `viral_load_changed`.
 
-"Variant" is reserved for resistant mutations; triggers and stats for systems that are not built yet arrive with them. P8.1 deferred surge survived to P4.3, which built it; region % cleansed (P5.2) and viral load (P5.1) are still to come.
+"Variant" is reserved for resistant mutations; triggers and stats for systems that are not built yet arrive with them. P8.1 deferred surge survived to P4.3 and viral load to P5.1, which built them (P5.1 adds a trigger and no stat: viral load is a level, not a count); region % cleansed (P5.2) is still to come.
 
 ## Debug commands `/remission` (built, P2.3)
 
@@ -427,7 +470,7 @@ Entity `remission:miasma_cloud` (misc category; `/summon remission:miasma_cloud 
 | `Age` | int | 0 | Ticks lived. |
 | `Lifetime` | int ≥ 1 | 3600 | It dissipates (is removed) when `Age` reaches this. |
 
-Released clouds sit over a random column of a random loaded festering chunk within 3 chunks of a player in the area (or of the origin when none is), 8 blocks above the highest motion-blocking block, radius 4–6, lifetime 3600, random heading. A cloud drifts 0.04 blocks per tick along its heading, eases toward 8 blocks above the ground beneath it (0.05 blocks per tick at most), and never drifts over land that is not festering: if the next step would leave a loaded chunk at stage 1 or higher it turns right, left or back (first that stays), and holds still if none does. It cannot be attacked, pushed or collided with and ignores explosions. **It does nothing to what it touches yet**: P5.1 adds viral load for anything inside its bounding box.
+Released clouds sit over a random column of a random loaded festering chunk within 3 chunks of a player in the area (or of the origin when none is), 8 blocks above the highest motion-blocking block, radius 4–6, lifetime 3600, random heading. A cloud drifts 0.04 blocks per tick along its heading, eases toward 8 blocks above the ground beneath it (0.05 blocks per tick at most), and never drifts over land that is not festering: if the next step would leave a loaded chunk at stage 1 or higher it turns right, left or back (first that stays), and holds still if none does. It cannot be attacked, pushed or collided with and ignores explosions. Players whose bounding box overlaps its bounding box gain viral load (`[viral_load] cloudGain`, P5.1); it does nothing to mobs.
 
 Saved data `data/remission_surges.dat` in the dimension folder (internal; read surges through the events and `/remission surge status`): `next_due` (game time) and `current` (`origin`, `intensity`, `warning_time`, `start_time`, `end_time`, `started`, and UUID lists `participants`, `fallen`, `hosts`).
 
@@ -450,8 +493,8 @@ Conventions, for every event here and every event later items add:
 - NeoForge events on `NeoForge.EVENT_BUS`, posted on the logical server, server thread only. Nothing is posted on the client.
 - Posted after the state change is applied, so `CorruptionQueries` in a listener already returns the new state. The one exception is the cancellable `StrainSpreadAttemptEvent`, posted before its step.
 - Batched changes (catch-up of a reloaded chunk, later bounded stage batches) post one event per chunk, never one per block or per missed pass, unless the event is block-scoped.
-- Base classes are abstract and cannot be listened to: `HostEvent` (extends NeoForge `LivingEvent`; `getEntity()` is the `LivingEntity`) and `FesteringLandEvent` (extends `Event`; `getLevel()` is the `ServerLevel`). Listen to the concrete events.
-- Levels are ints 0–100 (`CorruptionQueries.MAX_LEVEL`) for entities and chunks. Host stages come from `[hosts] stageThresholds`, chunk (festering) stages from `[festering] stageThresholds`.
+- Base classes are abstract and cannot be listened to: `HostEvent` (extends NeoForge `LivingEvent`; `getEntity()` is the `LivingEntity`) and `FesteringLandEvent` (extends `Event`; `getLevel()` is the `ServerLevel`). Listen to the concrete events. `ViralLoadChangedEvent` (P5.1) extends NeoForge's `PlayerEvent` directly.
+- Levels are ints 0–100 (`CorruptionQueries.MAX_LEVEL`) for entities and chunks; viral load is a float 0–100 (`CorruptionQueries.MAX_VIRAL_LOAD`). Host stages come from `[hosts] stageThresholds`, chunk (festering) stages from `[festering] stageThresholds`.
 
 | Event | Fields (getters) | Fired | Cancellable |
 | --- | --- | --- | --- |
@@ -462,6 +505,7 @@ Conventions, for every event here and every event later items add:
 | `BlockFesteredEvent extends FesteringLandEvent` (P4.2) | `getLevel()`, `getPos()`, `getOldState()`, `getNewState()` | After a block in a festering chunk is replaced through `remission:festers_into` (Festering stages, above), or gains festering vein faces (P4.8; old state air or a vein), once per block: it is block-scoped, so a chunk's stage batch posts one per replaced block, spread over the ticks the batch takes. The biome flip posts nothing. Listeners must not set the block at `getPos()` in the listener. | no |
 | `SurgeStartedEvent extends FesteringLandEvent` (P4.3) | `getLevel()`, `getOrigin()` (the nidus), `getIntensity()` (1–10), `getEndTime()` (game time it is due to end) | When a surge's warning runs out and it starts, after its clouds are released and before its first wave (Surges and miasma clouds, above). Never for a surge stopped during its warning. | no |
 | `SurgeEndedEvent extends FesteringLandEvent` (P4.3) | `getLevel()`, `getOrigin()`, `getIntensity()`, `getReason()` (`ELAPSED`, `NIDUS_DESTROYED`, `STOPPED`; treat unknown values as `STOPPED`), `getSurvivors()` (immutable list of the `ServerPlayer`s awarded `surge_survived`) | When a started surge ends, after acceleration and waves stopped and survivors were awarded. Its clouds keep drifting. | no |
+| `ViralLoadChangedEvent extends PlayerEvent` (P5.1) | `getEntity()` (the `ServerPlayer`), `getOldLoad()`, `getNewLoad()` (floats 0–100), `getCause()` (`EXPOSURE`: land, water or a miasma cloud; `DRINK`; `DECAY`; `OTHER`; treat unknown values as `OTHER`), `isRising()` | After a player's viral load changed and was stored (Viral load, above): at most once per player per update (once a second) plus once per drink. Not when only the trend changed, nor for the reset to 0 on death. | no |
 | `StrainSpreadAttemptEvent extends FesteringLandEvent` | `getLevel()`, `getFrom()`, `getTo()` (`ChunkPos`), `getAmount()` (level gain at multiplier 1, capped at the target), `isCatchUp()`, `getRateMultiplier()`/`setRateMultiplier(double)` (default 1; negative or NaN become 0) | Before every chunk-to-chunk step: each live step into a loaded chunk below its target whose parent passed the threshold, and once per nidus in reach when a reloaded chunk catches up (`isCatchUp()`, `getAmount()` covers every missed pass, `getFrom()` may be unloaded). The growth of a nidus's own chunk is not a spread attempt, and a step from a loaded parent below the threshold is held without an event (live and catch-up). | yes: cancelling (or multiplier 0) stops this step; chunks reached through it stay clean while the cancelled chunk is loaded. A step from an unloaded parent is not held (the parent counts as at its target), so keep a firebreak chunk loaded or cancel the steps behind it too |
 
 Spread rate: the gain is `amount * multiplier`, capped at the chunk's target. A fractional part is added as one more level with that probability, drawn from a hash of the two chunks and the game time, so slowed spread still advances on average and the same state and ticks give the same levels. Listeners compose by multiplying (`event.setRateMultiplier(event.getRateMultiplier() * 0.5)`). `last_update_game_time` moves to now only when a catch-up changed the chunk's level: passes shortened by a multiplier below 1 are then not credited again (the chunk ends below where full-rate spread would have taken it and continues from there), while a catch-up whose steps were all cancelled, scaled to 0 or held keeps the old time, so a later reload credits that history again, still capped at the target. A parent caught up first (see the rules above) contributes its level after its own catch-up, which converges on the same targets as live spread rather than replaying exact history.
@@ -479,14 +523,14 @@ Queries, `CorruptionQueries` (static):
 | `chunkLevel(ServerLevel, ChunkPos)`, `levelAt(ServerLevel, BlockPos)` | Strain level of a loaded chunk (of the chunk holding the position); 0 if clean or not loaded (never loads a chunk) | server |
 | `chunkStage(ServerLevel, ChunkPos)`, `stageAt(ServerLevel, BlockPos)` | festering stage of that level (every block in a chunk shares its chunk's stage) | server |
 | `chunkStageFor(int level)`, `maxChunkStage()` | stage of a chunk level under the current config; the number of chunk stages | server config |
+| `viralLoad(Player)` (P5.1) | the player's viral load, 0–100 (`MAX_VIRAL_LOAD`) | server for any player; a client knows only its own player's (others read 0) |
 
 Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; the default `festers_into` map turns grass at 1, trees and foliage at 2 and stone at 3, and the last stage flips the biome; Festering stages, above). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
 
-Planned by later items, added here when built: viral load changed and a player's viral load query (P5.1), block purified and chunk entered remission (P5.2).
+Planned by later items, added here when built: block purified and chunk entered remission (P5.2).
 
 | Event | Fired by | Payload (planned) | Cancellable |
 | --- | --- | --- | --- |
-| viral load changed | P5.1 | player, old and new value, cause | no |
 | block purified | P5.2 | level, pos, old and new block state, cause | no |
 | chunk entered remission | P5.2 | level, chunk pos, player (optional) | no |
 

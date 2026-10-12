@@ -1,5 +1,6 @@
 package com.cubiecode.remission.harness;
 
+import com.cubiecode.remission.api.ViralLoadChangedEvent;
 import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
@@ -9,9 +10,12 @@ import com.cubiecode.remission.research.Bestiary;
 import com.cubiecode.remission.research.Scanning;
 import com.cubiecode.remission.surge.SurgeController;
 import com.cubiecode.remission.surge.SurgeHosts;
+import com.cubiecode.remission.viralload.ViralLoad;
+import com.cubiecode.remission.viralload.ViralLoadState;
 import com.cubiecode.remission.world.ChunkCorruption;
 import com.cubiecode.remission.world.FesteringStages;
 import com.cubiecode.remission.world.FesteringVeins;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -45,6 +49,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * Strain level of the chunks a box covers and festers them at once; {@code harness resend <from> <to>} sends the chunks a
  * box covers to clients again (P4.2). {@code harness surge hosts <centre> <count> <radius>} and {@code harness surge
  * clouds <centre> <count>} spawn surge hosts and release miasma clouds through the surge code with a fixed seed (P4.3).
+ * {@code harness viral_load <targets> <load> [rising|falling]} sets players' viral load and the trend their HUD shows
+ * (P5.1).
  */
 final class HarnessCommands {
     private static final SimpleCommandExceptionType NO_HOSTS =
@@ -115,6 +121,11 @@ final class HarnessCommands {
                                         .executes(context -> surgeClouds(context.getSource().getLevel(),
                                                 BlockPosArgument.getBlockPos(context, "centre"),
                                                 IntegerArgumentType.getInteger(context, "count")))))))
+                .then(Commands.literal("viral_load").then(Commands.argument("targets", EntityArgument.players())
+                        .then(Commands.argument("load", FloatArgumentType.floatArg(0.0F, ViralLoadState.MAX))
+                                .executes(context -> viralLoad(context, ViralLoadState.Trend.STEADY))
+                                .then(Commands.literal("rising").executes(context -> viralLoad(context, ViralLoadState.Trend.RISING)))
+                                .then(Commands.literal("falling").executes(context -> viralLoad(context, ViralLoadState.Trend.FALLING))))))
                 .then(Commands.literal("fester").then(Commands.argument("from", BlockPosArgument.blockPos())
                         .then(Commands.argument("to", BlockPosArgument.blockPos())
                                 .then(Commands.argument("level", IntegerArgumentType.integer(0, ChunkCorruption.MAX_LEVEL))
@@ -132,6 +143,17 @@ final class HarnessCommands {
     private static int eachPlayer(CommandContext<CommandSourceStack> context, Consumer<ServerPlayer> action) {
         var players = context.getSource().getServer().getPlayerList().getPlayers();
         players.forEach(action);
+        return players.size();
+    }
+
+    /**
+     * Sets the viral load and trend of every target player through the server code, which syncs it to their HUD. Scenes
+     * freeze ticks, and viral load does not update while they are frozen, so the value holds for every shot (P5.1).
+     */
+    private static int viralLoad(CommandContext<CommandSourceStack> context, ViralLoadState.Trend trend) throws CommandSyntaxException {
+        float load = FloatArgumentType.getFloat(context, "load");
+        var players = EntityArgument.getPlayers(context, "targets");
+        players.forEach(player -> ViralLoad.set(player, load, trend, ViralLoadChangedEvent.Cause.OTHER));
         return players.size();
     }
 
