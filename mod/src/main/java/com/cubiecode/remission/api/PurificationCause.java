@@ -12,6 +12,8 @@ public enum PurificationCause {
     PYLON,
     /** Mendroot growing nearby. */
     MENDROOT,
+    /** A thrown Counterstrain prototype landing (P7.3). */
+    PROTOTYPE,
     /** Any other caller, including other mods using Remission's internals. */
     OTHER
 }

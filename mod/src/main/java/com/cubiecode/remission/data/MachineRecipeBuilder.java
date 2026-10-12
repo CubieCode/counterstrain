@@ -46,6 +46,16 @@ final class MachineRecipeBuilder {
         return this;
     }
 
+    MachineRecipeBuilder ingredient(ItemLike item, int count) {
+        ingredients.add(SizedIngredient.of(item, count));
+        return this;
+    }
+
+    MachineRecipeBuilder ingredient(TagKey<Item> tag, int count) {
+        ingredients.add(SizedIngredient.of(tag, count));
+        return this;
+    }
+
     MachineRecipeBuilder fluid(Fluid fluid, int amount) {
         this.fluid = Optional.of(SizedFluidIngredient.of(fluid, amount));
         return this;

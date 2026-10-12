@@ -1,0 +1,29 @@
+{
+  "type": "remission:synthesizing",
+  "energy": 12000,
+  "fluid_ingredient": {
+    "amount": 1000,
+    "fluid": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "count": 1,
+      "item": "remission:strain_sequence"
+    },
+    {
+      "count": 1,
+      "item": "remission:nidus_core"
+    },
+    {
+      "count": 1,
+      "item": "minecraft:glass_bottle"
+    }
+  ],
+  "results": [
+    {
+      "count": 1,
+      "id": "remission:counterstrain_prototype"
+    }
+  ],
+  "time": 400
+}

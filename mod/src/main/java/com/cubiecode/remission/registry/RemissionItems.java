@@ -2,13 +2,16 @@ package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.countermeasure.CountermeasureProtocolItem;
+import com.cubiecode.remission.counterstrain.PrototypeItem;
 import com.cubiecode.remission.purification.HandheldPurifierItem;
 import com.cubiecode.remission.research.ScanItem;
 import com.cubiecode.remission.research.ScannerItem;
+import com.cubiecode.remission.serum.SerumItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Rarity;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -62,6 +65,14 @@ public final class RemissionItems {
     // Countermeasures (P5.7)
     public static final DeferredItem<CountermeasureProtocolItem> COUNTERMEASURE_PROTOCOL = ITEMS.registerItem(
             "countermeasure_protocol", CountermeasureProtocolItem::new);
+
+    // Synthesizer products (P7.3)
+    public static final DeferredItem<SerumItem> SERUM = ITEMS.registerItem("serum", SerumItem::new,
+            new Item.Properties().stacksTo(16));
+    /** In {@code #remission:purifier_fuel}; repairs the handheld purifier in an anvil. */
+    public static final DeferredItem<Item> PURIFIER_FUEL = ITEMS.registerSimpleItem("purifier_fuel");
+    public static final DeferredItem<PrototypeItem> COUNTERSTRAIN_PROTOTYPE = ITEMS.registerItem("counterstrain_prototype",
+            PrototypeItem::new, new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON));
 
     private RemissionItems() {
     }

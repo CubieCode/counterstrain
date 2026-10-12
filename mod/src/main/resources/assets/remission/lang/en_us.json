@@ -129,5 +129,12 @@
   "remission.configuration.festerFog": "Festering fog",
   "remission.configuration.festerFog.tooltip": "How much the fog thickens in festering land as its stage rises, from 0 (off) to 1 (full). Changes only what you see.",
   "event.remission.nidus.bar": "Nidus vitality",
-  "event.remission.nidus.lash": "The nidus lashes out"
+  "event.remission.nidus.lash": "The nidus lashes out",
+  "item.remission.serum": "Serum",
+  "item.remission.serum.desc": "Drink to lower viral load and resist the Strain for a while",
+  "effect.remission.inoculated": "Inoculated",
+  "item.remission.purifier_fuel": "Purifier Fuel",
+  "item.remission.counterstrain_prototype": "Counterstrain Prototype",
+  "item.remission.counterstrain_prototype.desc": "Throw to cleanse festering land. Unstable: it may release miasma instead",
+  "entity.remission.counterstrain_prototype": "Counterstrain Prototype"
 }

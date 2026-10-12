@@ -20,6 +20,8 @@ public class ViralLoadChangedEvent extends PlayerEvent {
         DECAY,
         /** A nidus under attack lashed the player (P4.10). */
         NIDUS,
+        /** A serum was drunk or given (P7.3). */
+        SERUM,
         /** Anything else: commands, the harness, other mods through Remission's internals. */
         OTHER
     }
