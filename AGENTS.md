@@ -24,7 +24,7 @@ Remission never depends on Counterstrain. It ships generic defaults that work wi
 
 ## Content provenance
 
-All AI-generated player-facing content (textures, models, GUI art, particles, sounds, icons, lang, quest text, lore, journal entries, store copy) is recorded in docs/CONTENT-PROVENANCE.md in the same PR that adds or changes it, and placeholder art is visibly marked (magenta 2×2 corner on textures, "PLACEHOLDER" label on GUI/promo images). Follow the [content-provenance](.agents/skills/content-provenance/SKILL.md) skill. Code, build files and internal docs are out of scope.
+All AI-generated player-facing content (textures, models, GUI art, particles, sounds, icons, lang, quest text, lore, journal entries, store copy) is recorded in docs/CONTENT-PROVENANCE.md in the same PR that adds or changes it, and placeholder art is visibly marked (magenta 2×2 corner on textures, "PLACEHOLDER" label on GUI/promo images). Follow the [content-provenance](.agents/skills/content-provenance/SKILL.md) skill; `tools/content-editor.sh` replaces content and updates rows from a `content/<date>-<slug>` branch. Code, build files and internal docs are out of scope.
 
 ## Coding and data
 

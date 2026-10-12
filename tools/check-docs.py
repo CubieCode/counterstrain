@@ -185,7 +185,9 @@ def check_links_and_paths():
 def check_tools_documented():
     readme = read("README.md") + read("AGENTS.md") + read("docs/DEV-ENVIRONMENT.md")
     for path in FILES:
-        if path.startswith("tools/") and path != "tools/lib.sh" and path.endswith((".sh", ".py")):
+        # Test modules (tools/tests/) are run by their tool's --test or --self-test, not by hand.
+        if path.startswith("tools/") and not path.startswith("tools/tests/") and path != "tools/lib.sh" \
+                and path.endswith((".sh", ".py")):
             name = os.path.basename(path)
             if name not in readme and not any(name in read(s) for s in DOCS if s.startswith(".agents/")):
                 fail(path, "not mentioned in README, AGENTS, DEV-ENVIRONMENT or any skill")

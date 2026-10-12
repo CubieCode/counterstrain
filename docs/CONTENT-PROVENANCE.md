@@ -4,7 +4,7 @@ Ledger of player-facing content in Remission and Counterstrain: where each asset
 
 Columns:
 
-- **Path / ID:** repository path, or `file:key` / `file:quest_id` for text inside a larger file.
+- **Path / ID:** repository path, or `file:key` / `file:quest_id` for text inside a larger file. A key ending in `*` covers every key with that prefix; an exact `file:key` row overrides it for that key (the most specific row wins).
 - **Type:** texture, model, gui, particle, sound, icon, lang, quest, lore, journal, book, store-copy, store-image, metadata.
 - **Origin:** `ai` (tool/model if known), `procedural` (script that generates it), `human`, or `licensed` (source and license).
 - **Status:** `placeholder`, `draft` or `final`; `removed` once the file is deleted.

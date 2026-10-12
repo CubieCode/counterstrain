@@ -2,6 +2,10 @@
 .local/
 .DS_Store
 
+# Python bytecode from tools/ scripts and tests
+__pycache__/
+*.pyc
+
 # Gradle and IDEs
 .gradle/
 build/

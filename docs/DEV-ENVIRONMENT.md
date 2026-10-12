@@ -104,6 +104,33 @@ Options: `--url` (or `COUNTERSTRAIN_PACK_URL`), `--remote HOST:PATH` (or `COUNTE
 
 Inner loop: most pack edits need no relaunch. `/reload` applies recipes, tags, loot, the pack datapack (`kubejs/data/`) and `server_scripts`; `/kubejs reload client_scripts` applies client scripts; `startup_scripts`, mod list changes and a new Remission jar need a relaunch (which syncs). Quests edited in game land in the instance's `config/ftbquests/`; copy them back into `pack/config/ftbquests/` before committing. For edit-and-`/reload` without the round trip, mount the checkout (`sshfs lab@foundry:development/CubieCode/counterstrain ~/cs`) and replace the instance's `kubejs/` and `config/ftbquests/` with symlinks into `~/cs/pack/`. Edits, including in-game quest edits, then write straight into the foundry checkout, so review the diff before committing.
 
+## Content editor
+
+`tools/content-editor.sh` (P1.5) is a small web app for replacing AI-generated player-facing content without hand-editing files. It is built on the provenance ledger and uses only the Python standard library and plain HTML, CSS and JavaScript from `tools/content-editor/`.
+
+On foundry, leave it running (e.g. in tmux):
+
+```sh
+tools/content-editor.sh          # prints http://127.0.0.1:8765/?t=<token>; --port N or COUNTERSTRAIN_EDITOR_PORT
+```
+
+From a PC, tunnel the port and open the printed URL: `ssh -L 8765:127.0.0.1:8765 foundry`. It binds `127.0.0.1` and only answers requests whose `Host` is a loopback name and that carry the token (the page sends it). `--lan` binds every interface instead and then needs the token on every request, pages included. `--reviewer NAME` overrides the name recorded in origins and acceptance notes (default `git config user.name`).
+
+Workflow:
+
+1. The queue lists every `docs/CONTENT-PROVENANCE.md` row grouped by type, filterable by status, type, roadmap item and origin, with a search on path or key. Until a batch starts the editor is read-only.
+2. **Start batch** creates a worktree under `.local/content-editor/worktrees/` on a new `content/<date>-<slug>` branch made from `origin/main`. Every edit goes there; the editor never writes the checkout it runs from, `main` or another lane's worktree. It resumes the last batch on restart (`--worktree PATH` picks one).
+3. Row pages:
+   - **Lang:** each key's current string with its arguments marked, the row's notes as guidance, an edit field that refuses a changed set of `%s` arguments (with a sample-value preview), **Replace** (status draft or final) and **Accept as final**, which records `Accepted as final by <who>, <date>.` in the notes. Saves rewrite only that value's line in `en_us.json`. Replacing or accepting one key of a `*` row that still governs other keys adds an exact-key row below it; the most specific row wins.
+   - **Textures:** the current PNG at pixel scale and tiled 3×3, an upload checked before anything is written (valid non-interlaced PNG, same size or aspect at a power-of-two scale, a strip only with an `.mcmeta`, the `#FF00FF` marker exactly when the chosen status is `placeholder`), then origin (`human`, or `licensed` with source and licence), a note, and **Write file and row**. Block textures render in 3D on their model as a block and a 3×3 wall. Host overlay patterns get a reference host preview instead: stages 1–3 composited onto a mannequin or vanilla mob texture with the same rules as `host_overlay.fsh`, on a box model, with `overlayIntensity` and the glow layer adjustable.
+   - **Models:** the JSON and a 3D preview on main and with the batch's textures. Generated models (`mod/src/generated/`) are read-only and say where the change belongs; hand-authored ones take a JSON upload that must parse and name existing textures.
+   - **Sounds:** play the current `.ogg` and upload an Ogg Vorbis replacement.
+4. **Batch** lists every changed row against the base commit with an **Undo** per row, runs `tools/check-provenance.sh`, `python3 -I tools/check-docs.py` and `git diff --check`, commits with your message once they pass, and **Open PR** pushes the content branch and runs `gh pr create --draft --body-file` with a body listing every changed row. It never pushes `main`, merges or publishes. A batch that touches `en_us.json` or texture references rebases and reruns its checks before merge.
+
+Writes are limited to files a ledger row names (plus a texture's `.mcmeta`), new rows under the mod's `assets/` or `pack/` (**+ Add row**), and the ledger; uploads are capped (textures 1 MiB, models 256 KiB, sounds 8 MiB). The 3D previews need WebGL in the browser. Vanilla parent models and mob textures are read at run time from the NeoForge client resources jar (`*-client-extra-aka-minecraft-resources.jar` under `mod/build/moddev/artifacts/`; run `./gradlew build` in `mod/` once); they are never copied into the repository. Without the jar the built-in mannequins still work.
+
+Layout: `server.py` (HTTP, token and routes) on the `contentedit` package: `ledger.py` (rows, exact-key precedence), `lang.py` (in-place value edits, argument check), `png.py` (decoding and the marker rule, shared with `check-provenance.py`), `textures.py` and `models.py` (upload checks), `host.py` (the host overlay composite and mannequins), `repo.py` (content worktree, checks, commit, PR, vanilla resources) and `service.py` (the operations the server exposes). The page is `static/index.html`, `app.js` and `preview.js` (the deepslate previews). `vendor/` holds deepslate 0.27.2 (MIT, misode/deepslate), the single UMD bundle with its licence; see `tools/content-editor/vendor/README.md`. Tests: `tools/content-editor.sh --test` runs `tools/tests/content_editor/`, including a scripted session on a clone of the repository that ends with the real batch checks passing.
+
 ## Run and output locations
 
 | Path | Contents |
@@ -114,4 +141,5 @@ Inner loop: most pack edits need no relaunch. `/reload` applies recipes, tags, l
 | `.local/compare/<scene>/` | Suggested `--out` for `tools/compare-screenshots.sh`: `<shot>-diff.png`, `compare-result.txt` |
 | `.local/dist/` | Pack exports |
 | `.local/instance/` | Default local test instance for `tools/build-mod.sh` |
+| `.local/content-editor/` | The content editor's active batch (`active`) and its content worktrees (`worktrees/<date>-<slug>/`) |
 | `.local/pack-sync/` | Throwaway instance target of `tools/pack-sync.sh --build` (only the jar in `mod/build/libs/` is used) |

@@ -47,6 +47,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `tools/collect-screenshots.sh` | Copy screenshots to `.local/screenshots/latest/` |
 | `python3 -I tools/check-docs.py` | Check docs, roadmap, READMEs and skills against the code (docs-sync skill) |
 | `tools/check-provenance.sh` | Fail if an image, sound or model lacks a [content provenance](docs/CONTENT-PROVENANCE.md) row or a texture's placeholder marker disagrees with its status; `--self-test` runs the fixtures in `tools/tests/provenance/` |
+| `tools/content-editor.sh [--port N] [--lan]` | Local web app over the provenance ledger: replace lang strings, textures, models and sounds in a `content/<date>-<slug>` worktree, with 3D and host overlay previews, then check, commit and open a draft PR ([content editor](docs/DEV-ENVIRONMENT.md#content-editor)); `--test` runs its unit tests |
 | `tools/build-mod.sh [INSTANCE]` | Build and copy the jar into a test instance's `mods/` |
 | `tools/pack.sh refresh` / `check` / `export` | packwiz index refresh, CI drift check, CurseForge zip (release artifact) + `.mrpack` (local testing) to `.local/dist/` |
 | `tools/pack.sh serve [PORT]` | Serve the pack over HTTP (default port 8080) for `tools/pack-sync.sh` |
@@ -60,7 +61,7 @@ Dev runs include KubeJS, ProbeJS, FTB Quests, EMI + JEI, Mekanism, AE2 and Journ
 ```text
 mod/                 Remission NeoForge project (Gradle wrapper, gradle.properties)
 pack/                Counterstrain packwiz pack, kubejs/, config/ftbquests/
-tools/               Build, pack, release, headless-client, screenshot comparison, worktree setup and docs/provenance check scripts (bash, no root); visual-references/ holds reviewed scene screenshots
+tools/               Build, pack, release, headless-client, screenshot comparison, worktree setup and docs/provenance check scripts (bash, no root); content-editor/ is the local content editor; visual-references/ holds reviewed scene screenshots
 orca.yaml            Orca setup hook (runs tools/worktree-setup.sh per worktree)
 docs/                Design, architecture, lore, content provenance and development environment
 ROADMAP.md           Phases, items, status
@@ -84,7 +85,7 @@ Remission is not in the packwiz index until it is published. For development, `t
 
 ## Releases
 
-The mod and the pack are versioned independently. CI (`ci.yml`) builds, runs datagen and gametests and checks the pack on every push and PR that touches more than Markdown, and its `ci-ok` job and `docs.yml` are the required checks for `main`; `docs.yml` runs `tools/check-docs.py` and `tools/check-provenance.sh`; `gpu-smoke.yml` runs every harness scene on foundry's GPU (`tools/run-scenes.sh`) on manual dispatch or when a same-repo PR carries the `gpu-smoke` label, and uploads logs, screenshots and diffs. Tags `mod-v<version>` and `pack-v<version>` build draft GitHub releases (`release-mod.yml`, `release-pack.yml`). Platform publishing is roadmap P12.3: Remission goes to Modrinth and CurseForge; Counterstrain is CurseForge-first (the CurseForge zip is the release artifact; see [distribution](docs/DESIGN.md#distribution)). See the release skill.
+The mod and the pack are versioned independently. CI (`ci.yml`) builds, runs datagen and gametests and checks the pack on every push and PR that touches more than Markdown, and its `ci-ok` job and `docs.yml` are the required checks for `main`; `docs.yml` runs `tools/check-docs.py`, `tools/check-provenance.sh` and the content editor's tests; `gpu-smoke.yml` runs every harness scene on foundry's GPU (`tools/run-scenes.sh`) on manual dispatch or when a same-repo PR carries the `gpu-smoke` label, and uploads logs, screenshots and diffs. Tags `mod-v<version>` and `pack-v<version>` build draft GitHub releases (`release-mod.yml`, `release-pack.yml`). Platform publishing is roadmap P12.3: Remission goes to Modrinth and CurseForge; Counterstrain is CurseForge-first (the CurseForge zip is the release artifact; see [distribution](docs/DESIGN.md#distribution)). See the release skill.
 
 ## License
 
