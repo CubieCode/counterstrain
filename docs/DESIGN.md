@@ -45,6 +45,9 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Radius wards | **quarantine pylons** | block `remission:quarantine_pylon`; its **ward** (the chunks it protects; config `pylonRadius`); "the base is inside the pylon's ward" |
 | Cleansing plants | **mendroot** | block and item `remission:mendroot`; "plant mendroot along the frontier" |
 | Reclaimed land | **remission zones** | "chunks in remission"; chunk attachment `remission:chunk_remission`; query `CorruptionQueries.isInRemission`; event `ChunkEnteredRemissionEvent`; trigger `remission:region_cleansed`; stat `remission:chunks_cleansed`; config `[remission_zones]` |
+| An upkeep hazard of the Strain (contact viral load, shedding, fouling, containment breaches, contamination and the like), as opposed to its danger | **Strain hazard** | hazard IDs such as `remission:shedding`, `remission:fouling` (planned, P5.7); "fouling is the region's new hazard" |
+| A researched, permanent protection of a player or team against one Strain hazard | **countermeasure** | player attachment `remission:countermeasures`, trigger `remission:countermeasure_gained`, `/remission countermeasure` (planned, P5.7); "the team has the shedding countermeasure" |
+| Synthesized data item that grants a countermeasure when used | **countermeasure protocol** | item `remission:countermeasure_protocol` (planned, P5.7); "synthesize the fouling protocol" |
 | Resistant mutations | **variants** | "sequence the variant"; `CorruptionState` field `variant`; registry `remission:variant`, trigger `remission:variant_emerged` (planned, P7.5) |
 | Endgame cure | **the Counterstrain** | "unstable Counterstrain prototypes", "the final deployment" |
 | Samples | host tissue, **nidus cores**, festered soil | `remission:host_tissue`, `remission:nidus_core`, `remission:festered_soil` |
@@ -136,12 +139,22 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - The Strain adapts to the Counterstrain too: prototypes meet variants that resist them (P7.5's system) until the final formula.
 - A final deployment defence event, after which the world visibly heals. The Counterstrain is deployed from a **dispersal payload**: a placed block is enough to finish the game. Its API treats the payload as a dispersal source with a position, so a moving holder (a Create contraption or Aeronautics airship, through the optional integration) can carry it instead.
 
+### Hazards and countermeasures
+
+The Strain costs the player in two ways, and they are treated differently (decided 2026-10-13):
+
+- **Danger escalates.** Surges, nidus fights, hosts, variants and budding are the game, and they keep growing until the finale. They never get a countermeasure.
+- **Upkeep is curable.** Strain hazards (contact viral load, shedding, fouled machinery, containment breaches, contaminated items, and integration hazards such as AE2 cable and Create track decay) are chores. Each has a **countermeasure** that research unlocks for good: the synthesizer turns a strain sequence into a **countermeasure protocol**, and using it protects the user's team from that hazard from then on (P5.7). The late game is less fiddly but no easier.
+- **Pressure follows progress, not time.** Hazards arrive and danger rises with the player's progress (regions cleared, nidi destroyed, tech tier), never with days played, so slow play and idle servers are not punished. Each hazard arrives with its answer a region or so behind it: met, worked on, then cured.
+
+Remission is generic: by default every hazard is active and no countermeasure is held, each hazard's own switch turns it off, and a cancellable hazard event lets a pack hold a hazard back until a stage. Counterstrain's schedule of which hazard arrives in which region, and what cures it, is pack data (P11.2).
+
 ### Teams and multiplayer
 
 Remission is played alone or together, and nothing it adds may make a solo game worse. Rules (decided 2026-10-13):
 
 - **Teams come from the pack.** Remission asks one team query (P4.12) wherever a rule involves teammates. Counterstrain answers it from FTB Teams. With no team source, each player is their own team.
-- **Research and progress are shared by a team; exposure is personal.** Bestiary progress, scan credit, standing and quest progress belong to the team (P6.4; FTB Quests already tracks quests per team). Viral load, succumbing, revenants and their owners belong to one player, though teammates can reclaim a revenant's items.
+- **Research and progress are shared by a team; exposure is personal.** Bestiary progress, scan credit, standing and quest progress belong to the team (P6.4; FTB Quests already tracks quests per team). Countermeasures belong to the team too. Viral load, succumbing, revenants and their owners belong to one player, though teammates can reclaim a revenant's items.
 - **Credit goes to everyone who took part.** Group achievements, starting with destroying a nidus, credit every player who contributed, not only the player who acted last (P4.10).
 - **Fights scale with the group.** Nidus vitality and the surges it starts scale with the number of players fighting it (P4.10).
 - **Some mechanics need other players.** Shedding (P5.6), stabilising a succumbing player and injecting someone else (P7.6) need a second player. Each is server-configurable and defined so that a solo player is never worse off.
