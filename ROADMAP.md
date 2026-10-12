@@ -323,9 +323,10 @@ Goals: the player can survive the Strain and push it back locally.
 
 ### P5.1: Viral load
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p5.1-viral-load
 - PR: https://github.com/CubieCode/counterstrain/pull/63
+- Validation: PR #63; 144 gametests incl. ViralLoadTests (gain from land, drinking, swimming, miasma clouds; altitude falloff on and off; full gain underground; decay); `survival/hud` scene from the RTX 4070 reviewed, references committed.
 - Depends on: P4.1, P4.4, P4.3, P8.1
 - Scope: Player attachment `viral_load`; gain in festering chunks, from drinking water from (or swimming in) water in festering chunks, and from flying through miasma clouds; land gain falls off with height above the ground (config: on/off, falloff curve), so airborne players and vehicles avoid the worst of it, while underground (caves, tunnels, bases below a festering chunk) gain is at full strength, so digging in is no refuge; decay; escalating debuffs; HUD element; sync. Emits viral load changed and adds the viral load query. Adds any viral load advancement triggers and stats the pack needs, following P8.1's conventions.
 - Acceptance: Gametests for gain (land, drinking, swimming, miasma clouds), altitude falloff (on and off), full gain underground and decay; harness scene `survival/hud`. Ledger updated; placeholders marked.
