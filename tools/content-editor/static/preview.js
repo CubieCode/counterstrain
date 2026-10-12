@@ -170,15 +170,22 @@ export async function modelPreview(canvas, opts) {
 }
 
 // --- mobs wearing the host overlay ---------------------------------------------
-// Boxes in texels on the vanilla UV layouts: [x, y, z, w, h, d, u, v]; y counts down from the top.
+// Boxes in texels on the vanilla UV layouts: [x, y, z, w, h, d, u, v, mode]; y counts down from the top and the
+// mob faces +z, so +x is its left. 'mirror' reuses the right limb's texels flipped, as vanilla's HumanoidModel
+// (zombies, husks, drowned) and QuadrupedModel do; only PlayerModel has separate left limbs at (32,48) and (16,48).
 const HUMANOID = { sheet: [64, 64], height: 32, boxes: [
+  [4, 0, 0, 8, 8, 8, 0, 0], [4, 8, 2, 8, 12, 4, 16, 16], [0, 8, 2, 4, 12, 4, 40, 16],
+  [12, 8, 2, 4, 12, 4, 40, 16, 'mirror'], [4, 20, 2, 4, 12, 4, 0, 16], [8, 20, 2, 4, 12, 4, 0, 16, 'mirror'],
+] };
+const PLAYER = { sheet: [64, 64], height: 32, boxes: [
   [4, 0, 0, 8, 8, 8, 0, 0], [4, 8, 2, 8, 12, 4, 16, 16], [0, 8, 2, 4, 12, 4, 40, 16],
   [12, 8, 2, 4, 12, 4, 32, 48], [4, 20, 2, 4, 12, 4, 0, 16], [8, 20, 2, 4, 12, 4, 16, 48],
 ] };
 const QUADRUPED = { sheet: [64, 32], height: 20, boxes: [
   [1, 2, 14, 8, 8, 8, 0, 0], [0, 6, 0, 10, 8, 16, 28, 8, 'lying'],
-  [0, 14, 0, 4, 6, 4, 0, 16], [6, 14, 0, 4, 6, 4, 0, 16], [0, 14, 12, 4, 6, 4, 0, 16], [6, 14, 12, 4, 6, 4, 0, 16],
+  [0, 14, 0, 4, 6, 4, 0, 16], [6, 14, 0, 4, 6, 4, 0, 16, 'mirror'], [0, 14, 12, 4, 6, 4, 0, 16], [6, 14, 12, 4, 6, 4, 0, 16, 'mirror'],
 ] };
+const LAYOUTS = { humanoid: HUMANOID, player: PLAYER, quadruped: QUADRUPED };
 
 function boxElement(box, layout, scale, offset) {
   const [x, y, z, w, h, d, u, v, mode] = box;
@@ -199,6 +206,17 @@ function boxElement(box, layout, scale, offset) {
       west: { uv: uv(u, v + t, u + t, v + t + l), rotation: 90 },
       east: { uv: uv(u + t + w, v + t, u + 2 * t + w, v + t + l), rotation: 270 },
     };
+  } else if (mode === 'mirror') {
+    // Flipped horizontally: each face's u runs backwards and the two sides swap.
+    const m = (u0, v0, u1, v1) => uv(u1, v0, u0, v1);
+    faces = {
+      up: { uv: m(u + d, v, u + d + w, v + d) },
+      down: { uv: m(u + d + w, v, u + d + 2 * w, v + d) },
+      south: { uv: m(u + d, v + d, u + d + w, v + d + h) },
+      north: { uv: m(u + 2 * d + w, v + d, u + 2 * d + 2 * w, v + d + h) },
+      west: { uv: m(u + d + w, v + d, u + 2 * d + w, v + d + h) },
+      east: { uv: m(u, v + d, u + d, v + d + h) },
+    };
   } else {
     faces = {
       up: { uv: uv(u + d, v, u + d + w, v + d) },
@@ -213,9 +231,9 @@ function boxElement(box, layout, scale, offset) {
   return { from, to, faces };
 }
 
-// opts: { kind: 'humanoid' | 'quadruped', textureUrl }
+// opts: { kind: 'humanoid' | 'player' | 'quadruped', textureUrl }
 export async function mobPreview(canvas, opts) {
-  const layout = opts.kind === 'quadruped' ? QUADRUPED : HUMANOID;
+  const layout = LAYOUTS[opts.kind] || HUMANOID;
   const scale = 0.5;
   const width = Math.max(...layout.boxes.map((b) => b[0] + b[3])) * scale;
   const depth = Math.max(...layout.boxes.map((b) => b[2] + b[5])) * scale;

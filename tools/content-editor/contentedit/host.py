@@ -87,13 +87,15 @@ def mannequin(kind="humanoid"):
                            ((0, 16, 4, 12, 4), LEGS), ((16, 48, 4, 12, 4), LEGS), ((32, 48, 4, 12, 4), SKIN)])
 
 
-# Mobs the preview offers: id -> (label, model kind, vanilla texture or None for the mannequin).
+# Mobs the preview offers: id -> (label, model kind, vanilla texture or None for the mannequin). Kinds match the box
+# layouts in static/preview.js: "humanoid" (HumanoidModel, left limbs mirror the right), "player" (separate left
+# limbs) and "quadruped".
 MOBS = {
     "mannequin": ("Mannequin (built in)", "humanoid", None),
     "mannequin_quadruped": ("Quadruped mannequin (built in)", "quadruped", None),
     "zombie": ("Zombie", "humanoid", "entity/zombie/zombie"),
     "husk": ("Husk", "humanoid", "entity/zombie/husk"),
     "drowned": ("Drowned", "humanoid", "entity/zombie/drowned"),
-    "steve": ("Player (Steve)", "humanoid", "entity/player/wide/steve"),
+    "steve": ("Player (Steve)", "player", "entity/player/wide/steve"),
     "pig": ("Pig", "quadruped", "entity/pig/pig"),
 }
