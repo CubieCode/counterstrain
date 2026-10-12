@@ -26,6 +26,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | The fester biome a particular source biome turns into | **fester variant** | data map `remission:fester_variant`; "plains festers into `remission:fester`, a pack's lavender field into its own fester variant" |
 | Growth that creeps over the faces of blocks in festering land, player builds included | **festering veins** | block `remission:festering_vein`; block tag `#remission:vein_resistant`; config `[festering] veins`, `veinMinStage`; "veins are creeping up the wall" |
 | How much punishment a nidus takes before it is destroyed; it fights back as it falls | **nidus vitality** | config `[nidi]` (planned, P4.10); `NidusDamagedEvent`; "the nidus is at half vitality" |
+| Large powered purifier that drains a wide area while fed energy and fuel | **reclaimer** | block `remission:reclaimer` (planned, P7.4); "run a reclaimer over the valley" |
 | Wreck site loot that opens only once its chunk is in remission | **sealed caches** | pack feature (P11.4); "reclaim the valley to open the sealed cache" |
 | Festering a new chunk starts with, from world generation | **initial festering** | config `[spread]` (planned, P4.9); "initial festering is off by default" |
 | A mob turning into a host by touching festered blocks or swimming in water in festering land | **contact infection** | block tag `#remission:infectious`; config `[infection] contact`, `contactTicks`; cause `CorruptionCause.CONTACT`; entity attachment `remission:contact_exposure` |
@@ -38,7 +39,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Radius wards | **quarantine pylons** | block `remission:quarantine_pylon`; its **ward** (the chunks it protects; config `pylonRadius`); "the base is inside the pylon's ward" |
 | Cleansing plants | **mendroot** | block and item `remission:mendroot`; "plant mendroot along the frontier" |
 | Reclaimed land | **remission zones** | "chunks in remission"; chunk attachment `remission:chunk_remission`; query `CorruptionQueries.isInRemission`; event `ChunkEnteredRemissionEvent`; trigger `remission:region_cleansed`; stat `remission:chunks_cleansed`; config `[remission_zones]` |
-| Resistant mutations | **variants** | "sequence the variant"; `CorruptionState` field `variant` |
+| Resistant mutations | **variants** | "sequence the variant"; `CorruptionState` field `variant`; registry `remission:variant`, trigger `remission:variant_emerged` (planned, P7.5) |
 | Endgame cure | **the Counterstrain** | "unstable Counterstrain prototypes", "the final deployment" |
 | Samples | host tissue, **nidus cores**, festered soil | `remission:host_tissue`, `remission:nidus_core`, `remission:festered_soil` |
 | Machines that process the Strain | **analyzer**, **sequencer**, **synthesizer** | blocks `remission:analyzer`, `remission:sequencer`, `remission:synthesizer`; recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing`; "analyze the sample, sequence the Strain, synthesize the serum" |
@@ -91,12 +92,13 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - **Nidus encounters** (P4.10): a nidus cannot be mined. Players wear down its **nidus vitality** by striking it, and it fights back as it falls, starting surges from itself and lashing nearby players, so destroying one is the climax of a region.
 - **Initial festering** (optional, off by default; P4.9): new chunks start at a configured level, rising with distance from world spawn, outside a safe radius. Land with no nidus in reach holds its level until purified; a live nidus takes purified land back, so nidi must still be destroyed.
 - **Catch-up:** unloaded chunks record a timestamp; on load they fast-forward deterministically, bounded per tick.
+- **Atmosphere** (P4.11): festering land has its own fog, sky, ambience and music, and fog thickens with the stage, so standing in it feels wrong.
 - **Surges:** periodic events that accelerate spread, spawn hosts (in caves under festering land as well as on the surface) and release miasma clouds that drift above festering land, telegraphed to players.
 
 ### Viral load and purification
 
 - **Viral load:** a player attachment that rises in festering chunks, with escalating debuffs; serums and gear reduce it. Drinking water from, or swimming in, water in festering chunks also adds viral load, and so does flying through a miasma cloud. Gain from festering land falls off with height above the ground (config: on/off and the falloff curve), so anything airborne, from elytra to airships, can cross festering zones above the worst of it. Below the ground there is no falloff: caves and tunnels under a festering chunk count in full. There are no climate mods: viral load is the only exposure system.
-- **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot. A quarantine pylon is the base ward: inside its radius the Strain does not spread, fester, grow veins or infect by contact, festered blocks and veins are cleansed and the land drains into remission, and the crash-site start is built around one (built in P5.2; large powered purifiers are not on the roadmap yet).
+- **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot. A quarantine pylon is the base ward: inside its radius the Strain does not spread, fester, grow veins or infect by contact, festered blocks and veins are cleansed and the land drains into remission, and the crash-site start is built around one (built in P5.2). The large powered purifier is the **reclaimer** (P7.4): it drains a wide area while fed energy and fuel, but does not ward, so a live nidus fights it.
 - **Contact:** touching festered blocks or veins (standing on, in or against them) adds viral load as well, so walking a festering cave is worse than flying over it (P5.2).
 - **Remission zones:** purified chunks enter remission and grant bonuses (spawn safety, growth, resource yields; tunable). Built in P5.2. Reclaimed land visibly comes back to life: passive wildlife returns and cleansed surfaces regrow plants (planned, P5.5).
 - **Revenants:** a player who dies to the Strain (killed by a host or revenant, by viral load, or anywhere in a festering chunk) rises as a revenant: a host with their skin, wearing their armour and holding their weapon, that keeps their items and experience and stays near where they fell. Other deaths drop items as usual, and `keepInventory` turns revenants off. Anyone can fight a revenant, but its items can be picked up only by its owner, and by their team where the pack defines one (Counterstrain uses FTB Teams), until a timeout frees them. A craftable **revenant tracker**, worn in a Curios slot or carried anywhere in the inventory, shows your revenants as JourneyMap waypoints, or as a HUD pointer without JourneyMap.
@@ -112,11 +114,12 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - Samples: host tissue, nidus cores, festered soil.
 - Machines: analyzer (samples into miasma and scans), sequencer (a scan and host tissue in miasma into a strain sequence), synthesizer (strain sequences into products), each a recipe type packs and KubeJS can edit, fed by hand or through standard item, fluid and energy capabilities (built in P7.2).
 - Products: personal serums, purifier fuel, unstable Counterstrain prototypes.
+- **Variants** (P7.5): the Strain adapts to the methods used against it near each nidus, becoming resistant to an overused tool or damage type. Scanning and sequencing a variant lets the synthesizer make the serum or fuel that beats it, so research is a loop that returns every region.
 
 ### Endgame: the Counterstrain
 
 - The Counterstrain uses the same chunk spread engine in reverse.
-- The Strain adapts: resistant variants appear in response to the player's methods.
+- The Strain adapts to the Counterstrain too: prototypes meet variants that resist them (P7.5's system) until the final formula.
 - A final deployment defence event, after which the world visibly heals. The Counterstrain is deployed from a **dispersal payload**: a placed block is enough to finish the game. Its API treats the payload as a dispersal source with a position, so a moving holder (a Create contraption or Aeronautics airship, through the optional integration) can carry it instead.
 
 ### Quest hooks

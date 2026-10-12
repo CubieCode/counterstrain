@@ -21,7 +21,7 @@ Names follow the glossary and naming rule in docs/DESIGN.md: content IDs, trigge
 | --- | --- | --- |
 | `level` | int 0–100 | How far the Strain has taken the entity. 0 removes the attachment. |
 | `stage` | int ≥ 0 | Host stage: how many `hosts.stageThresholds` entries `level` met when it was set. 0 = not a host; `isHost` is `stage >= 1`. Readers use the stored stage, never recompute it. |
-| `variant` | reserved | Resistant mutation (P9.1). Not written yet; unknown keys are ignored on load, so adding it is backward compatible. |
+| `variant` | reserved | Resistant mutation (P7.5). Not written yet; unknown keys are ignored on load, so adding it is backward compatible. |
 
 Config `config/remission-common.toml`, `[hosts] stageThresholds = [1, 34, 67]`: 1–8 ints in 1–100, order-independent. Changes apply the next time a level is set.
 
