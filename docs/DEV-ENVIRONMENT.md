@@ -93,7 +93,7 @@ On the PC (Manjaro):
    chmod +x ~/bin/pack-sync.sh
    ```
 
-3. In Prism: Add Instance → Minecraft 1.21.1, then Edit → Version → Install Loader → NeoForge 21.1.259 (match `pack/pack.toml`). Under Edit → Settings → Custom commands, set the pre-launch command to the script's absolute path, such as `/home/you/bin/pack-sync.sh` (or the path inside your clone). Prism may not expand `~`.
+3. In Prism: Add Instance → Minecraft 1.21.1, then Edit → Version → Install Loader → NeoForge 21.1.259 (match `pack/pack.toml`). Under Edit → Settings → Custom commands, set the pre-launch command to the script's absolute path, such as `/home/you/bin/pack-sync.sh` (or the path inside your clone). Prism may not expand `~`. The script runs the installer with the instance's Java (`INST_JAVA`, or one of Prism's managed runtimes when that names a directory), then `java` on PATH, then SDKMAN's current Java (`~/.sdkman/candidates/java/current`), which a launcher started from the desktop does not have on its PATH.
 4. With `tools/pack.sh serve` running on foundry, check the PC reaches it: `curl -I http://foundry:8080/pack.toml`. If not, use the tunnel below.
 
 Each launch then runs `tools/pack-sync.sh`, which:

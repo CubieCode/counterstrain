@@ -56,8 +56,24 @@ done
 [[ -n "$instance" ]] || die "no instance directory (pass one, or run from Prism, which sets INST_MC_DIR)"
 [[ -d "$instance" ]] || die "instance directory not found: $instance"
 instance="$(cd "$instance" && pwd)"
-java="${INST_JAVA:-java}"
-command -v "$java" >/dev/null 2>&1 || die "'$java' not found; install Java 21 or run from Prism"
+# Prism's INST_JAVA can name a directory instead of the binary (seen: the Prism
+# data dir, when the instance uses Prism's managed Java). The bootstrap runs on
+# any Java 8+, so any of Prism's managed runtimes will do. A launcher started
+# from the desktop has no SDKMAN on its PATH, so its current Java is tried too.
+find_java() {
+  local c="$1" d
+  [[ -n "$c" ]] || return 1
+  if [[ -d "$c" ]]; then
+    for d in "$c/bin/java" "$c"/java/*/bin/java; do
+      [[ -f "$d" && -x "$d" ]] && { printf '%s\n' "$d"; return 0; }
+    done
+    return 1
+  fi
+  command -v "$c" 2>/dev/null
+}
+java="$(find_java "${INST_JAVA:-}" || find_java java ||
+  find_java "${SDKMAN_DIR:-$HOME/.sdkman}/candidates/java/current/bin/java")" ||
+  die "no Java found (INST_JAVA='${INST_JAVA:-}'); install Java 21, or set the instance's Java path in Prism"
 
 # 1. Pack files through packwiz-installer.
 cache="${XDG_CACHE_HOME:-$HOME/.cache}/counterstrain"
