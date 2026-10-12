@@ -105,7 +105,7 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 
 ### P1.5: Local content editor
 
-- Status: `review`
+- Status: `done`
 - Owner: `feat/p1.5-local-content-editor`
 - PR: https://github.com/CubieCode/counterstrain/pull/60
 - Depends on: P1.4
