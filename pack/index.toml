@@ -14,7 +14,7 @@ hash = "1b3c66cbd0e0a3cd9eea26ea61d963f43bd2f46176521f6fea88fd6e2798fbad"
 
 [[files]]
 file = "kubejs/server_scripts/counterstrain.js"
-hash = "283b64afca3aa295633e88d0d8aa3f2894dc7f6b7705b169d57f8bec36f66265"
+hash = "8f31808959cf63a474e190c9f46868a0ad39e5696773b293f7786ddbcab646e1"
 
 [[files]]
 file = "kubejs/startup_scripts/counterstrain.js"

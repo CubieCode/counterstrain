@@ -32,3 +32,12 @@ description='''${mod_description}'''
     versionRange="[10.7,)"
     ordering="NONE"
     side="BOTH"
+
+# The recipe viewer plugin (integration/jei/, P7.2) is built against the JEI 19.51 API; EMI shows it through its JEI
+# compatibility.
+[[dependencies.${mod_id}]]
+    modId="jei"
+    type="optional"
+    versionRange="[19.51,)"
+    ordering="NONE"
+    side="CLIENT"

@@ -3,6 +3,7 @@ package com.cubiecode.remission.data;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.registry.RemissionBlocks;
 import net.minecraft.core.Direction;
+import com.cubiecode.remission.tech.MachineKind;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.level.block.MultifaceBlock;
 import net.neoforged.neoforge.client.model.generators.BlockStateProvider;
@@ -49,5 +50,12 @@ public final class RemissionBlockStateProvider extends BlockStateProvider {
         veins.part().modelFile(vein).rotationY(270).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.WEST), true);
         veins.part().modelFile(vein).rotationX(270).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.UP), true);
         veins.part().modelFile(vein).rotationX(90).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.DOWN), true);
+        // Machines (P7.2): a shared casing with each machine's own front, facing the player who placed it.
+        for (MachineKind kind : MachineKind.values()) {
+            ModelFile model = models().orientable(kind.blockName(), modLoc("block/machine_side"),
+                    modLoc("block/" + kind.blockName() + "_front"), modLoc("block/machine_top"));
+            horizontalBlock(kind.block(), model);
+            simpleBlockItem(kind.block(), model);
+        }
     }
 }

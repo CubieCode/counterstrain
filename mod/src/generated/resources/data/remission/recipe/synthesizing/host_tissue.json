@@ -1,0 +1,25 @@
+{
+  "type": "remission:synthesizing",
+  "energy": 4000,
+  "fluid_ingredient": {
+    "amount": 500,
+    "fluid": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "count": 1,
+      "item": "remission:strain_sequence"
+    },
+    {
+      "count": 1,
+      "item": "remission:host_tissue"
+    }
+  ],
+  "results": [
+    {
+      "count": 2,
+      "id": "remission:host_tissue"
+    }
+  ],
+  "time": 200
+}

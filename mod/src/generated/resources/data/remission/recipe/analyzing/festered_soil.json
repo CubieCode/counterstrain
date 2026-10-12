@@ -1,0 +1,26 @@
+{
+  "type": "remission:analyzing",
+  "energy": 2000,
+  "fluid_result": {
+    "amount": 50,
+    "id": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "count": 1,
+      "item": "remission:festered_soil"
+    }
+  ],
+  "results": [
+    {
+      "components": {
+        "remission:scan_data": {
+          "block": "remission:festering_grass"
+        }
+      },
+      "count": 1,
+      "id": "remission:block_scan"
+    }
+  ],
+  "time": 100
+}

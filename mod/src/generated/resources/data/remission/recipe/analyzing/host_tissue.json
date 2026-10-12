@@ -1,0 +1,15 @@
+{
+  "type": "remission:analyzing",
+  "energy": 2000,
+  "fluid_result": {
+    "amount": 100,
+    "id": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "count": 1,
+      "item": "remission:host_tissue"
+    }
+  ],
+  "time": 100
+}

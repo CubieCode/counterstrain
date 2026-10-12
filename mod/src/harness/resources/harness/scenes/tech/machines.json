@@ -1,0 +1,79 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamemode creative @a",
+    "fill -5 -61 -3 5 -61 6 minecraft:smooth_stone",
+    "setblock -2 -60 0 remission:analyzer[facing=south]",
+    "setblock 0 -60 0 remission:sequencer[facing=south]",
+    "setblock 2 -60 0 remission:synthesizer[facing=south]",
+    "data merge block -2 -60 0 {items:{Size:3,Items:[{Slot:0,id:\"remission:nidus_core\",count:2},{Slot:1,id:\"remission:block_scan\",count:1,components:{\"remission:scan_data\":{block:\"remission:nidus\"}}}]},output_tank:{Fluid:{id:\"remission:miasma\",amount:2600}},energy:15000,progress:90,recipe:\"remission:analyzing/nidus_core\"}",
+    "data merge block 0 -60 0 {items:{Size:4,Items:[{Slot:0,id:\"remission:block_scan\",count:3,components:{\"remission:scan_data\":{block:\"remission:nidus\"}}},{Slot:1,id:\"remission:host_tissue\",count:5},{Slot:2,id:\"remission:strain_sequence\",count:1}]},input_tank:{Fluid:{id:\"remission:miasma\",amount:1750}},energy:9000,progress:120,recipe:\"remission:sequencing/strain_sequence\"}",
+    "data merge block 2 -60 0 {items:{Size:5,Items:[{Slot:0,id:\"remission:strain_sequence\",count:2},{Slot:1,id:\"remission:host_tissue\",count:4},{Slot:3,id:\"remission:host_tissue\",count:6}]},input_tank:{Fluid:{id:\"remission:miasma\",amount:3000}},energy:4000,progress:60,recipe:\"remission:synthesizing/host_tissue\"}"
+  ],
+  "shots": [
+    {
+      "name": "blocks",
+      "camera": {
+        "pos": [
+          0.5,
+          -60.0,
+          4.5
+        ],
+        "yaw": 180.0,
+        "pitch": 15.0
+      },
+      "commands": [
+        "tick step 1"
+      ]
+    },
+    {
+      "name": "analyzer_gui",
+      "camera": {
+        "pos": [
+          0.5,
+          -60.0,
+          4.5
+        ],
+        "yaw": 180.0,
+        "pitch": 15.0
+      },
+      "screen": true,
+      "commands": [
+        "harness player use -2 -60 0"
+      ]
+    },
+    {
+      "name": "sequencer_gui",
+      "camera": {
+        "pos": [
+          0.5,
+          -60.0,
+          4.5
+        ],
+        "yaw": 180.0,
+        "pitch": 15.0
+      },
+      "screen": true,
+      "commands": [
+        "harness player use 0 -60 0"
+      ]
+    },
+    {
+      "name": "synthesizer_gui",
+      "camera": {
+        "pos": [
+          0.5,
+          -60.0,
+          4.5
+        ],
+        "yaw": 180.0,
+        "pitch": 15.0
+      },
+      "screen": true,
+      "commands": [
+        "harness player use 2 -60 0"
+      ]
+    }
+  ]
+}

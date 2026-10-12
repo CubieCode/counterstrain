@@ -1,15 +1,21 @@
 package com.cubiecode.remission.research;
 
+import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.registry.RemissionDataComponents;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 
 /** A host scan or block scan: a data item whose {@code remission:scan_data} component says what was scanned. */
 public class ScanItem extends Item {
+    /** Item tag {@code #remission:scans}: both scan items, so a machine recipe can take either (P7.2). */
+    public static final TagKey<Item> SCANS = ItemTags.create(Remission.id("scans"));
+
     public ScanItem(Properties properties) {
         super(properties);
     }

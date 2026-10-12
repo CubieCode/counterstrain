@@ -45,6 +45,10 @@ public final class RemissionBlockLootProvider extends BlockLootSubProvider {
         dropSelf(RemissionBlocks.FESTERED_DEEPSLATE.get());
         // Festering veins (P4.8): one vein per face, with silk touch only, as sculk veins.
         add(RemissionBlocks.FESTERING_VEIN.get(), block -> createMultifaceBlockDrops(block, hasSilkTouch()));
+        // Machines (P7.2) drop themselves; their contents drop when they are removed (MachineBlock).
+        dropSelf(RemissionBlocks.ANALYZER.get());
+        dropSelf(RemissionBlocks.SEQUENCER.get());
+        dropSelf(RemissionBlocks.SYNTHESIZER.get());
     }
 
     // Every Remission block must have a loot table; datagen fails if one is missing.

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "remission:block/sequencer_front",
+    "side": "remission:block/machine_side",
+    "top": "remission:block/machine_top"
+  }
+}

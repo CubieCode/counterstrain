@@ -3,6 +3,8 @@ package com.cubiecode.remission.registry;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.world.FesteringVeinBlock;
 import com.cubiecode.remission.world.FesteringVeins;
+import com.cubiecode.remission.tech.MachineBlock;
+import com.cubiecode.remission.tech.MachineKind;
 import com.cubiecode.remission.world.NidusBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.Block;
@@ -75,6 +77,19 @@ public final class RemissionBlocks {
                     .strength(0.2F)
                     .sound(SoundType.GLOW_LICHEN)
                     .pushReaction(PushReaction.DESTROY));
+    // Machines (P7.2)
+    public static final DeferredBlock<MachineBlock> ANALYZER = machine(MachineKind.ANALYZER);
+    public static final DeferredBlock<MachineBlock> SEQUENCER = machine(MachineKind.SEQUENCER);
+    public static final DeferredBlock<MachineBlock> SYNTHESIZER = machine(MachineKind.SYNTHESIZER);
+
+    private static DeferredBlock<MachineBlock> machine(MachineKind kind) {
+        return BLOCKS.registerBlock(kind.blockName(), properties -> new MachineBlock(kind, properties),
+                BlockBehaviour.Properties.of()
+                        .mapColor(MapColor.METAL)
+                        .strength(3.5F, 6.0F)
+                        .requiresCorrectToolForDrops()
+                        .sound(SoundType.METAL));
+    }
 
     private RemissionBlocks() {
     }
