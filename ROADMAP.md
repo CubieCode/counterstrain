@@ -39,6 +39,12 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - J: P10.2 + P10.3 + P10.4 + P10.5, after P10.1. Each owns its `integration/<modid>/` packages and its pack scripts (`pack/kubejs/**/integrations/<modid>.js`); one remission-data-formats owner per wave (P10.2); none touches build files or `pack/mods/`.
 - K: P10.6 + P10.7 + P10.8. P10.6 extends `integration/create/` after P10.2 has merged; P10.8 owns `integration/ballistix/`.
 - L: P11.1 → P11.4 → P11.5 → P11.2 → P11.3 serially (one pack-content owner). P11.4 and P11.5 were added after the phase was planned, so their numbers do not follow the run order.
+- P4.12 (team query) runs before P5.3 and P6.4, alone or in any wave without another build-file owner; it owns `integration/ftbteams/` and the team query in `api/`.
+- P4.13 → P4.14 serially after P4.10 (both append to the nidus and surge code and the `[nidi]` config).
+- P5.6 (follow-up to P5.1) can join any wave or run alone; it owns the viral load system and its HUD while it runs.
+- P6.4 (after P6.2 and P4.12) can join any wave or run alone; it owns `research/Bestiary`.
+- P7.6, P7.7 and P7.8 follow wave G: P7.6 after P7.3 and P5.3; P7.7 and P7.8 can run together after P7.2, with one remission-data-formats owner and one registry owner.
+- P11.6 runs last in wave L, after P11.3.
 - M: P12.1 + P12.2, then P12.3.
 
 ## Phase 0: Scaffold
@@ -337,8 +343,8 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Owner:
 - PR:
 - Depends on: P4.3, P4.4, P8.1
-- Scope: Destroying a nidus becomes a fight instead of mining one block. A nidus has **nidus vitality** (config, scaled by how long it has grown) and cannot be mined: players wear it down by striking it (damage from the held item's attack damage and attack strength), and projectiles and explosions count at configurable fractions, so TNT alone is not the answer. As vitality falls past thresholds (default 75, 50 and 25%) the nidus fights back: it starts a surge from itself at once with no warning (P4.3), at rising intensity, and lashes nearby players with viral load and knockback. Vitality regenerates when no player has struck it for a while, so a failed attempt has to start over. Nearby players see a boss bar with its vitality, and the block shows its damage (block state or crack overlay). The player who lands the final blow destroys it: the nidus core drops, `NidusDestroyedEvent` gains that player, and `remission:nidus_destroyed` fires for that player only. A new cancellable `NidusDamagedEvent` (with a mutable amount) lets packs and scripts make prepared items or serums deal more (P7.3, P8.3) or protect a story nidus. Creative players and `/setblock` still remove a nidus at once. Config in a new `[nidi]` section (vitality, growth scaling, regeneration, thresholds, the projectile and explosion fractions; vitality 0 restores plain mining). Documents the event, the trigger change and the config in remission-data-formats and docs/ARCHITECTURE.md.
-- Acceptance: Gametests: mining never breaks a nidus; strikes, projectiles and explosions deal their configured damage; each threshold starts one surge from that nidus and lashes players; vitality regenerates after the delay and is saved with the block entity; the final blow drops the core and fires the event and trigger for that player; `NidusDamagedEvent` cancels and scales damage; vitality 0 restores mining. A dev-world fight against a full-grown nidus with iron gear is winnable but costly, noted in the PR. Harness scene `world/nidus_fight` (a damaged nidus at each threshold, the boss bar and a surge under way), reviewed. Ledger updated; placeholders marked.
+- Scope: Destroying a nidus becomes a fight instead of mining one block. A nidus has **nidus vitality** (config, scaled by how long it has grown) and cannot be mined: players wear it down by striking it (damage from the held item's attack damage and attack strength), and projectiles and explosions count at configurable fractions, so TNT alone is not the answer. As vitality falls past thresholds (default 75, 50 and 25%) the nidus fights back: it starts a surge from itself at once with no warning (P4.3), at rising intensity, and lashes nearby players with viral load and knockback. Vitality regenerates when no player has struck it for a while, so a failed attempt has to start over. Nearby players see a boss bar with its vitality, and the block shows its damage (block state or crack overlay). The player who lands the final blow destroys it: the nidus core drops, and `NidusDestroyedEvent` gains that player and its contributors (every player who damaged it within a configurable window, projectiles and explosions included); `remission:nidus_destroyed` fires for every contributor, so a group fight credits the whole group. Vitality, and the intensity of the surges it starts, scale with the number of players within range when the fight starts and as players join (config: per-player factor and cap), so a group neither melts a nidus nor leaves a solo player facing a fight tuned for four (DESIGN "Teams and multiplayer"). A new cancellable `NidusDamagedEvent` (with a mutable amount) lets packs and scripts make prepared items or serums deal more (P7.3, P8.3) or protect a story nidus. Creative players and `/setblock` still remove a nidus at once. Config in a new `[nidi]` section (vitality, growth scaling, player scaling, the contributor window, regeneration, thresholds, the projectile and explosion fractions; vitality 0 restores plain mining). Documents the event, the trigger change and the config in remission-data-formats and docs/ARCHITECTURE.md.
+- Acceptance: Gametests: mining never breaks a nidus; strikes, projectiles and explosions deal their configured damage; each threshold starts one surge from that nidus and lashes players; vitality regenerates after the delay and is saved with the block entity; the final blow drops the core and fires the event with that player and every contributor, and the trigger for each contributor, but not for a player who struck it outside the window; vitality and surge intensity scale with the number of players by the configured factor up to the cap; `NidusDamagedEvent` cancels and scales damage; vitality 0 restores mining. A dev-world fight against a full-grown nidus with iron gear is winnable but costly, noted in the PR. Harness scene `world/nidus_fight` (a damaged nidus at each threshold, the boss bar and a surge under way), reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
 - Parallel: Owns `NidusBlock` and its block entity, the `[nidi]` config, `NidusDamagedEvent` and the `nidus_destroyed` trigger contract; appends to `api/` and the surge controller's start path.
 
@@ -353,7 +359,40 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Skills: neoforge-mod-dev, minecraft-resource-pack, minecraft-world-generation, visual-checks, content-provenance
 - Parallel: Owns the fester biome's effects in `RemissionBiomeProvider`, `sounds.json` entries for festering land and fog in `client/`; appends to the client config.
 
-Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5 to P4.11, follow-ups added after P4.4, are not part of these exit criteria.
+### P4.12: Team query
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.4
+- Scope: One generic answer to "are these two players teammates?", so every rule that involves teammates asks the same question (DESIGN "Teams and multiplayer"). A query in `com.cubiecode.remission.api`, backed by a team lookup event that packs and integrations answer; with nothing answering, each player is their own team. A guarded `integration/ftbteams/` (`compileOnly`, `ModList`) answers it from FTB Teams, whose team lookup is Java; packs without FTB Teams can answer it from KubeJS once P8.3's bindings exist. Answers are cached briefly so systems can ask freely. Documented in remission-data-formats and docs/ARCHITECTURE.md.
+- Acceptance: Gametests: with nothing answering, a player is a teammate only of themselves; a test listener makes two players teammates; with FTB Teams in the dev runtime, members of one FTB team are teammates and members of different teams are not; the cache follows a team change. `./gradlew build runGameTestServer` passes with and without FTB Teams.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing
+- Parallel: Owns the team query in `api/` and `integration/ftbteams/` with its build-file entries (one build-file owner per wave).
+
+### P4.13: Nidus defence: rallying hosts and sympathetic surges
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.10
+- Scope: A nidus fight builds up and pushes back on other fronts. **Rallying:** while a nidus is under attack (damaged within P4.10's contributor window), hosts in its festering chunks within a configured radius path toward it in budgeted batches, so the fight grows as they arrive rather than all at once; hosts that cannot path there are left alone. **Sympathetic surges:** when a nidus passes a vitality threshold, other live nidi within a configured radius may start a surge (P4.3) after the usual warning, at reduced intensity, chosen deterministically; the surge started event carries a sympathetic cause and the nidus under attack. Config in `[nidi]` (rally radius and batch size; sympathetic radius, chance and intensity; an on/off switch for each). Documented in remission-data-formats. Glossary entries: rallying, sympathetic surge (DESIGN).
+- Acceptance: Gametests: hosts within the radius move toward a struck nidus and those outside do not; batches respect the budget; crossing a threshold starts a sympathetic surge at a nidus in range and none out of range; the event cause is set; both switches work. Server tick cost with a few hundred hosts rallying measured on foundry and recorded in the PR. Harness scene `world/nidus_rally` (hosts converging on a struck nidus), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Appends to the nidus fight code, the `[nidi]` config and the surge controller's start path; never in the same wave as P4.14.
+
+### P4.14: Budding nidi
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.3, P4.10
+- Scope: Ignoring a region has a long-term cost. A nidus that has grown for a configured time without being struck may, during one of its surges, **bud**: it seeds a daughter nidus at the edge of its festering land, in a festering chunk at or above a configured stage, at least a minimum distance from any nidus, on solid ground, and never inside a pylon's ward, in a chunk in remission or within a configured distance of world spawn. Each nidus buds at most a configured number of times and a daughter cannot bud until it has grown itself, so the total stays bounded and a world with a border stays finishable. Nearby players get a warning like a surge's. Emits a cancellable `NidusBuddedEvent` so packs can stop budding in story regions; adds trigger `remission:nidus_budded`, following P8.1's conventions. Config in `[nidi]` (on/off, growth time, cap, distances, minimum stage). Documented in remission-data-formats and docs/ARCHITECTURE.md. Glossary entry: budding (DESIGN).
+- Acceptance: Gametests: an unstruck nidus past the growth time buds during a surge and a recently struck one does not; each placement rule (stage, spacing, ward, remission, spawn distance, solid ground) holds; the cap and the daughter rule bound the count; the event cancels budding; the switch works; placement is deterministic for a seed. Harness scene `world/nidus_budding` (a parent nidus and its daughter), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Appends to the nidus block entity, the `[nidi]` config and the surge controller; never in the same wave as P4.13.
+
+Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5 to P4.14, follow-ups added after P4.4, are not part of these exit criteria.
 
 ## Phase 5: Viral load and early purification
 
@@ -386,10 +425,10 @@ Goals: the player can survive the Strain and push it back locally.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P2.2, P3.1, P4.4, P5.1, P8.1
-- Scope: Entity `remission:revenant`: when a player dies to the Strain (killer is a host or revenant, death by viral load, or death anywhere in a festering chunk at stage 1 or above, underground included), their items (main inventory, armour, offhand, and Curios slots through a guarded `integration/curios/`) and experience go into a revenant at the death position instead of dropping; other deaths and `keepInventory` behave as vanilla. The revenant is a hostile host rendered with the player's skin and the host overlay (P2.2), wearing their armour and holding their main-hand item, which it fights with; it never despawns, stays within a short radius of where the player fell, survives unloads, and takes damage only from players and their projectiles (fire, lava, falling, drowning and other mobs cannot destroy it; in the void it returns to its death position). Killing it drops its items and experience at its position; item pickup is restricted to the owner, widened by a public API event (packs add teammates), and freed for anyone after a timeout (config). A saved per-level index keeps each revenant's owner, dimension and last position, so P5.4 can track unloaded revenants. A player can have several revenants, one per death. Pack side: a KubeJS handler on that event (NeoForge event listening) lets FTB Teams members collect too; if FTB Teams' team lookup is not reachable from KubeJS, a guarded `integration/ftbteams/` does it instead. Emits revenant risen and revenant slain events; adds the revenant reclaimed trigger and a revenants reclaimed stat, following P8.1's conventions. Glossary entry: revenant (DESIGN).
-- Acceptance: Gametests: each Strain death creates a revenant holding exactly the dropped items (Curios included when Curios is present) and the experience; non-Strain deaths and `keepInventory` drop as vanilla; the revenant ignores non-player damage and returns from the void; it persists across unload and reload and stays leashed; owner-only pickup, the API event widening it, and the timeout; the index is updated on rise, move and death. Harness scene `survival/revenant` (a revenant with a player skin, armour and weapon, at two host stages), reviewed. Ledger updated; placeholders marked.
-- Skills: neoforge-mod-dev, remission-data-formats, kubejs-scripting, minecraft-testing, visual-checks, content-provenance
+- Depends on: P2.2, P3.1, P4.4, P4.12, P5.1, P8.1
+- Scope: Entity `remission:revenant`: when a player dies to the Strain (killer is a host or revenant, death by viral load, or death anywhere in a festering chunk at stage 1 or above, underground included), their items (main inventory, armour, offhand, and Curios slots through a guarded `integration/curios/`) and experience go into a revenant at the death position instead of dropping; other deaths and `keepInventory` behave as vanilla. The revenant is a hostile host rendered with the player's skin and the host overlay (P2.2), wearing their armour and holding their main-hand item, which it fights with; it never despawns, stays within a short radius of where the player fell, survives unloads, and takes damage only from players and their projectiles (fire, lava, falling, drowning and other mobs cannot destroy it; in the void it returns to its death position). Killing it drops its items and experience at its position; item pickup is restricted to the owner and their teammates (the team query, P4.12), and freed for anyone after a timeout (config). A saved per-level index keeps each revenant's owner, dimension and last position, so P5.4 can track unloaded revenants. A player can have several revenants, one per death. Emits revenant risen and revenant slain events; adds the revenant reclaimed trigger and a revenants reclaimed stat, following P8.1's conventions. Glossary entry: revenant (DESIGN).
+- Acceptance: Gametests: each Strain death creates a revenant holding exactly the dropped items (Curios included when Curios is present) and the experience; non-Strain deaths and `keepInventory` drop as vanilla; the revenant ignores non-player damage and returns from the void; it persists across unload and reload and stays leashed; owner-only pickup, teammates through the team query, and the timeout; the index is updated on rise, move and death. Harness scene `survival/revenant` (a revenant with a player skin, armour and weapon, at two host stages), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
 - Parallel: Owns the revenant entity, its renderer and index, `integration/curios/` and its build-file entries (one build-file owner per wave).
 
 ### P5.4: Revenant tracker
@@ -398,7 +437,7 @@ Goals: the player can survive the Strain and push it back locally.
 - Owner:
 - PR:
 - Depends on: P5.3
-- Scope: Craftable item `remission:revenant_tracker` (default recipe in the mod, pack may replace it), active when worn in a Curios charm slot (guarded `integration/curios/`) or carried anywhere in the inventory. While active, the server sends the holder the dimension and position of their own revenants (and those of anyone the P5.3 pickup event allows them to reclaim) from the revenant index, so unloaded revenants show too, on an interval. With JourneyMap present, each revenant is a JourneyMap waypoint or marker on the full-screen map and minimap (guarded `integration/journeymap/`, `compileOnly`), removed when the revenant is slain or the tracker is no longer carried; without JourneyMap, a HUD pointer shows direction and distance to the nearest revenant. Client code under `client/`.
+- Scope: Craftable item `remission:revenant_tracker` (default recipe in the mod, pack may replace it), active when worn in a Curios charm slot (guarded `integration/curios/`) or carried anywhere in the inventory. While active, the server sends the holder the dimension and position of their own revenants (and their teammates', through the team query) from the revenant index, so unloaded revenants show too, on an interval. With JourneyMap present, each revenant is a JourneyMap waypoint or marker on the full-screen map and minimap (guarded `integration/journeymap/`, `compileOnly`), removed when the revenant is slain or the tracker is no longer carried; without JourneyMap, a HUD pointer shows direction and distance to the nearest revenant. Client code under `client/`.
 - Acceptance: Gametests for activation (Curios slot, inventory, neither) and for the positions sent (own, allowed, unloaded, removed on death); harness scenes `survival/revenant_tracker` (HUD pointer) and, with JourneyMap in the dev runtime, `survival/revenant_map`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 - Parallel: Adds a network payload (one registry and network spine owner per wave) and the JourneyMap build-file entry; P8.2 also uses `integration/journeymap/`, so whichever runs second appends to that package rather than replacing it.
@@ -414,7 +453,18 @@ Goals: the player can survive the Strain and push it back locally.
 - Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
 - Parallel: Owns `RemissionZones` and the `[remission_zones]` config; appends to remission-data-formats.
 
-Exit criteria: a player can enter, survive and cleanse festering land in a dev world, leaving chunks in remission; scenes reviewed. P5.3, P5.4 and P5.5, added later, are not part of these exit criteria.
+### P5.6: Shedding
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P5.1
+- Scope: Above a configured viral load, a player **sheds** the Strain: particles and a cough sound other players can see and hear, a HUD indicator for the shedder, and viral load for players within a small radius at a rate that rises with the shedder's load. Shedding never raises the shedder's own load and does nothing with no other player in range, so a solo game is unchanged. The viral load changed event reports shedding as its cause (adding a cause field if it has none). Config in `[viral_load]` (`shedding` on/off, threshold, radius, rate). Documented in remission-data-formats. Glossary entry: shedding (DESIGN).
+- Acceptance: Gametests: below the threshold nothing is passed on; above it, a player in range gains load at the configured rate and a player out of range does not; the shedder's own load is unaffected; the switch works; the event cause is set. Harness scene `survival/shedding` (a shedding player seen by another, and the HUD indicator), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Appends to the viral load system, its HUD and the `[viral_load]` config.
+
+Exit criteria: a player can enter, survive and cleanse festering land in a dev world, leaving chunks in remission; scenes reviewed. P5.3 to P5.6, added later, are not part of these exit criteria.
 
 ## Phase 6: Research
 
@@ -453,7 +503,18 @@ Goals: knowledge is gathered from the world and recorded.
 - Acceptance: Gametests show tagged types absent from the list and total, a pack tag hiding another type and `replace` re-showing a default, and the robit still listed in the dev runtime; `research/bestiary` reference updated for the new total and reviewed from a GPU run.
 - Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks
 
-Exit criteria: scanning works for vanilla and modded hosts; bestiary screenshots reviewed. P6.3, a follow-up added after P6.2, is not part of these exit criteria.
+### P6.4: Team-shared research
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P6.2, P4.12
+- Scope: Research belongs to the team (DESIGN "Teams and multiplayer"). The bestiary lists and counts the union of the team's progress through the team query (each host type at the highest stage any member scanned), synced to each member and updated when a member scans or a player joins or leaves a team. Each player's own record is kept, so a player leaving a team keeps what they scanned. `remission:host_scanned` still fires for the scanning player; a team-level bestiary query lets quests and scripts read the team total. Documented in remission-data-formats.
+- Acceptance: Gametests: a scan by one teammate appears in the other's bestiary and total; players on different teams share nothing; a player leaving a team keeps only their own scans; with nothing answering the team query, behaviour is unchanged from P6.2. The `research/bestiary` reference is unchanged for a solo player.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing
+- Parallel: Owns `research/Bestiary` and its sync while it runs.
+
+Exit criteria: scanning works for vanilla and modded hosts; bestiary screenshots reviewed. P6.3 and P6.4, follow-ups added after P6.2, are not part of these exit criteria.
 
 ## Phase 7: Tech chain
 
@@ -507,11 +568,44 @@ Goals: the Strain becomes a resource processed by machines into tools for the fi
 - Owner:
 - PR:
 - Depends on: P7.3, P7.4, P6.1
-- Scope: The Strain adapts to how it is fought, from the mid-game rather than only at the end, so research stays a loop instead of a one-time unlock. Remission records, per nidus, how its land and hosts are being beaten (purification by tool: handheld purifier, pylon, reclaimer, mendroot; host kills by damage type). When one method passes a threshold, that nidus's Strain becomes a **variant** resistant to it: purification by that tool slows in its reach and its hosts (the `CorruptionState` `variant` field, now written) take less damage of that type, with a visible tint. Host and block scans show the variant; sequencing it (P7.2 machines, new default recipes) lets the synthesizer make a matching serum or purifier fuel that restores full effect. Variants are a datapack registry (`remission:variant`: what it resists, by how much, its trigger threshold and tint) with defaults for each tool and damage class. Config `[variants]` (on/off, thresholds); `/remission variant` to set or clear one for quests; cancellable `VariantEmergedEvent`; triggers `remission:variant_emerged` and `remission:variant_sequenced`. Documented in remission-data-formats and docs/ARCHITECTURE.md. P9.1 reuses this for variants that resist Counterstrain prototypes.
+- Scope: The Strain adapts to how it is fought, from the mid-game rather than only at the end, so research stays a loop instead of a one-time unlock. Remission records, per nidus, how its land and hosts are being beaten (purification by tool: handheld purifier, pylon, reclaimer, mendroot; host kills by damage type). Pressure counts every player's methods near a nidus together, per method, so a group that mixes tools and damage types delays variants and a group that all use one tool brings one on sooner. When one method passes a threshold, that nidus's Strain becomes a **variant** resistant to it: purification by that tool slows in its reach and its hosts (the `CorruptionState` `variant` field, now written) take less damage of that type, with a visible tint. Host and block scans show the variant; sequencing it (P7.2 machines, new default recipes) lets the synthesizer make a matching serum or purifier fuel that restores full effect. Variants are a datapack registry (`remission:variant`: what it resists, by how much, its trigger threshold and tint) with defaults for each tool and damage class. Config `[variants]` (on/off, thresholds); `/remission variant` to set or clear one for quests; cancellable `VariantEmergedEvent`; triggers `remission:variant_emerged` and `remission:variant_sequenced`. Documented in remission-data-formats and docs/ARCHITECTURE.md. P9.1 reuses this for variants that resist Counterstrain prototypes.
 - Acceptance: Gametests: overusing a method near a nidus produces the matching variant and only there; purification and damage are reduced by the configured amount; the variant field saves and syncs; a sequenced variant's serum or fuel restores full effect; the event cancels emergence; the command, triggers and the off switch work. Harness scene `research/variants` (hosts and land of two variants beside the base Strain, and their scans), reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
 
-Exit criteria: full chain from sample to serum works in a dev world; machine screenshots reviewed. P7.4 and P7.5, added later, are not part of these exit criteria.
+### P7.6: Succumbing, stabilising and injectors
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P5.1, P5.3, P7.3
+- Scope: A death to the Strain (P5.3's causes) first leaves the player **succumbing** for a configured time: down in a crawling pose, slowed, unable to attack, use items or place blocks, viral load held, with a screen effect and a state other players can see; further damage while succumbing ends it early. Another player **stabilises** them by using an injector loaded with a serum on them, which ends succumbing with configured health and viral load; if time runs out, the death happens as before and a revenant rises. Item `remission:injector`: loaded with a serum (P7.3) and used on another player or on yourself, it applies that serum's effect, so serums can be given to others. Config `[succumbing]` (on/off, duration, whether a player with no other player within a radius succumbs at all, health and viral load after stabilising). Events: player succumbing (cancellable) and player stabilised; trigger `remission:player_stabilised` and stat `remission:players_stabilised`, following P8.1's conventions. Client code under `client/`. Documented in remission-data-formats and docs/ARCHITECTURE.md. Glossary entries: succumbing, stabilise, injector (DESIGN).
+- Acceptance: Gametests: each Strain death cause leads to succumbing and other deaths do not; stabilising with a loaded injector saves the player with the configured values; running out of time creates the revenant with the full inventory; the injector applies a serum to another player and to its user; the switch and the solo rule work; the events, trigger and stat fire. Harness scenes `survival/succumbing` (a succumbing player seen by another, and the succumbing screen) and `survival/injector`, reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Appends to the revenant death path, the serum effects and the registries; adds a network payload (one registry and network spine owner per wave).
+
+### P7.7: Fouled machinery
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.2, P5.2, P7.2
+- Scope: The Strain gets into machines, the generic form of LORE's "infected machinery" twist. Blocks in `#remission:foulable` in festering chunks at or above a configured stage become **fouled** over time, with veins on their faces and a scanner readout. Default tag contents are chosen here and recorded in remission-data-formats (for example Remission's machines and the dev runtime's Mekanism machines), so a pack decides which of its machines foul. A fouled machine works slowly; the mechanism is chosen here against NeoForge 21.1 APIs (for example wrapping its item, fluid and energy capabilities to throttle throughput, or slowing its block entity ticks), must work for other mods' machines without mixins into them where possible, and is recorded in docs/ARCHITECTURE.md. The handheld purifier cleanses a fouled machine, nothing fouls inside a pylon's ward, and a chunk entering remission clears it. Events: machine fouled (cancellable) and machine cleansed. Config `[fouling]` (on/off, minimum stage, time to foul, slowdown). Documented in remission-data-formats. Glossary entry: fouled (DESIGN).
+- Acceptance: Gametests: a foulable machine in a festering chunk fouls after the configured time and runs at the configured slowdown; one in a ward or in remission does not; the purifier clears it; a block outside the tag never fouls; event cancellation and the switch work; a Mekanism machine in the dev runtime fouls and slows. Per-tick cost measured on foundry and recorded in the PR. Harness scene `tech/fouled_machine` (a clean and a fouled machine side by side), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns `[fouling]` and the fouling mechanism; appends to the purifier, pylon and remission zone code paths.
+
+### P7.8: Containment breaches
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.2, P5.2, P7.1
+- Scope: Working with the Strain carries some of its own risk. Item tag `#remission:live_samples` (nidus cores and host tissue by default). Remission checks loaded block entities that hold items through the item handler capability, a budgeted few per tick; a container holding live samples has a chance per check, rising with how many it holds, to **breach**: it and nearby blocks fester as if in a festering chunk at a configured stage and grow veins, inside a pylon's ward too. Block `remission:containment_locker` (default recipe in the mod; the pack may replace it) stores items and never breaches; block tag `#remission:containment` lets packs mark other storage as safe. Event: containment breach (cancellable). Config `[containment]` (on/off, chance, check budget, breach stage). Documented in remission-data-formats. Glossary entries: containment breach, containment (DESIGN).
+- Acceptance: Gametests: a chest of live samples breaches within the expected time at the configured chance; a containment locker and a `#remission:containment` block never do; other items never cause a breach; the budget bounds checks per tick; event cancellation and the switch work. Per-tick cost measured on foundry and recorded in the PR. Harness scene `tech/containment_breach` (a breached chest beside a containment locker), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns the containment locker, the live sample and containment tags and `[containment]`; registry and lang edits append-only.
+
+Exit criteria: full chain from sample to serum works in a dev world; machine screenshots reviewed. P7.4 to P7.8, added later, are not part of these exit criteria.
 
 ## Phase 8: Quest integration
 
@@ -581,9 +675,9 @@ Goals: the Counterstrain heals the world.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P9.1, P4.3
-- Scope: `remission:dispersal_payload` block that deploys the Counterstrain, the defence event around it, then visible healing back to original blocks/biomes. The final deployment works with a ground-based payload alone. The payload's API (a dispersal source with a position, ticked by its holder) must not assume a placed block, so a moving holder such as a Create contraption can carry it (P10.6); document it in remission-data-formats.
-- Acceptance: A ground-based payload completes the final deployment in a gametest and a dev run with no optional mods; harness scenes `cure/before`, `cure/after`, reviewed. Ledger updated; placeholders marked.
+- Depends on: P9.1, P4.3, P4.12
+- Scope: `remission:dispersal_payload` block that deploys the Counterstrain, the defence event around it, then visible healing back to original blocks/biomes. The final deployment works with a ground-based payload alone. The payload's API (a dispersal source with a position, ticked by its holder) must not assume a placed block, so a moving holder such as a Create contraption can carry it (P10.6); document it in remission-data-formats. Decide how the finale works on a server with several teams and record it in DESIGN ("Teams and multiplayer"): either one server-wide event every team can join and defend, or payloads deployed at several sites at once. Either way, one team cannot end the game for the others without warning (for example, the deployment is announced server-wide before it starts).
+- Acceptance: A ground-based payload completes the final deployment in a gametest and a dev run with no optional mods; the multi-team rule is recorded in DESIGN and covered by a gametest with two teams; harness scenes `cure/before`, `cure/after`, reviewed. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
 Exit criteria: a dev world can be fully cured; scenes reviewed.
@@ -598,7 +692,7 @@ Goals: the pack's mods take part in the fight against the Strain, each creating 
 - Owner:
 - PR:
 - Depends on: P4.4, P8.3
-- Scope: Add the verified mods from CurseForge with `packwiz cf add` (PneumaticCraft: Repressurized, Occultism, Serene Seasons, Farmer's Delight, Productive Bees, Iron's Spells 'n Spellbooks, Waystones, Immersive Engineering, Mekanism Generators, Oritech, Theurgy, L_Ender's Cataclysm, Mowzie's Mobs, Ballistix with Voltaic, MFFS, MineColonies with its required mods, Sophisticated Backpacks and Storage, Simple Voice Chat, Create Aeronautics with Sable, the chosen field journal mod, Biomes O' Plenty, Terralith, and DESIGN's supporting mods: Lootr, Artifacts, Chunk Pregenerator, Naturalist, Sound Physics Remastered, YUNG's Better Dungeons with YUNG's API) and their required dependencies; record versions and IDs; note beta-only files. Confirm the CurseForge 1.21.1 NeoForge files for Theurgy, Artifacts and MFFS, and that every required library of an added mod is on CurseForge; a mod that fails either check is recorded in DESIGN and left out. Re-source the existing Modrinth-sourced pack mods from CurseForge (same files) and drop the separate Better Advanced Tooltips entry (Modrinth-only; KubeJS bundles it), so the CurseForge export embeds no jars it may not redistribute. Add `compileOnly` APIs and dev-runtime entries for every mod-side integration in phase 10 to `mod/build.gradle`/`mod/gradle.properties` and optional dependency entries to the `neoforge.mods.toml` template. Update README stack and the pack changelog.
+- Scope: Add the verified mods from CurseForge with `packwiz cf add` (PneumaticCraft: Repressurized, Occultism, Serene Seasons, Farmer's Delight, Productive Bees, Iron's Spells 'n Spellbooks, Waystones, Immersive Engineering, Mekanism Generators, Oritech, Theurgy, L_Ender's Cataclysm, Mowzie's Mobs, Ballistix with Voltaic, MFFS, MineColonies with its required mods, Sophisticated Backpacks and Storage, Simple Voice Chat, Create Aeronautics with Sable, the chosen field journal mod, Biomes O' Plenty, Terralith, and DESIGN's supporting mods: Lootr, Artifacts, Chunk Pregenerator, Naturalist, Sound Physics Remastered, YUNG's Better Dungeons with YUNG's API, FTB Chunks) and their required dependencies; record versions and IDs; note beta-only files. Confirm the CurseForge 1.21.1 NeoForge files for Theurgy, Artifacts, MFFS and FTB Chunks, and that every required library of an added mod is on CurseForge; a mod that fails either check is recorded in DESIGN and left out. Re-source the existing Modrinth-sourced pack mods from CurseForge (same files) and drop the separate Better Advanced Tooltips entry (Modrinth-only; KubeJS bundles it), so the CurseForge export embeds no jars it may not redistribute. Add `compileOnly` APIs and dev-runtime entries for every mod-side integration in phase 10 to `mod/build.gradle`/`mod/gradle.properties` and optional dependency entries to the `neoforge.mods.toml` template. Update README stack and the pack changelog.
 - Acceptance: `tools/pack.sh check` passes; `tools/pack.sh export` adds every mod to the CurseForge manifest and embeds none under `overrides/mods/`; the full pack starts headlessly on foundry (dedicated server and client) with the renderer verified; every new file name says neoforge/1.21.1; `./gradlew build runGameTestServer` passes with and without dev-runtime mods.
 - Skills: packwiz-pack, neoforge-mod-dev, playtesting, headless-client
 - Parallel: Runs alone; owns `pack/pack.toml`, `pack/mods/` and build files for the phase
@@ -725,9 +819,20 @@ Goals: Counterstrain becomes a playable pack.
 - Owner:
 - PR:
 - Depends on: P11.1, P8.1
-- Scope: The relay (a surviving piece of the survey ship in orbit, per P11.1) answers supply requests: the player spends a quest reward choice or a crafted beacon to call a supply drop, a crate that lands near them after a delay, telegraphed like a surge and drawing nearby hosts. Each request costs standing with the relay; completing chapters, sending scans and reclaiming land earn it back. Standing is a per-team KubeJS scoreboard value (FTB Teams), shown in the quest book, and sets the stages that switch P11.1's standing branches (some quest text and the ending). Pack-side only.
-- Acceptance: Requesting a drop spends standing and delivers its crate in a playtest; standing rises from each earning source; each standing branch is reachable in a playtest or by setting the score; crate contents from loot tables pass `tools/pack.sh check`; harness scene `explore/supply_drop`, reviewed. Ledger updated; placeholders marked.
+- Scope: The relay (a surviving piece of the survey ship in orbit, per P11.1) answers supply requests: the player spends a quest reward choice or a crafted beacon to call a supply drop, a crate that lands near them after a delay, telegraphed like a surge and drawing nearby hosts. Each request costs standing with the relay; completing chapters, sending scans and reclaiming land earn it back. Standing is a per-team KubeJS scoreboard value (FTB Teams), shown in the quest book, and sets the stages that switch P11.1's standing branches (some quest text and the ending). On a server with several teams, a team can pass standing to another and call a supply drop to another team's position, so teams can help each other through the relay. Pack-side only.
+- Acceptance: Requesting a drop spends standing and delivers its crate in a playtest; standing rises from each earning source; each standing branch is reachable in a playtest or by setting the score; passing standing and calling a drop for another team work with two teams; crate contents from loot tables pass `tools/pack.sh check`; harness scene `explore/supply_drop`, reviewed. Ledger updated; placeholders marked.
 - Skills: kubejs-scripting, ftb-quests-authoring, minecraft-datapack, playtesting, visual-checks, content-provenance
+
+### P11.6: Multiplayer server rules and co-op playtest
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P10.1, P11.2, P11.5, P4.12, P5.6, P6.4, P7.6, P9.2
+- Scope: Counterstrain on a server (DESIGN "Servers" and "Teams and multiplayer"). FTB Chunks (joined in P10.1) claims protect a team's blocks, pylons and containment from other players, but never ward against the Strain: festering, veins, fouling, budding and surges ignore claims. Strain commands such as seeding a nidus stay operator-only. Server defaults in `pack/config/remission-common.toml` for shedding, succumbing (with the solo rule), nidus player scaling and the contributor window. A short server guide (pregeneration, team setup, these settings) in the pack's docs. Pack-side only.
+- Acceptance: A co-op playtest report per the playtesting skill, on a dedicated server on foundry with at least two players on one team and one on another, covering a shared nidus fight (credit and scaling), shedding, stabilising, the shared bestiary, passing standing, claims not stopping festering, and the finale under P9.2's rule; what could not be tested with the players available is stated. `tools/pack.sh check` passes.
+- Skills: playtesting, kubejs-scripting, ftb-quests-authoring
+- Parallel: Owns `pack/config/remission-common.toml` and the server guide while it runs.
 
 Exit criteria: complete playthrough recorded; screenshots of each chapter milestone reviewed.
 
