@@ -159,6 +159,19 @@ class Workspace:
         out = git(root, "diff", "--name-status", self.base()).stdout
         return [tuple(line.split("\t", 1)) for line in out.splitlines() if line.strip()]
 
+    def uncommitted(self):
+        """True when the content worktree has changes not yet committed to its branch."""
+        if not self.worktree:
+            return False
+        return bool(git(self.worktree, "status", "--porcelain").stdout.strip())
+
+    def commits(self):
+        """[{sha, subject}] for the branch's commits since the base, newest first."""
+        if not self.worktree:
+            return []
+        out = git(self.worktree, "log", "--format=%h%x09%s", f"{self.base()}..HEAD").stdout
+        return [dict(zip(("sha", "subject"), line.split("\t", 1))) for line in out.splitlines() if line]
+
     def numstat(self):
         if not self.worktree:
             return {}

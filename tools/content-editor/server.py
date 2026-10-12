@@ -255,6 +255,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self.app.checked or not self.app.checked[0]:
             raise EditorError("run the checks and get them all passing first")
         sha = self.app.editor.workspace.commit(self.body().get("message", ""), self.app.checked[0])
+        self.app.checked = None  # a later commit needs a fresh check run
         return {"commit": sha}
 
     def post_batch_pr(self):

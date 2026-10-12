@@ -187,7 +187,12 @@ class ServiceTest(unittest.TestCase):
         _, tree = self.editor.workspace.run_checks()
         self.editor.workspace.commit("Content: Rename festered stone", tree)
         self.assertEqual(fixture.git(self.editor.root, "log", "-1", "--format=%s").strip(), "Content: Rename festered stone")
-        self.assertEqual(len(self.editor.batch()["changes"]), 1)  # still differs from main after the commit
+        summary = self.editor.batch()
+        self.assertEqual(len(summary["changes"]), 1)  # still differs from main after the commit
+        self.assertFalse(summary["uncommitted"])
+        self.assertEqual([c["subject"] for c in summary["commits"]], ["Content: Rename festered stone"])
+        self.editor.lang_save(LANG, "block.remission.stone", "Rotten Stone, third")
+        self.assertTrue(self.editor.batch()["uncommitted"])
 
 
 if __name__ == "__main__":

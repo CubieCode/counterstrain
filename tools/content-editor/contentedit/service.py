@@ -467,7 +467,8 @@ class Editor:
         files = [{"status": s, "path": p, "added": stats.get(p, ("", ""))[0], "deleted": stats.get(p, ("", ""))[1]}
                  for s, p in self.workspace.changed_files()]
         return {"changes": changes, "files": files, "branch": self.workspace.branch(),
-                "base": self.workspace.base()[:9], "worktree": self.workspace.worktree}
+                "base": self.workspace.base()[:9], "worktree": self.workspace.worktree,
+                "uncommitted": self.workspace.uncommitted(), "commits": self.workspace.commits()}
 
     def _changed_strings(self, ledger, row):
         try:

@@ -872,8 +872,14 @@ async function batchView() {
       c.ok === false && c.output ? h('pre', { class: 'out' }, c.output) : null)));
     sum.textContent = lastChecks ? (ok ? `${lastChecks.length} of ${lastChecks.length} passed` : `${lastChecks.filter((c) => c.ok).length} passed, ${lastChecks.filter((c) => !c.ok).length} failed`) : 'not run';
     sum.style.color = lastChecks ? (ok ? 'var(--okf)' : 'var(--erf)') : '';
-    commitBtn.disabled = !ok || !STATE.checked || !summary.files.length;
-    hint.textContent = !lastChecks ? 'Run the checks to commit.' : ok ? 'Open PR pushes this branch (never main) and runs gh pr create --draft --body-file.' : 'Fix the failing check and run the checks again.';
+    const dirty = summary.uncommitted;
+    const committed = summary.commits.length > 0;
+    commitBtn.disabled = !dirty || !ok || !STATE.checked;
+    prBtn.disabled = dirty || !committed;
+    if (!dirty && committed) hint.textContent = 'Everything is committed. Open PR pushes this branch (never main) and runs gh pr create --draft --body-file.';
+    else if (!dirty) hint.textContent = 'Nothing to commit yet.';
+    else if (!lastChecks) hint.textContent = committed ? 'New changes since the last commit: run the checks to commit them.' : 'Run the checks to commit.';
+    else hint.textContent = ok ? 'Checks pass: commit, then open the PR.' : 'Fix the failing check and run the checks again.';
     hint.style.color = lastChecks && !ok ? 'var(--erf)' : 'var(--f3)';
   }
   const sum = h('span', { class: 'small' });
@@ -916,7 +922,9 @@ async function batchView() {
           h('label', { for: 'msg', class: 'small', style: 'font-weight:600;color:var(--f2)' }, 'Commit message (also the PR title)'), message,
           h('span', { class: 'small', style: 'font-weight:600;color:var(--f2)' }, 'PR body · generated from the changed rows'), h('pre', { class: 'body' }, summary.prBody),
           h('label', { class: 'row-flex', style: 'gap:8px', for: 'draft' }, draft, 'Open as draft'),
-          h('div', { class: 'row-flex' }, commitBtn, prBtn, hint), prResult))));
+          h('div', { class: 'row-flex' }, commitBtn, prBtn, hint), prResult,
+          summary.commits.length ? h('div', { class: 'stack', style: 'gap:2px' }, h('span', { class: 'eyebrow' }, `Commits on ${summary.branch}`),
+            summary.commits.map((c) => h('span', { class: 'small' }, h('span', { class: 'mono muted' }, c.sha), ' ', c.subject))) : null))));
   renderChecks();
 }
 
