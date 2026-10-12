@@ -574,8 +574,8 @@ Goals: the Strain becomes a resource processed by machines into tools for the fi
 
 ### P7.3: Serums, purifier fuel, Counterstrain prototypes and KubeJS integration
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p7.3-serums-kubejs
 - PR:
 - Depends on: P7.2, P5.2
 - Scope: Serums, purifier fuel and unstable Counterstrain prototypes and their effects; verify KubeJS can add/remove/replace Remission recipes (schema registration if needed).
