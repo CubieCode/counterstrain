@@ -119,6 +119,7 @@ Cost (foundry, `ExposureBenchmark`, `REMISSION_EXPOSURE_BENCHMARK=1`): see docs/
 - **Altitude factor:** the height above the ground is the player's feet Y minus the top of the highest block in their column that blocks motion, leaves excluded and fluids included (`Heightmap.Types.MOTION_BLOCKING_NO_LEAVES`). At or below `falloffStart` (so always on the ground, in water at the surface, in caves, tunnels and bases below the surface, and under any roof) the factor is 1; at or above `falloffEnd` it is `falloffMinimum`; in between it follows `falloffCurve` from 1 down to the minimum. With `altitudeFalloff` off it is always 1.
 - **Water:** feet or eyes in water in a chunk at festering stage 1 or higher (swimming, wading, diving): `waterGain`, on top of land gain, no altitude factor.
 - **Miasma clouds:** the player's bounding box overlaps a `remission:miasma_cloud`'s bounding box (Surges and miasma clouds, below): `cloudGain`, at any height and over any land.
+- **Contact (P5.2):** while a block in `#remission:infectious` touches the player (standing on it, inside it or pressed against it; the contact query of Festering veins and contact infection, below), `contactGain`, anywhere, festering chunk or not, on top of land gain, no altitude factor. Water never counts as contact here: swimming in festering water is `waterGain` only.
 - **Drinking:** finishing a water bottle (`minecraft:potion` holding `minecraft:water`) while standing in a chunk at festering stage 1 or higher adds `drinkDose` at once. Where the bottle was filled is not tracked (bottle origin and contaminated items are P10.6).
 
 After the gain or decay, each `debuffs` entry whose viral load is reached applies its effect (highest amplifier per effect) for 240 ticks as an ambient effect without particles, refreshed every update; at or above `damageAt` the player takes `damage` per second of damage type `remission:viral_load`. Players in creative or spectator gain nothing and take no debuffs; their viral load still decays. Death resets it: a respawned player starts at 0.
@@ -141,6 +142,8 @@ Config `config/remission-common.toml`, section `[viral_load]` (read at every upd
 | `debuffs` | list of 0–64 strings `"<viral load> <effect id> <amplifier>"` | `["25 minecraft:hunger 0", "50 minecraft:weakness 0", "50 minecraft:mining_fatigue 0", "75 minecraft:slowness 0", "75 minecraft:hunger 1"]` | Effect while viral load is at or above the value; amplifier 0 is level I. Unknown effect ids are skipped with one warning. |
 | `damageAt` | number 0–100 | 100.0 | Viral load at and above which players take viral load damage. |
 | `damage` | number 0–100 | 1.0 | Damage per second there (2 is one heart); 0 turns it off. |
+| `contact` | bool | true | Whether touching an infectious block adds viral load (P5.2). |
+| `contactGain` | number 0–6000 | 10.0 | Per minute while touching one (P5.2). |
 
 With the defaults, standing on stage 4 land fills the meter in about 8 minutes (hunger after about 2), stage 1 land in about 100 minutes, and a full meter decays in 20.
 
@@ -298,6 +301,7 @@ Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired f
 | `remission:host_scanned` | A player takes a host scan with the scanner (a host; a non-host gives no scan and no trigger). | `entity`: entity predicate (or loot conditions) on the scanned host; `stage`: int range, the host stage scanned; `bestiary_types`: int range, the number of host types in the player's bestiary after this scan (`Bestiary`; types it does not list are not counted). |
 | `remission:block_scanned` | A player takes a block scan with the scanner. | `location`: vanilla location predicate at the centre of the scanned block (its `block` predicate sees the scanned block). |
 | `remission:viral_load_changed` (P5.1) | The player's viral load changed (Viral load, above): at most once per update (once a second) plus once per drink, never when only the trend changed, nor for the reset on death. | `viral_load`: float range, the new viral load (0–100): `{"min": 50}` for a player who reached 50, `{"max": 0}` for one whose viral load fell back to 0. |
+| `remission:region_cleansed` (P5.2) | A chunk entered remission (Purification and remission zones, below) while the player was alive, not a spectator, in the same level and within 8 chunks (Chebyshev) of it. Fires once per chunk entering remission. | `radius`: int 0–16, default 4: the square of chunks around the player's own chunk the region covers; `share`: float range, the share (0–1) of the region's affected loaded chunks (in remission or festering) that are in remission (0 when none are affected); `chunks`: int range, how many of its loaded chunks are in remission. |
 | `remission:surge_survived` (P4.3) | A surge ends (any reason) and the player was caught in it: inside its area at one of its 20-tick checks while it ran, not dead since, and online and alive at the end (Surges and miasma clouds, below). A surge stopped during its warning never started and awards nothing. | `intensity`: int range, the surge's intensity (1–10). |
 
 ```json
@@ -307,6 +311,8 @@ Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired f
 {"criteria": {"found": {"trigger": "remission:block_scanned", "conditions": {"location": {"block": {"blocks": "remission:nidus"}}}}}}
 {"criteria": {"storm": {"trigger": "remission:surge_survived", "conditions": {"intensity": {"min": 2}}}}}
 {"criteria": {"exposed": {"trigger": "remission:viral_load_changed", "conditions": {"viral_load": {"min": 50}}}}}
+{"criteria": {"reclaimed": {"trigger": "remission:region_cleansed", "conditions": {"radius": 6, "share": {"min": 0.75}}}}}
+{"criteria": {"first": {"trigger": "remission:region_cleansed", "conditions": {"radius": 0}}}}
 ```
 
 Custom stats (registry `minecraft:custom_stat`, holder `RemissionStats`, formatter `DEFAULT`), awarded at the same moments as the triggers; lang keys `stat.remission.<name>`:
@@ -317,10 +323,11 @@ Custom stats (registry `minecraft:custom_stat`, holder `RemissionStats`, formatt
 | `remission:hosts_scanned` | host scans taken (as `host_scanned`) |
 | `remission:blocks_scanned` | block scans taken (as `block_scanned`) |
 | `remission:surges_survived` | surges survived (as `surge_survived`; P4.3) |
+| `remission:chunks_cleansed` | chunks that entered remission within 8 chunks of the player (as `region_cleansed`; P5.2) |
 
-Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above); `SurgeTests` for `surge_survived` and its stat; `ViralLoadTests` for `viral_load_changed`.
+Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above); `SurgeTests` for `surge_survived` and its stat; `ViralLoadTests` for `viral_load_changed`; `PurificationTests` for `region_cleansed` and `chunks_cleansed`.
 
-"Variant" is reserved for resistant mutations; triggers and stats for systems that are not built yet arrive with them. P8.1 deferred surge survived to P4.3 and viral load to P5.1, which built them (P5.1 adds a trigger and no stat: viral load is a level, not a count); region % cleansed (P5.2) is still to come.
+"Variant" is reserved for resistant mutations; triggers and stats for systems that are not built yet arrive with them. P8.1 deferred surge survived to P4.3 and viral load to P5.1, which built them (P5.1 adds a trigger and no stat: viral load is a level, not a count); region % cleansed is P5.2's `region_cleansed`.
 
 ## Debug commands `/remission` (built, P2.3)
 
@@ -461,7 +468,7 @@ Block tags, `data/<ns>/tags/block/<name>.json`:
 | `#remission:vein_resistant` | empty | Blocks veins never grow on (a face toward one is never added). The pack fills it, for example with a ward block or a sealed base material. Veins already on a block stay if it is added later. |
 | `#remission:infectious` | `festering_grass`, `festering_log`, `festering_leaves`, `festered_stone`, `festered_deepslate`, `festering_vein` | Blocks that infect mobs by contact (below), anywhere, festering chunk or not. |
 
-**Contact infection** (`infection/Contact`, `ContactTracker`, `ContactInfection`, server side): a `Mob` is in **contact** when a block in `#remission:infectious` reaches its bounding box grown by 0.001 blocks (standing on it, inside it, or pressed against it; the block's outline shape counts, so a floor vein touches what stands in its block), or when water (`#minecraft:water` fluid) reaches into its bounding box and the mob's chunk is at or above `[infection] festeringLandMinStage` (fish, squid, drowned, axolotls, anything swimming or wading; the water itself is not replaced). The query `Contact.of(entity)` (`Kind.NONE`, `BLOCK`, `WATER`) and `Contact.inContact(entity)` work for any entity, players included, read loaded chunks only and are what a later item can reuse (*planned*: P5.2's contact viral load gain); they are internal, not API.
+**Contact infection** (`infection/Contact`, `ContactTracker`, `ContactInfection`, server side): a `Mob` is in **contact** when a block in `#remission:infectious` reaches its bounding box grown by 0.001 blocks (standing on it, inside it, or pressed against it; the block's outline shape counts, so a floor vein touches what stands in its block), or when water (`#minecraft:water` fluid) reaches into its bounding box and the mob's chunk is at or above `[infection] festeringLandMinStage` (fish, squid, drowned, axolotls, anything swimming or wading; the water itself is not replaced). The query `Contact.of(entity)` (`Kind.NONE`, `BLOCK`, `WATER`) and `Contact.inContact(entity)` work for any entity, players included, read loaded chunks only; contact viral load (P5.2, Viral load above) reuses them for players. They are internal, not API. Inside a quarantine pylon's ward (P5.2, below) no mob counts as in contact.
 
 - Cadence: one `ContactTracker` per server level on `LevelTickEvent.Post`. Every 10 ticks a pass snapshots the level's mobs and checks up to 64 per tick, ending the tick early once 32 have become hosts (`ContactSettings.INTERVAL_TICKS`, `MOB_BUDGET`, `INFECTION_BUDGET`; not configurable), so a touch shorter than 10 ticks can go unseen. Each checked mob in contact gains the game ticks since the previous pass started (nothing on the first pass); one without contact loses them. Mobs in chunks that are not entity-ticking are skipped.
 - Eligibility is festering land infection's (`Infection.canInfectFromFesteringLand`): not immune, not a host, and its profile does not set `conversion.festering_land` to false; an ineligible mob's contact is cleared. **Players never take contact infection** (only `Mob`s are checked); viral load (P5.1) is the player system.
@@ -515,6 +522,65 @@ Saved data `data/remission_surges.dat` in the dimension folder (internal; read s
 
 Events: `SurgeStartedEvent`, `SurgeEndedEvent` (Public API, below). Commands: Surge commands, above.
 
+## Purification and remission zones (built, P5.2)
+
+`com.cubiecode.remission.purification`, server side, loaded chunks only. Mechanics and costs: docs/ARCHITECTURE.md (Purification and remission zones).
+
+**Lowering land and remission.** Every purification tool lowers a chunk's Strain level (`chunk_corruption`, Festering land above) through one path: the level is stored with the current game time, `ChunkStageChangedEvent` fires when the stage falls, and `festered_stage` drops to the new stage so the stage work festers the chunk again if the Strain returns. A chunk lowered from above 0 to 0 **enters remission**: chunk attachment `remission:chunk_remission` (a long, the game time it entered; saved with the chunk, server only, not synced) is set, its remaining festered blocks are queued for a cleanse, `ChunkEnteredRemissionEvent` fires and nearby players are credited (`remission:region_cleansed`, `remission:chunks_cleansed`, above). A chunk that never festered is never in remission. Any later rise of its level (spread) removes the attachment; there is no leave event. While in remission, catch-up after a reload counts missed spread passes from the remission time. A chunk in remission that loads is checked again and anything festered in it is cleansed. Read it with `CorruptionQueries.isInRemission` (Public API, below).
+
+**Cleansing.** A block is cleansed into its `remission:cleanses_into` entry, keeping the state properties both blocks share; a `remission:festering_vein` is cleared to air; blocks with block entities and blocks without an entry are left alone. One `BlockPurifiedEvent` per changed block; flags `UPDATE_CLIENTS | UPDATE_KNOWN_SHAPE` (no neighbour updates). A whole-chunk cleanse also turns every fester biome cell (`remission:fester` and every `fester_variant` target) back into the biome the level's biome source generates there, and clears `festered_stage`.
+
+Data map `data/<ns>/data_maps/block/cleanses_into.json` (`remission:cleanses_into`, NeoForge data map, server only, `/reload`-able; keys are block ids or tags):
+
+```json
+{"values": {"remission:festering_log": {"block": "minecraft:oak_log"}, "#counterstrain:festered_planks": {"block": "minecraft:oak_planks"}}}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `block` | block id | The clean block it turns back into. |
+
+Defaults: `festering_grass` → `minecraft:grass_block`, `festering_log` → `minecraft:oak_log`, `festering_leaves` → `minecraft:oak_leaves`, `festered_stone` → `minecraft:stone`, `festered_deepslate` → `minecraft:deepslate`. Which block festered is not recorded, so a pack that adds `festers_into` targets adds their `cleanses_into` entries too (a target without one is never cleansed), and a birch log cleanses into an oak log.
+
+**Quarantine pylon** `remission:quarantine_pylon` (block and block item; pickaxe, hardness 5, light 10, pistons cannot move it; drops itself; default recipe: iron ingots around a lightning rod over a handheld purifier). Indexed per dimension in saved data `remission_pylons` (`data/remission_pylons.dat`, a long array of positions); its block entity holds no data and re-indexes a pylon a structure placed when it loads, so a pack's crash site can ship one. Its **ward** is every chunk within `[purification] pylonRadius` chunks of the pylon's chunk (Chebyshev, a square; 5 by 5 chunks by default). Inside a ward:
+
+- the Strain does not spread into a chunk (live or catch-up, and a nidus there does not grow its own chunk); steps through the ward to chunks behind it hold once the ward's levels fall below `[spread] spreadThreshold`;
+- the festering stage work (surface and caves) and festering vein growth skip it;
+- contact infection does not count for mobs in it (their contact decays);
+- placing the pylon queues every loaded chunk of the ward for a cleanse, and a warded chunk is cleansed again whenever it loads;
+- every `[purification] intervalTicks` (aligned to the level's game time) each loaded warded chunk loses `pylonStep`, once however many wards overlap it, until it enters remission (cause `PYLON`).
+
+Breaking or removing a pylon ends its ward at once; chunks no longer warded are queued for the stage work and vein growth, which bring them back to their current stage. Festering land exposure (P4.7) and land viral load are not stopped by the ward itself; they stop as the land drains.
+
+**Handheld purifier** `remission:handheld_purifier` (item, 256 uses, 10-tick cooldown; default recipe: glass over a copper ingot between iron ingots). Used on a block: cleanses every festered block and vein in the cube `purifierRadius` around it (cause `PURIFIER`) and lowers that block's chunk by `purifierStep`; `ChunkEnteredRemissionEvent.getPlayer()` names the user when that finishes the chunk. Used on a host: lowers its Strain level by `purifierHostStep` through `Corruption.set` with `CorruptionCause.PURIFICATION`. A use that changes nothing costs no durability.
+
+**Mendroot** `remission:mendroot` (block and block item; a plant on `#minecraft:dirt` or farmland, festering grass included; no collision, breaks instantly, drops itself; default recipe: wheat seeds, bone meal and glow berries make two). Planting it schedules a block tick (saved with the chunk); every `mendrootIntervalTicks` it cleanses the cube `mendrootRadius` around it (cause `MENDROOT`) and lowers its chunk by `mendrootStep`. Anything that places blocks from an item can plant it.
+
+**Remission zone bonuses** (chunks in remission): natural monster spawns fail (`MobSpawnEvent.PositionCheck`, spawn type `NATURAL`, category `monster`; spawners, structures, events and surges unaffected); a crop growth attempt that would fail succeeds with chance `growthChance` (`CropGrowEvent.Pre`); a block in `#remission:remission_yields` broken there drops one more of each item stack with chance `yieldChance` (`BlockDropsEvent`).
+
+| Tag | Default | Meaning |
+| --- | --- | --- |
+| `#remission:remission_yields` | `#minecraft:crops` | Blocks whose drops the yield bonus raises. |
+
+Config `config/remission-common.toml` (read when each pass, use or bonus runs):
+
+| Section | Key | Type | Default | Meaning |
+| --- | --- | --- | --- | --- |
+| `[purification]` | `intervalTicks` | int 20–72000 | 200 | Game ticks between pylon passes. |
+| `[purification]` | `pylonRadius` | int 0–8 | 2 | Chunks a pylon wards around its own chunk, in a square. |
+| `[purification]` | `pylonStep` | int 1–100 | 5 | Strain level each warded chunk loses per pass. |
+| `[purification]` | `purifierRadius` | int 0–8 | 2 | Blocks around the used block the handheld purifier cleanses (a cube). |
+| `[purification]` | `purifierStep` | int 0–100 | 1 | Strain level that block's chunk loses per use. |
+| `[purification]` | `purifierHostStep` | int 0–100 | 34 | Strain level a host loses per use (about one host stage). |
+| `[purification]` | `mendrootRadius` | int 0–8 | 3 | Blocks around a mendroot it cleanses (a cube). |
+| `[purification]` | `mendrootStep` | int 0–100 | 1 | Strain level its chunk loses per cleanse. |
+| `[purification]` | `mendrootIntervalTicks` | int 20–72000 | 600 | Game ticks between a mendroot's cleanses. |
+| `[remission_zones]` | `spawnSafety` | bool | true | Natural monster spawns fail in chunks in remission. |
+| `[remission_zones]` | `growthChance` | number 0–1 | 0.25 | Chance a failing crop growth attempt succeeds there. |
+| `[remission_zones]` | `yieldChance` | number 0–1 | 0.25 | Chance a `#remission:remission_yields` block broken there drops one more of each item. |
+
+With the defaults a pylon brings a stage 4 chunk (level 100) into remission in 20 passes (about 3 minutes 20 seconds), a handheld purifier needs 100 uses for the same chunk, and one mendroot about 50 minutes. Lang keys: `item.remission.handheld_purifier` (and `.desc`), `block.remission.quarantine_pylon`, `block.remission.mendroot`, `stat.remission.chunks_cleansed`. Gametests: `PurificationTests`.
+
 ## Item contamination (planned, P10.6)
 
 Data component `remission:contaminated` on item stacks carried through festering chunks, a tag for containers that protect their contents, and a decontamination recipe type or KubeJS hook. Fields fixed in P10.6.
@@ -539,11 +605,13 @@ Conventions, for every event here and every event later items add:
 | --- | --- | --- | --- |
 | `HostCorruptedEvent extends HostEvent` | `getEntity()`, `getOldLevel()`, `getOldStage()`, `getNewLevel()`, `getNewStage()`, `getCause()`; `wasHost()`, `isHost()`, `becameHost()` | After `Corruption.set` raises an entity's level (or, at the same level, its stage after a threshold change), with attachment, host attributes and host goals already applied. Every increase, not only the first; `becameHost()` marks the non-host to host change. Never for immune entities (their state does not change) or no-op sets. | no |
 | `HostCleansedEvent extends HostEvent` | as above; `isFullyCleansed()` (new level 0) | After `Corruption.set` lowers an entity's level (or stage), including partial cleansing. | no |
-| `ChunkStageChangedEvent extends FesteringLandEvent` | `getLevel()`, `getChunk()` (`ChunkPos`), `getOldLevel()`, `getNewLevel()`, `getOldStage()`, `getNewStage()` | After the spread engine stores a chunk level whose festering stage differs from the old one: live passes and catch-up. A catch-up posts once per chunk, so stages can jump by more than one; changes within a stage post nothing. | no |
+| `ChunkStageChangedEvent extends FesteringLandEvent` | `getLevel()`, `getChunk()` (`ChunkPos`), `getOldLevel()`, `getNewLevel()`, `getOldStage()`, `getNewStage()` | After the spread engine stores a chunk level whose festering stage differs from the old one: live passes and catch-up; since P5.2 also after purification lowers one (stages then fall). A catch-up posts once per chunk, so stages can jump by more than one; changes within a stage post nothing. | no |
 | `NidusDestroyedEvent extends FesteringLandEvent` | `getLevel()`, `getPos()` (the nidus block) | After a nidus leaves the level's index: its block was broken, replaced or removed, or a spread pass found an index entry without its block. Its land keeps its level. No player is passed; quests use the `remission:nidus_destroyed` trigger (Advancement triggers and stats, above). To protect a nidus, cancel the block break. When the block was removed, it is posted from the block's `onRemove` inside `setBlockState`: listeners must not set the block at `getPos()` in the listener (defer it). | no |
 | `BlockFesteredEvent extends FesteringLandEvent` (P4.2) | `getLevel()`, `getPos()`, `getOldState()`, `getNewState()` | After a block in a festering chunk is replaced through `remission:festers_into` (Festering stages, above), or gains festering vein faces (P4.8; old state air or a vein), once per block: it is block-scoped, so a chunk's stage batch posts one per replaced block, spread over the ticks the batch takes. The biome flip posts nothing. Listeners must not set the block at `getPos()` in the listener. | no |
 | `SurgeStartedEvent extends FesteringLandEvent` (P4.3) | `getLevel()`, `getOrigin()` (the nidus), `getIntensity()` (1–10), `getEndTime()` (game time it is due to end) | When a surge's warning runs out and it starts, after its clouds are released and before its first wave (Surges and miasma clouds, above). Never for a surge stopped during its warning. | no |
 | `SurgeEndedEvent extends FesteringLandEvent` (P4.3) | `getLevel()`, `getOrigin()`, `getIntensity()`, `getReason()` (`ELAPSED`, `NIDUS_DESTROYED`, `STOPPED`; treat unknown values as `STOPPED`), `getSurvivors()` (immutable list of the `ServerPlayer`s awarded `surge_survived`) | When a started surge ends, after acceleration and waves stopped and survivors were awarded. Its clouds keep drifting. | no |
+| `BlockPurifiedEvent extends FesteringLandEvent` (P5.2) | `getLevel()`, `getPos()`, `getOldState()` (the festered block or vein), `getNewState()` (its `cleanses_into` target, or air for a vein), `getCause()` (`PurificationCause`) | After a block is cleansed (Purification and remission zones, below), once per block: block-scoped, so a chunk's budgeted cleanse posts one per changed block over the ticks it takes. The biome restore posts nothing. Listeners must not set the block at `getPos()` in the listener. | no |
+| `ChunkEnteredRemissionEvent extends FesteringLandEvent` (P5.2) | `getLevel()`, `getChunk()` (`ChunkPos`), `getCause()` (`PurificationCause`), `getPlayer()` (`Optional<ServerPlayer>`: the player whose handheld purifier finished the chunk; empty otherwise) | Once when purification lowers a chunk's Strain level from above 0 to 0, after the level and the remission mark are stored and before its remaining blocks are cleansed. A chunk that festers again leaves remission without an event and can enter it again. | no |
 | `ViralLoadChangedEvent extends PlayerEvent` (P5.1) | `getEntity()` (the `ServerPlayer`), `getOldLoad()`, `getNewLoad()` (floats 0–100), `getCause()` (`EXPOSURE`: land, water or a miasma cloud; `DRINK`; `DECAY`; `OTHER`; treat unknown values as `OTHER`), `isRising()` | After a player's viral load changed and was stored (Viral load, above): at most once per player per update (once a second) plus once per drink. Not when only the trend changed, nor for the reset to 0 on death. | no |
 | `StrainSpreadAttemptEvent extends FesteringLandEvent` | `getLevel()`, `getFrom()`, `getTo()` (`ChunkPos`), `getAmount()` (level gain at multiplier 1, capped at the target), `isCatchUp()`, `getRateMultiplier()`/`setRateMultiplier(double)` (default 1; negative or NaN become 0) | Before every chunk-to-chunk step: each live step into a loaded chunk below its target whose parent passed the threshold, and once per nidus in reach when a reloaded chunk catches up (`isCatchUp()`, `getAmount()` covers every missed pass, `getFrom()` may be unloaded). The growth of a nidus's own chunk is not a spread attempt, and a step from a loaded parent below the threshold is held without an event (live and catch-up). | yes: cancelling (or multiplier 0) stops this step; chunks reached through it stay clean while the cancelled chunk is loaded. A step from an unloaded parent is not held (the parent counts as at its target), so keep a firebreak chunk loaded or cancel the steps behind it too |
 
@@ -551,7 +619,9 @@ Spread rate: the gain is `amount * multiplier`, capped at the chunk's target. A 
 
 Re-entrancy: a host event listener that changes the same entity's level (`Corruption.set`) posts a nested event at once; later listeners of the outer event then see its stale values while queries return the nested change. Defer such changes to a later tick.
 
-`CorruptionCause` (enum, `HostEvent.getCause()`): `INFECTION` (killed by a host and infected in place or converted), `COMMAND` (`/remission infect` or `/remission cleanse`), `FESTERING_LAND` (prolonged exposure to festering land, P4.7), `SURGE` (spawned as a host by a surge; P4.3), `CONTACT` (touched an infectious block or swam in festering water; P4.8), `OTHER` (any other caller). Later items insert their causes before `OTHER` (purification, P5.2), so never persist a cause by ordinal; treat unknown values as `OTHER`.
+`CorruptionCause` (enum, `HostEvent.getCause()`): `INFECTION` (killed by a host and infected in place or converted), `COMMAND` (`/remission infect` or `/remission cleanse`), `FESTERING_LAND` (prolonged exposure to festering land, P4.7), `SURGE` (spawned as a host by a surge; P4.3), `CONTACT` (touched an infectious block or swam in festering water; P4.8), `PURIFICATION` (a handheld purifier used on a host; P5.2), `OTHER` (any other caller). Later items insert their causes before `OTHER`, so never persist a cause by ordinal; treat unknown values as `OTHER`.
+
+`PurificationCause` (enum, P5.2, `BlockPurifiedEvent.getCause()` and `ChunkEnteredRemissionEvent.getCause()`): `PURIFIER` (a handheld purifier), `PYLON` (a quarantine pylon's ward), `MENDROOT`, `OTHER` (anything else, including the re-check of a chunk in remission when it loads). Same rules: inserted before `OTHER`, never persisted by ordinal.
 
 Queries, `CorruptionQueries` (static):
 
@@ -562,16 +632,12 @@ Queries, `CorruptionQueries` (static):
 | `chunkLevel(ServerLevel, ChunkPos)`, `levelAt(ServerLevel, BlockPos)` | Strain level of a loaded chunk (of the chunk holding the position); 0 if clean or not loaded (never loads a chunk) | server |
 | `chunkStage(ServerLevel, ChunkPos)`, `stageAt(ServerLevel, BlockPos)` | festering stage of that level (every block in a chunk shares its chunk's stage) | server |
 | `chunkStageFor(int level)`, `maxChunkStage()` | stage of a chunk level under the current config; the number of chunk stages | server config |
+| `isInRemission(ServerLevel, ChunkPos)` (P5.2) | whether a loaded chunk is in remission (purified from festering to level 0 and not festering since); false if it never festered, is festering or is not loaded (never loads a chunk). P8.2's remission-zone map layer reads it | server |
 | `viralLoad(Player)` (P5.1) | the player's viral load, 0–100 (`MAX_VIRAL_LOAD`) | server for any player; a client knows only its own player's (others read 0) |
 
 Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; the default `festers_into` map turns grass at 1, trees and foliage at 2 and stone at 3, and the last stage flips the biome; Festering stages, above). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
 
-Planned by later items, added here when built: block purified and chunk entered remission (P5.2).
-
-| Event | Fired by | Payload (planned) | Cancellable |
-| --- | --- | --- | --- |
-| block purified | P5.2 | level, pos, old and new block state, cause | no |
-| chunk entered remission | P5.2 | level, chunk pos, player (optional) | no |
+Later items append their events and queries here when built.
 
 ## KubeJS event bindings (planned, P8.3)
 

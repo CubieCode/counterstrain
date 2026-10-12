@@ -3,6 +3,7 @@ package com.cubiecode.remission.data;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.infection.Contact;
 import com.cubiecode.remission.loot.IsFesteringCondition;
+import com.cubiecode.remission.purification.RemissionZones;
 import com.cubiecode.remission.registry.RemissionBlocks;
 import com.cubiecode.remission.world.FesteringVeins;
 import java.util.concurrent.CompletableFuture;
@@ -36,6 +37,9 @@ public final class RemissionBlockTagsProvider extends BlockTagsProvider {
         tag(Contact.INFECTIOUS).add(RemissionBlocks.FESTERING_GRASS.get(), RemissionBlocks.FESTERING_LOG.get(),
                 RemissionBlocks.FESTERING_LEAVES.get(), RemissionBlocks.FESTERED_STONE.get(),
                 RemissionBlocks.FESTERED_DEEPSLATE.get(), RemissionBlocks.FESTERING_VEIN.get());
+        // Purification (P5.2): the pylon needs a pickaxe; the remission zone yield bonus covers crops by default.
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(RemissionBlocks.QUARANTINE_PYLON.get());
+        tag(RemissionZones.YIELDS).addTag(BlockTags.CROPS);
         // Machines (P7.2): any pickaxe.
         tag(BlockTags.MINEABLE_WITH_PICKAXE).add(RemissionBlocks.ANALYZER.get(), RemissionBlocks.SEQUENCER.get(),
                 RemissionBlocks.SYNTHESIZER.get());

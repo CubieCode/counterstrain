@@ -93,5 +93,10 @@
   "gui.remission.recipe.sequencing": "Sequencing",
   "gui.remission.recipe.synthesizing": "Synthesizing",
   "gui.remission.recipe.cost": "%s FE, %s s",
-  "tag.item.remission.scans": "Scans"
+  "tag.item.remission.scans": "Scans",
+  "item.remission.handheld_purifier": "Handheld Purifier",
+  "item.remission.handheld_purifier.desc": "Use on festering ground to cleanse it, or on a host to weaken the Strain",
+  "block.remission.quarantine_pylon": "Quarantine Pylon",
+  "block.remission.mendroot": "Mendroot",
+  "stat.remission.chunks_cleansed": "Chunks Cleansed"
 }

@@ -29,10 +29,12 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Boundary between festering land and reclaimed land | **frontier** | "hold the frontier" |
 | Periodic spread bursts from one nidus, telegraphed by a warning | **surges** | config `[surges]`; trigger `remission:surge_survived`, stat `remission:surges_survived`; `/remission surge start`; entity tag `#remission:surge_hosts`; "the nidus surges at the season change", "survive the surge" |
 | Extracted resource | **miasma** | fluid `remission:miasma`; Mekanism chemical `remission:miasma` when Mekanism is present |
-| Player exposure meter | **viral load** | player attachment `viral_load`; config `[viral_load]`; trigger `remission:viral_load_changed`; damage type `remission:viral_load` (death message "succumbed to the Strain"); "viral load is at 60", "the viral load meter" |
-| Radius wards | **quarantine pylons** | `remission:quarantine_pylon` |
-| Cleansing plants | **mendroot** | `remission:mendroot` |
-| Reclaimed land | **remission zones** | "chunks in remission" |
+| Player exposure meter | **viral load** | player attachment `viral_load`; config `[viral_load]` (including `contact`, `contactGain`: touching an infectious block); trigger `remission:viral_load_changed`; damage type `remission:viral_load` (death message "succumbed to the Strain"); "viral load is at 60", "the viral load meter" |
+| Turning festered land, blocks or hosts back | **cleanse** / **purify** (noun **purification**) | data map `remission:cleanses_into`; event `BlockPurifiedEvent`; config `[purification]`; "cleanse the grove", "purify the chunk" |
+| Handheld cleansing tool | **handheld purifier** | item `remission:handheld_purifier`; "use the purifier on the veins" |
+| Radius wards | **quarantine pylons** | block `remission:quarantine_pylon`; its **ward** (the chunks it protects; config `pylonRadius`); "the base is inside the pylon's ward" |
+| Cleansing plants | **mendroot** | block and item `remission:mendroot`; "plant mendroot along the frontier" |
+| Reclaimed land | **remission zones** | "chunks in remission"; chunk attachment `remission:chunk_remission`; query `CorruptionQueries.isInRemission`; event `ChunkEnteredRemissionEvent`; trigger `remission:region_cleansed`; stat `remission:chunks_cleansed`; config `[remission_zones]` |
 | Resistant mutations | **variants** | "sequence the variant"; `CorruptionState` field `variant` |
 | Endgame cure | **the Counterstrain** | "unstable Counterstrain prototypes", "the final deployment" |
 | Samples | host tissue, **nidus cores**, festered soil | `remission:host_tissue`, `remission:nidus_core`, `remission:festered_soil` |
@@ -83,8 +85,9 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 ### Viral load and purification
 
 - **Viral load:** a player attachment that rises in festering chunks, with escalating debuffs; serums and gear reduce it. Drinking water from, or swimming in, water in festering chunks also adds viral load, and so does flying through a miasma cloud. Gain from festering land falls off with height above the ground (config: on/off and the falloff curve), so anything airborne, from elytra to airships, can cross festering zones above the worst of it. Below the ground there is no falloff: caves and tunnels under a festering chunk count in full. There are no climate mods: viral load is the only exposure system.
-- **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot. A quarantine pylon is the base ward: inside its radius the Strain does not spread, fester, grow veins or infect by contact, and the crash-site start is built around one.
-- **Remission zones:** purified chunks enter remission and grant bonuses (spawn safety, growth, resource yields; tunable).
+- **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot. A quarantine pylon is the base ward: inside its radius the Strain does not spread, fester, grow veins or infect by contact, festered blocks and veins are cleansed and the land drains into remission, and the crash-site start is built around one (built in P5.2; large powered purifiers are not on the roadmap yet).
+- **Contact:** touching festered blocks or veins (standing on, in or against them) adds viral load as well, so walking a festering cave is worse than flying over it (P5.2).
+- **Remission zones:** purified chunks enter remission and grant bonuses (spawn safety, growth, resource yields; tunable). Built in P5.2.
 - **Revenants:** a player who dies to the Strain (killed by a host or revenant, by viral load, or anywhere in a festering chunk) rises as a revenant: a host with their skin, wearing their armour and holding their weapon, that keeps their items and experience and stays near where they fell. Other deaths drop items as usual, and `keepInventory` turns revenants off. Anyone can fight a revenant, but its items can be picked up only by its owner, and by their team where the pack defines one (Counterstrain uses FTB Teams), until a timeout frees them. A craftable **revenant tracker**, worn in a Curios slot or carried anywhere in the inventory, shows your revenants as JourneyMap waypoints, or as a HUD pointer without JourneyMap.
 
 ### Research

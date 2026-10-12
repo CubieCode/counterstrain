@@ -2,6 +2,7 @@ package com.cubiecode.remission.infection;
 
 import com.cubiecode.remission.behaviour.MobProfile;
 import com.cubiecode.remission.corruption.Corruption;
+import com.cubiecode.remission.purification.Purification;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import java.util.ArrayDeque;
 import java.util.Optional;
@@ -93,7 +94,8 @@ public final class ContactTracker {
             return false;
         }
         int contact = contact(mob);
-        if (Contact.of(mob, waterMinLevel) == Contact.Kind.NONE) {
+        // Inside a quarantine pylon's ward contact does not infect (P5.2); it decays as if there were none.
+        if (Purification.isWarded(level, mob.chunkPosition().toLong()) || Contact.of(mob, waterMinLevel) == Contact.Kind.NONE) {
             if (contact > 0) {
                 setContact(mob, contact - credit);
             }

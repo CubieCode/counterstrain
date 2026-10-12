@@ -1,6 +1,8 @@
 package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.purification.MendrootBlock;
+import com.cubiecode.remission.purification.QuarantinePylonBlock;
 import com.cubiecode.remission.world.FesteringVeinBlock;
 import com.cubiecode.remission.world.FesteringVeins;
 import com.cubiecode.remission.tech.MachineBlock;
@@ -81,6 +83,26 @@ public final class RemissionBlocks {
     public static final DeferredBlock<MachineBlock> ANALYZER = machine(MachineKind.ANALYZER);
     public static final DeferredBlock<MachineBlock> SEQUENCER = machine(MachineKind.SEQUENCER);
     public static final DeferredBlock<MachineBlock> SYNTHESIZER = machine(MachineKind.SYNTHESIZER);
+
+    // Purification (P5.2)
+    /** Wards the chunks around it: no spread, festering, veins or contact infection, and their land drains to remission. */
+    public static final DeferredBlock<QuarantinePylonBlock> QUARANTINE_PYLON = BLOCKS.registerBlock("quarantine_pylon",
+            QuarantinePylonBlock::new, BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(5.0F, 6.0F)
+                    .requiresCorrectToolForDrops()
+                    .lightLevel(state -> 10)
+                    .sound(SoundType.METAL)
+                    .pushReaction(PushReaction.BLOCK));
+    /** Cleansing plant: cleanses festered blocks around it and drains its chunk. Plantable on dirt, festering grass included. */
+    public static final DeferredBlock<MendrootBlock> MENDROOT = BLOCKS.registerBlock("mendroot", MendrootBlock::new,
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.PLANT)
+                    .noCollission()
+                    .instabreak()
+                    .sound(SoundType.GRASS)
+                    .offsetType(BlockBehaviour.OffsetType.XZ)
+                    .pushReaction(PushReaction.DESTROY));
 
     private static DeferredBlock<MachineBlock> machine(MachineKind kind) {
         return BLOCKS.registerBlock(kind.blockName(), properties -> new MachineBlock(kind, properties),

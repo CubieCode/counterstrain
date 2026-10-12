@@ -1,5 +1,6 @@
 package com.cubiecode.remission.world;
 
+import com.cubiecode.remission.purification.Purification;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionBlocks;
 import com.cubiecode.remission.surge.SurgeController;
@@ -34,7 +35,12 @@ final class ServerLand implements SpreadEngine.Land {
             return ChunkCorruption.NONE;
         }
         ChunkCorruption state = loaded.getExistingDataOrNull(RemissionAttachments.CHUNK_CORRUPTION);
-        return state == null ? ChunkCorruption.NONE : state;
+        if (state != null) {
+            return state;
+        }
+        // A chunk in remission was purified at a known time: catch-up credits only the passes since then (P5.2).
+        Long remission = loaded.getExistingDataOrNull(RemissionAttachments.CHUNK_REMISSION);
+        return remission == null ? ChunkCorruption.NONE : new ChunkCorruption(0, remission);
     }
 
     @Override
@@ -45,6 +51,10 @@ final class ServerLand implements SpreadEngine.Land {
         }
         int oldLevel = get(chunk).level();
         loaded.setData(RemissionAttachments.CHUNK_CORRUPTION, state);
+        if (state.level() > 0) {
+            // Festering again: the chunk leaves remission (P5.2).
+            loaded.removeData(RemissionAttachments.CHUNK_REMISSION);
+        }
         if (oldLevel != state.level()) {
             SpreadHooks.chunkLevelChanged(level, loaded.getPos(), oldLevel, state.level());
         }
@@ -70,6 +80,11 @@ final class ServerLand implements SpreadEngine.Land {
             SpreadHooks.nidusDestroyed(level, nidus.pos());
         }
         return false;
+    }
+
+    @Override
+    public boolean warded(long chunk) {
+        return Purification.isWarded(level, chunk);
     }
 
     @Override

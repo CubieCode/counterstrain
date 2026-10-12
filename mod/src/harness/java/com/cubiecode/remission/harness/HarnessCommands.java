@@ -4,6 +4,8 @@ import com.cubiecode.remission.api.ViralLoadChangedEvent;
 import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.purification.Purification;
+import com.cubiecode.remission.purification.PurificationSettings;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionItems;
 import com.cubiecode.remission.research.Bestiary;
@@ -54,7 +56,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * box covers to clients again (P4.2). {@code harness surge hosts <centre> <count> <radius>} and {@code harness surge
  * clouds <centre> <count>} spawn surge hosts and release miasma clouds through the surge code with a fixed seed (P4.3).
  * {@code harness viral_load <targets> <load> [rising|falling]} sets players' viral load and the trend their HUD shows
- * (P5.1).
+ * (P5.1). {@code harness purify} runs the level's quarantine pylon passes until every loaded warded chunk is in remission
+ * and does every queued cleanse at once, as the budgeted passes would over many ticks (P5.2).
  */
 final class HarnessCommands {
     private static final SimpleCommandExceptionType NO_HOSTS =
@@ -144,6 +147,8 @@ final class HarnessCommands {
                                                 BlockPosArgument.getBlockPos(context, "from"),
                                                 BlockPosArgument.getBlockPos(context, "to"),
                                                 IntegerArgumentType.getInteger(context, "level")))))))
+                .then(Commands.literal("purify").executes(context -> Purification.engine(context.getSource().getLevel())
+                        .settleNow(PurificationSettings.fromConfig())))
                 .then(Commands.literal("veins").then(Commands.argument("from", BlockPosArgument.blockPos())
                         .then(Commands.argument("to", BlockPosArgument.blockPos())
                                 .executes(context -> veins(context.getSource().getLevel(),

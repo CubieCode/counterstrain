@@ -23,5 +23,8 @@ public final class RemissionItemModelProvider extends ItemModelProvider {
         // Festering veins (P4.8): a flat item from the block texture, as sculk veins.
         withExistingParent("festering_vein", mcLoc("item/generated")).texture("layer0", modLoc("block/festering_vein"));
         basicItem(RemissionItems.STRAIN_SEQUENCE.get());
+        // Purification (P5.2): mendroot's item is its flat block texture, as saplings.
+        basicItem(RemissionItems.HANDHELD_PURIFIER.get());
+        withExistingParent("mendroot", mcLoc("item/generated")).texture("layer0", modLoc("block/mendroot"));
     }
 }

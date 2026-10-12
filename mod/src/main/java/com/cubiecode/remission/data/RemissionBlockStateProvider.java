@@ -50,6 +50,10 @@ public final class RemissionBlockStateProvider extends BlockStateProvider {
         veins.part().modelFile(vein).rotationY(270).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.WEST), true);
         veins.part().modelFile(vein).rotationX(270).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.UP), true);
         veins.part().modelFile(vein).rotationX(90).uvLock(true).addModel().condition(MultifaceBlock.getFaceProperty(Direction.DOWN), true);
+        // Purification (P5.2): the pylon is a column with its own top; mendroot is a cross plant like a sapling.
+        simpleBlockWithItem(RemissionBlocks.QUARANTINE_PYLON.get(), models().cubeColumn("quarantine_pylon",
+                modLoc("block/quarantine_pylon_side"), modLoc("block/quarantine_pylon_top")));
+        simpleBlock(RemissionBlocks.MENDROOT.get(), models().cross("mendroot", modLoc("block/mendroot")).renderType("cutout"));
         // Machines (P7.2): a shared casing with each machine's own front, facing the player who placed it.
         for (MachineKind kind : MachineKind.values()) {
             ModelFile model = models().orientable(kind.blockName(), modLoc("block/machine_side"),

@@ -351,8 +351,9 @@ public final class ContactInfectionTests {
                 RemissionBlocks.FESTERED_DEEPSLATE.get(), RemissionBlocks.FESTERING_VEIN.get())) && infectious.size() == 6,
                 "shipped #remission:infectious: " + infectious);
         List<CorruptionCause> causes = List.of(CorruptionCause.values());
-        helper.assertValueEqual(causes.indexOf(CorruptionCause.CONTACT), causes.indexOf(CorruptionCause.OTHER) - 1,
-                "CONTACT comes just before OTHER");
+        // Later causes (P5.2's PURIFICATION) are inserted before OTHER too, so only the order is fixed.
+        helper.assertTrue(causes.indexOf(CorruptionCause.CONTACT) < causes.indexOf(CorruptionCause.OTHER),
+                "CONTACT comes before OTHER");
         helper.succeed();
     }
 }

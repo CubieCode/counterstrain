@@ -26,6 +26,9 @@ public final class RemissionStats {
     /** Surges a player survived (P4.3). */
     public static final Supplier<ResourceLocation> SURGES_SURVIVED = register("surges_survived");
 
+    /** Chunks that entered remission near a player (P5.2). */
+    public static final Supplier<ResourceLocation> CHUNKS_CLEANSED = register("chunks_cleansed");
+
     private RemissionStats() {
     }
 

@@ -1,5 +1,6 @@
 package com.cubiecode.remission.data;
 
+import com.cubiecode.remission.purification.Cleansing;
 import com.cubiecode.remission.registry.RemissionBlocks;
 import com.cubiecode.remission.world.FesterMaps;
 import java.util.concurrent.CompletableFuture;
@@ -29,6 +30,18 @@ public final class RemissionDataMapProvider extends DataMapProvider {
                 // and could not be overridden for deepslate in the same file.
                 .add(BlockTags.STONE_ORE_REPLACEABLES, festers(RemissionBlocks.FESTERED_STONE.get(), 3), false)
                 .add(BlockTags.DEEPSLATE_ORE_REPLACEABLES, festers(RemissionBlocks.FESTERED_DEEPSLATE.get(), 3), false);
+        // Purification (P5.2): each festering block turns back into the most common block that festers into it. The
+        // source is not recorded, so a festered birch log cleanses into an oak log and festered tuff into deepslate.
+        builder(Cleansing.CLEANSES_INTO)
+                .add(RemissionBlocks.FESTERING_GRASS, cleanses(Blocks.GRASS_BLOCK), false)
+                .add(RemissionBlocks.FESTERING_LOG, cleanses(Blocks.OAK_LOG), false)
+                .add(RemissionBlocks.FESTERING_LEAVES, cleanses(Blocks.OAK_LEAVES), false)
+                .add(RemissionBlocks.FESTERED_STONE, cleanses(Blocks.STONE), false)
+                .add(RemissionBlocks.FESTERED_DEEPSLATE, cleanses(Blocks.DEEPSLATE), false);
+    }
+
+    private static Cleansing.CleanseBlock cleanses(Block block) {
+        return new Cleansing.CleanseBlock(block);
     }
 
     private static FesterMaps.FesterBlock festers(Block block, int stage) {

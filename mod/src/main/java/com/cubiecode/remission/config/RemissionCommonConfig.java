@@ -49,6 +49,20 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> VIRAL_LOAD_DEBUFFS;
     public static final ModConfigSpec.DoubleValue VIRAL_LOAD_DAMAGE_AT;
     public static final ModConfigSpec.DoubleValue VIRAL_LOAD_DAMAGE;
+    public static final ModConfigSpec.BooleanValue VIRAL_LOAD_CONTACT;
+    public static final ModConfigSpec.DoubleValue VIRAL_LOAD_CONTACT_GAIN;
+    public static final ModConfigSpec.IntValue PURIFICATION_INTERVAL_TICKS;
+    public static final ModConfigSpec.IntValue PURIFICATION_PYLON_RADIUS;
+    public static final ModConfigSpec.IntValue PURIFICATION_PYLON_STEP;
+    public static final ModConfigSpec.IntValue PURIFICATION_PURIFIER_RADIUS;
+    public static final ModConfigSpec.IntValue PURIFICATION_PURIFIER_STEP;
+    public static final ModConfigSpec.IntValue PURIFICATION_PURIFIER_HOST_STEP;
+    public static final ModConfigSpec.IntValue PURIFICATION_MENDROOT_RADIUS;
+    public static final ModConfigSpec.IntValue PURIFICATION_MENDROOT_STEP;
+    public static final ModConfigSpec.IntValue PURIFICATION_MENDROOT_INTERVAL_TICKS;
+    public static final ModConfigSpec.BooleanValue REMISSION_SPAWN_SAFETY;
+    public static final ModConfigSpec.DoubleValue REMISSION_GROWTH_CHANCE;
+    public static final ModConfigSpec.DoubleValue REMISSION_YIELD_CHANCE;
 
     static {
         BUILDER.push("hosts");
@@ -211,6 +225,57 @@ public final class RemissionCommonConfig {
         VIRAL_LOAD_DAMAGE = BUILDER
                 .comment("Damage per second at or above damageAt (2 = one heart). 0 turns viral load damage off.")
                 .defineInRange("damage", 1.0, 0.0, 100.0);
+        VIRAL_LOAD_CONTACT = BUILDER
+                .comment("Whether touching a block in #remission:infectious (standing on it, inside it or against it) adds viral load,",
+                        "anywhere, on top of landGain. Water is not counted again: waterGain already covers festering water.")
+                .define("contact", true);
+        VIRAL_LOAD_CONTACT_GAIN = BUILDER
+                .comment("Viral load gained per minute while touching an infectious block.")
+                .defineInRange("contactGain", 10.0, 0.0, 6000.0);
+        BUILDER.pop();
+
+        BUILDER.push("purification");
+        PURIFICATION_INTERVAL_TICKS = BUILDER
+                .comment("Game ticks between quarantine pylon passes. Each pass lowers the Strain level of every loaded warded chunk.")
+                .defineInRange("intervalTicks", 200, 20, 72000);
+        PURIFICATION_PYLON_RADIUS = BUILDER
+                .comment("Chunks a quarantine pylon wards around its own, in a square (2 = 5 by 5 chunks). Inside the ward the Strain",
+                        "does not spread, fester, grow veins or infect mobs by contact, and festered blocks and veins are cleansed.")
+                .defineInRange("pylonRadius", 2, 0, 8);
+        PURIFICATION_PYLON_STEP = BUILDER
+                .comment("Strain level every warded chunk loses per pylon pass, until it reaches 0 and enters remission.",
+                        "Overlapping wards do not stack.")
+                .defineInRange("pylonStep", 5, 1, CorruptionState.MAX_LEVEL);
+        PURIFICATION_PURIFIER_RADIUS = BUILDER
+                .comment("Blocks around the block a handheld purifier is used on whose festered blocks and veins it cleanses (a cube).")
+                .defineInRange("purifierRadius", 2, 0, 8);
+        PURIFICATION_PURIFIER_STEP = BUILDER
+                .comment("Strain level the chunk of that block loses per use of a handheld purifier.")
+                .defineInRange("purifierStep", 1, 0, CorruptionState.MAX_LEVEL);
+        PURIFICATION_PURIFIER_HOST_STEP = BUILDER
+                .comment("Strain level a host loses when a handheld purifier is used on it (34 is about one host stage).")
+                .defineInRange("purifierHostStep", 34, 0, CorruptionState.MAX_LEVEL);
+        PURIFICATION_MENDROOT_RADIUS = BUILDER
+                .comment("Blocks around a mendroot whose festered blocks and veins it cleanses (a cube).")
+                .defineInRange("mendrootRadius", 3, 0, 8);
+        PURIFICATION_MENDROOT_STEP = BUILDER
+                .comment("Strain level the chunk of a mendroot loses each time it cleanses.")
+                .defineInRange("mendrootStep", 1, 0, CorruptionState.MAX_LEVEL);
+        PURIFICATION_MENDROOT_INTERVAL_TICKS = BUILDER
+                .comment("Game ticks between a mendroot's cleanses.")
+                .defineInRange("mendrootIntervalTicks", 600, 20, 72000);
+        BUILDER.pop();
+
+        BUILDER.push("remission_zones");
+        REMISSION_SPAWN_SAFETY = BUILDER
+                .comment("Whether monsters never spawn naturally in chunks in remission (spawners and events still spawn them).")
+                .define("spawnSafety", true);
+        REMISSION_GROWTH_CHANCE = BUILDER
+                .comment("Chance that a crop's growth attempt in a chunk in remission succeeds when it would otherwise fail.")
+                .defineInRange("growthChance", 0.25, 0.0, 1.0);
+        REMISSION_YIELD_CHANCE = BUILDER
+                .comment("Chance that a block in #remission:remission_yields broken in a chunk in remission drops one more of each item.")
+                .defineInRange("yieldChance", 0.25, 0.0, 1.0);
         BUILDER.pop();
     }
 

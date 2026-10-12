@@ -24,11 +24,13 @@ import net.minecraft.util.Mth;
  * @param debuffs         effects by viral load
  * @param damageAt        viral load at and above which players take damage
  * @param damage          damage per second there (0 = none)
+ * @param contact         whether touching an infectious block adds viral load (P5.2)
+ * @param contactGain     gain per minute while touching one, on top of land gain; water contact is not counted
  */
 public record ViralLoadSettings(boolean enabled, List<Double> landGain, double waterGain, double drinkDose,
                                 double cloudGain, double decay, boolean altitudeFalloff, double falloffStart,
                                 double falloffEnd, double falloffMinimum, FalloffCurve falloffCurve, List<Debuff> debuffs,
-                                double damageAt, double damage) {
+                                double damageAt, double damage, boolean contact, double contactGain) {
     /** Ticks between viral load updates. */
     public static final int INTERVAL_TICKS = 20;
     /** How long each debuff lasts when it is refreshed; above 200 so the effect icon does not blink between refreshes. */
@@ -54,7 +56,9 @@ public record ViralLoadSettings(boolean enabled, List<Double> landGain, double w
                 RemissionCommonConfig.VIRAL_LOAD_FALLOFF_CURVE.get(),
                 RemissionCommonConfig.VIRAL_LOAD_DEBUFFS.get().stream().map(Debuff::parse).toList(),
                 RemissionCommonConfig.VIRAL_LOAD_DAMAGE_AT.get(),
-                RemissionCommonConfig.VIRAL_LOAD_DAMAGE.get());
+                RemissionCommonConfig.VIRAL_LOAD_DAMAGE.get(),
+                RemissionCommonConfig.VIRAL_LOAD_CONTACT.get(),
+                RemissionCommonConfig.VIRAL_LOAD_CONTACT_GAIN.get());
     }
 
     /** Land gain per minute at festering {@code stage} (0 below stage 1 or with an empty list). */

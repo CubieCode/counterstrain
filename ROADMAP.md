@@ -334,9 +334,9 @@ Goals: the player can survive the Strain and push it back locally.
 
 ### P5.2: Handheld purifier, quarantine pylons and mendroot
 
-- Status: `todo`
-- Owner:
-- PR:
+- Status: `review`
+- Owner: feat/p5.2-purification
+- PR: https://github.com/CubieCode/counterstrain/pull/70
 - Depends on: P4.1, P4.2, P4.4, P4.8, P8.1
 - Scope: Handheld purifier item, `remission:quarantine_pylon` block with radius (inside it, spread, festering, vein growth and contact infection stop and festered blocks and veins are cleansed; it is the ward a base or the crash site is built around), `remission:mendroot` cleansing plant (plantable, so automation can place it); purified chunks enter remission and grant remission zone bonuses (config). Contact viral load: a player touching a block in `#remission:infectious` (standing on it, inside it or against it, through P4.8's `Contact.of(entity)`) gains viral load at a configurable rate (`[viral_load]`: on/off and rate), on top of P5.1's land gain; water contact is not counted again, since P5.1's water gain already covers swimming in festering water. Emits block purified and chunk entered remission. Adds the region-cleansed advancement trigger (share of chunks in remission around a point) and a chunks-cleansed stat, following P8.1's conventions.
 - Acceptance: Gametests for radius, cleansing and remission entry, and for contact viral load (gain on, in and against an infectious block; none with it off; no extra gain from water contact); harness scene `purification/pylon_radius` (before/after). Ledger updated; placeholders marked.

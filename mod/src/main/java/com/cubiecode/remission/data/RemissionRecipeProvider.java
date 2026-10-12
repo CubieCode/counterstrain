@@ -14,6 +14,7 @@ import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
+import net.minecraft.data.recipes.ShapelessRecipeBuilder;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
@@ -28,6 +29,7 @@ public final class RemissionRecipeProvider extends RecipeProvider {
     @Override
     protected void buildRecipes(RecipeOutput output) {
         machines(output);
+        purification(output);
         analyzing(output);
         sequencing(output);
         synthesizing(output);
@@ -50,6 +52,34 @@ public final class RemissionRecipeProvider extends RecipeProvider {
                 .define('R', Items.REDSTONE)
                 .define('C', core)
                 .unlockedBy("has_iron_ingot", has(Items.IRON_INGOT))
+                .save(output);
+    }
+
+    /** Purification tools from vanilla parts (P5.2): the purifier, a pylon built around one, and mendroot. */
+    private static void purification(RecipeOutput output) {
+        ShapedRecipeBuilder.shaped(RecipeCategory.TOOLS, RemissionItems.HANDHELD_PURIFIER.get())
+                .pattern(" G ")
+                .pattern("ICI")
+                .pattern(" I ")
+                .define('G', Items.GLASS)
+                .define('I', Items.IRON_INGOT)
+                .define('C', Items.COPPER_INGOT)
+                .unlockedBy("has_iron_ingot", has(Items.IRON_INGOT))
+                .save(output);
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, RemissionBlocks.QUARANTINE_PYLON.get())
+                .pattern("ILI")
+                .pattern("IPI")
+                .pattern("III")
+                .define('I', Items.IRON_INGOT)
+                .define('L', Items.LIGHTNING_ROD)
+                .define('P', RemissionItems.HANDHELD_PURIFIER.get())
+                .unlockedBy("has_handheld_purifier", has(RemissionItems.HANDHELD_PURIFIER.get()))
+                .save(output);
+        ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, RemissionBlocks.MENDROOT.get(), 2)
+                .requires(Items.WHEAT_SEEDS)
+                .requires(Items.BONE_MEAL)
+                .requires(Items.GLOW_BERRIES)
+                .unlockedBy("has_glow_berries", has(Items.GLOW_BERRIES))
                 .save(output);
     }
 

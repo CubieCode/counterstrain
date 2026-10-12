@@ -3,6 +3,7 @@ package com.cubiecode.remission.registry;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.quest.HostScannedTrigger;
 import com.cubiecode.remission.quest.LocationTrigger;
+import com.cubiecode.remission.quest.RegionCleansedTrigger;
 import com.cubiecode.remission.quest.SurgeSurvivedTrigger;
 import com.cubiecode.remission.quest.ViralLoadTrigger;
 import java.util.function.Supplier;
@@ -25,6 +26,9 @@ public final class RemissionTriggers {
             TRIGGER_TYPES.register("surge_survived", SurgeSurvivedTrigger::new);
     public static final Supplier<ViralLoadTrigger> VIRAL_LOAD_CHANGED =
             TRIGGER_TYPES.register("viral_load_changed", ViralLoadTrigger::new);
+
+    public static final Supplier<RegionCleansedTrigger> REGION_CLEANSED =
+            TRIGGER_TYPES.register("region_cleansed", RegionCleansedTrigger::new);
 
     private RemissionTriggers() {
     }

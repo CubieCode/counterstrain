@@ -3,6 +3,7 @@ package com.cubiecode.remission.viralload;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.api.CorruptionQueries;
 import com.cubiecode.remission.api.ViralLoadChangedEvent;
+import com.cubiecode.remission.infection.Contact;
 import com.cubiecode.remission.network.ViralLoadPayload;
 import com.cubiecode.remission.quest.QuestProgress;
 import com.cubiecode.remission.registry.RemissionAttachments;
@@ -128,7 +129,9 @@ public final class ViralLoad {
 
     /**
      * Viral load per minute the player gains where they are now: land gain by the chunk's festering stage times the
-     * altitude factor, plus water gain when in water in festering land, plus cloud gain inside a miasma cloud.
+     * altitude factor, plus water gain when in water in festering land, plus cloud gain inside a miasma cloud, plus
+     * contact gain while touching an infectious block anywhere (P5.2; festering water is already water gain, so
+     * {@link Contact.Kind#WATER} adds nothing here).
      */
     public static double gainPerMinute(ServerPlayer player, ViralLoadSettings settings) {
         ServerLevel level = player.serverLevel();
@@ -142,6 +145,9 @@ public final class ViralLoad {
         }
         if (settings.cloudGain() > 0 && inMiasmaCloud(level, player)) {
             gain += settings.cloudGain();
+        }
+        if (settings.contact() && settings.contactGain() > 0 && Contact.of(player) == Contact.Kind.BLOCK) {
+            gain += settings.contactGain();
         }
         return gain;
     }
