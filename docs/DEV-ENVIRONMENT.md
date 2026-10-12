@@ -85,8 +85,16 @@ tools/pack.sh serve          # http://foundry:8080/pack.toml; pass a port or set
 On the PC (Manjaro):
 
 1. `sudo pacman -S prismlauncher` (the native package: the Flatpak sandbox cannot run host scripts with your ssh keys). Make sure `ssh foundry` works without a password prompt (key auth), because the hook runs non-interactively.
-2. Get `tools/pack-sync.sh`: clone the repository, or copy just that file (`scp lab@foundry:development/CubieCode/counterstrain/tools/pack-sync.sh ~/bin/`). It is self-contained.
-3. In Prism: Add Instance → Minecraft 1.21.1, then Edit → Version → Install Loader → NeoForge 21.1.259 (match `pack/pack.toml`). Under Edit → Settings → Custom commands, set the pre-launch command to `~/bin/pack-sync.sh` (or the path inside your clone).
+2. Get `tools/pack-sync.sh`: clone the repository, or copy just that file (it is self-contained). Name the destination file: some scp versions fail on a bare directory target with `open local "…/bin/": Is a directory`.
+
+   ```sh
+   mkdir -p ~/bin
+   scp lab@foundry:development/CubieCode/counterstrain/tools/pack-sync.sh ~/bin/pack-sync.sh
+   chmod +x ~/bin/pack-sync.sh
+   ```
+
+3. In Prism: Add Instance → Minecraft 1.21.1, then Edit → Version → Install Loader → NeoForge 21.1.259 (match `pack/pack.toml`). Under Edit → Settings → Custom commands, set the pre-launch command to the script's absolute path, such as `/home/you/bin/pack-sync.sh` (or the path inside your clone). Prism may not expand `~`.
+4. With `tools/pack.sh serve` running on foundry, check the PC reaches it: `curl -I http://foundry:8080/pack.toml`. If not, use the tunnel below.
 
 Each launch then runs `tools/pack-sync.sh`, which:
 - runs packwiz-installer (the bootstrap jar is pinned by SHA-256 and cached in `~/.cache/counterstrain/`) against the served `pack.toml`: changed mods, configs, KubeJS scripts and quests are downloaded, removed ones deleted, files it did not install left alone. Its window asks once about optional mods (ProbeJS) and asks you to download any mod CurseForge will not serve to it.
