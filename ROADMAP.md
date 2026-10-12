@@ -15,6 +15,7 @@ Rules for every item after P4.4:
 
 All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a lock), so keep waves at four lanes or fewer. One owner per wave for build/version files, the registry and network spine, contracts (remission-data-formats) and pack membership. Generated files (`mod/src/generated/`, `pack/index.toml`) are regenerated after rebasing, never hand-merged.
 
+- P1.5 (follow-up to P1.4) is next: it can run in any wave or alone, so content can be replaced as features land, and must land before the art pass (P12.2), which uses it.
 - A: P1.1 + P2.1 + P1.4. P2.1 owns the registry and network spine; P1.1 owns the dev-only harness and `tools/run-client-headless.sh`; P1.4 owns the provenance check script and its `docs.yml` step. P1.4 can also run in any later early wave.
 - B: P2.2 + P2.3 + P1.2 + P1.3, after A. P1.2 owns comparison scripts; P1.3 owns `gpu-smoke.yml`; P2.2 owns client rendering; P2.3 owns commands.
 - P2.4 (follow-up to P2.2) can join any wave after B, or run alone. It owns `client/` host rendering and the `corruption/*` scenes and their references.
@@ -102,7 +103,25 @@ Goals: reproducible, self-terminating visual runs, so every later visual feature
 - Skills: content-provenance, docs-sync, minecraft-ci-release
 - Parallel: Any early wave; owns its script and the `docs.yml` step
 
-Exit criteria: harness scene `smoke/mob_lineup` runs headlessly, quits by itself, and its screenshots are reviewed and stored as the first reference. The GPU workflow runs it. The provenance check runs in CI.
+### P1.5: Local content editor
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P1.4
+- Scope: A planned small local web app for replacing AI-generated player-facing content without hand-editing files: `tools/content-editor.sh [--port N] [--lan]`, a Python standard library HTTP server (no new dependencies, no root, no build step; plain HTML, CSS and JavaScript served from `tools/content-editor/`). It is built on the provenance ledger: it lists `docs/CONTENT-PROVENANCE.md` rows, filterable by status (`placeholder`, `draft`, `final`), type and roadmap item, and edits the files they point at.
+  - **Text:** for `lang` rows, shows each matching key's current English string (rows with `*` expand to every matching key) with the row's notes as guidance, and saves edits to `en_us.json`, keeping key order and formatting and refusing invalid JSON or a changed set of `%s` arguments. The same page can accept a string unchanged as final.
+  - **Textures:** previews the current PNG at pixel scale, tiled 3×3 (host overlays and block faces must tile) and next to the upload; accepts a PNG upload and checks it before writing: a valid PNG, the same size as the original or the same aspect ratio at a power-of-two scale, an animation strip only with a matching `.mcmeta`, and the 2×2 `#FF00FF` marker present exactly when the chosen status is `placeholder`.
+  - **Models and sounds:** uploads hand-authored block or item model JSON (must parse; every texture it names must exist) and `.ogg` sounds for existing rows. Datagen output under `mod/src/generated/` is never written: those rows are shown read-only with a note that the change belongs in the datagen provider or a hand-authored model under `mod/src/main/resources/`.
+  - **Ledger:** every save updates its row in the same change: origin (`human`, or `licensed` with source and licence), status, and for an accepted draft the reviewer and date in the notes, as P12.2 requires. Rows are never deleted.
+  - **Git:** edits go to a dedicated content worktree and branch (`content/<date>-<slug>`), never to `main` or another lane's worktree. A "Save batch" step runs `tools/check-provenance.sh`, `python3 -I tools/check-docs.py` and `git diff --check`, shows the results, commits with a plain message and can open a PR with `gh pr create --body-file` listing every changed row; it never pushes to `main`, merges or publishes.
+  - **Access:** binds to `127.0.0.1` by default (from a PC, `ssh -L`, as for `tools/pack.sh serve`). `--lan` binds every interface and requires a random token printed at start in every request. Writes only to paths the ledger names (or new rows the user adds under the mod's `assets/` and `pack/`), with an upload size limit.
+  - Quest text and field journal entries are out of scope until their files exist (P11.1, P10.7); the row model must not rule them out.
+- Acceptance: Python `unittest` tests (no network, temporary repository fixture) for lang editing (order, formatting, argument check), texture validation (size, scale, marker against status, `.mcmeta`), refusing generated paths and paths outside the ledger, and ledger row updates; `tools/check-provenance.sh` passes after a scripted edit session. A manual session on foundry, reached from a PC through `ssh -L`, replaces one lang string and one placeholder texture, accepts one draft string, and opens a draft PR from the content branch; the PR is recorded and closed unmerged. Screenshots of the list, text and texture pages in the PR (the GUI is a dev tool, not player-facing, so no ledger rows). Documented in README, docs/DEV-ENVIRONMENT.md and the content-provenance skill.
+- Skills: content-provenance, docs-sync
+- Parallel: Any wave; owns the planned `tools/content-editor.sh`, `tools/content-editor/` and its tests. Content branches it creates follow the serialization gates: a batch that touches `en_us.json` or texture references rebases and reruns its checks before merge.
+
+Exit criteria: harness scene `smoke/mob_lineup` runs headlessly, quits by itself, and its screenshots are reviewed and stored as the first reference. The GPU workflow runs it. The provenance check runs in CI. P1.5, a follow-up added after phase 1 closed, is not part of these exit criteria.
 
 ## Phase 2: Corruption state
 
@@ -617,8 +636,8 @@ Goals: performant, compatible, with final art and writing, published.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P11.3
-- Scope: Replace every `placeholder` and `draft` row in CONTENT-PROVENANCE with human-made or licensed content, or accept a draft as final with a recorded human review (reviewer and date in the row's notes). Remove placeholder markers from replaced textures. Store page copy and gallery images for Modrinth and CurseForge.
+- Depends on: P1.5, P11.3
+- Scope: Using the content editor (P1.5), replace every `placeholder` and `draft` row in CONTENT-PROVENANCE with human-made or licensed content, or accept a draft as final with a recorded human review (reviewer and date in the row's notes). Remove placeholder markers from replaced textures. Store page copy and gallery images for Modrinth and CurseForge.
 - Acceptance: No `placeholder` rows remain for shipped content; every remaining `draft` has a recorded review or is replaced; the provenance check passes; store pages use final art; affected harness scenes re-reviewed.
 - Skills: content-provenance, visual-checks, minecraft-resource-pack
 - Parallel: With P12.1
