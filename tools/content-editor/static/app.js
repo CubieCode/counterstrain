@@ -1,6 +1,7 @@
 // Content editor front end (P1.5). Plain DOM, no build step. Every request carries the
 // token from <meta name="editor-token">. All text goes in through text nodes.
 import { modelPreview, mobPreview } from '/static/preview.js?t=__TOKEN__';
+import { render as renderMarkdown, headings, lineDiff, slug } from '/static/markdown.js?t=__TOKEN__';
 
 const TOKEN = document.querySelector('meta[name="editor-token"]').content;
 const app = document.getElementById('app');
@@ -345,7 +346,7 @@ function rowLine(r) {
   if (r.kind === 'texture' || (r.path.endsWith('.png') && !r.key)) {
     thumb = h('span', { class: 'thumb' }, h('img', { class: 'pixel', src: url('/api/file', { path: r.path }), alt: '', width: 32, height: 32, loading: 'lazy' }));
   } else {
-    thumb = h('span', { class: 'thumb none' }, r.generated ? icon(LOCK) : r.kind === 'lang' ? 'Aa' : r.kind === 'model' ? '{ }' : r.kind === 'sound' ? 'ogg' : '·');
+    thumb = h('span', { class: 'thumb none' }, r.generated ? icon(LOCK) : r.kind === 'lang' ? 'Aa' : r.kind === 'markdown' ? 'md' : r.kind === 'model' ? '{ }' : r.kind === 'sound' ? 'ogg' : '·');
   }
   let mark = null;
   if (r.generated) mark = h('span', { class: 'mark lock' }, 'read-only');
@@ -409,6 +410,7 @@ function rowHeader(detail, extra) {
 async function rowView(id, params) {
   const detail = await api(url('/api/row', { id }));
   if (detail.kind === 'lang') return langView(detail, params);
+  if (detail.kind === 'markdown') return markdownView(detail);
   if (detail.kind === 'texture') return textureView(detail);
   if (detail.kind === 'model') return modelView(detail);
   if (detail.kind === 'sound') return soundView(detail);
@@ -542,6 +544,115 @@ async function langView(detail, params) {
       h('div', { class: 'row-flex', style: 'padding-top:14px;border-top:1px solid var(--bd)' }, replace, accept,
         h('span', { class: 'small dim' }, `Accepting keeps the string; status → final, notes gain “Accepted as final by ${STATE.reviewer}, ${STATE.today}.”`),
         h('span', { class: 'grow' }), acceptAll))));
+  update();
+}
+
+// --- markdown -------------------------------------------------------------------------------
+
+function markdownView(detail) {
+  const r = detail.row;
+  const original = detail.text;
+  let mode = store('mdmode', 'split');
+  const source = h('textarea', { id: 'md', class: 'mono', spellcheck: 'true', 'aria-label': `${r.file} source`,
+    style: 'min-height:560px;font-size:13px;line-height:1.6;tab-size:2' });
+  source.value = original;
+  const preview = h('article', { class: 'md-preview card pad', 'aria-label': 'Preview' });
+  const outline = h('select', { 'aria-label': 'Jump to heading', onchange: (e) => jump(Number(e.target.value)) });
+  const status = h('select', { 'aria-label': 'Status after saving' }, h('option', { value: 'draft' }, 'draft'), h('option', { value: 'final' }, 'final'));
+  const save = h('button', { type: 'button', class: 'btn lg primary' }, 'Save');
+  const accept = h('button', { type: 'button', class: 'btn lg ok' }, icon(CHECK), 'Accept as final');
+  const revert = h('button', { type: 'button', class: 'btn lg', onclick: () => { source.value = original; update(); } }, 'Revert');
+  const changes = h('div', { class: 'stack' });
+  const warnings = h('div', { class: 'stack' });
+  const counter = h('span', { class: 'mono tiny muted' });
+  const grid = h('div', { style: 'display:grid;gap:16px;align-items:start' });
+
+  function jump(line) {
+    const before = source.value.split('\n').slice(0, line - 1).join('\n').length;
+    source.focus();
+    source.setSelectionRange(before + 1, before + 1);
+    source.scrollTop = Math.max(0, (line - 3) * 20.8);
+    const head = headings(source.value).find((x) => x.line === line);
+    if (head) preview.querySelector(`#${CSS.escape(slug(head.text))}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+  function layout() {
+    grid.style.gridTemplateColumns = mode === 'split' ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)';
+    source.parentElement.classList.toggle('hidden', mode === 'preview');
+    preview.classList.toggle('hidden', mode === 'edit');
+    seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+  }
+  function showWarnings(list) {
+    warnings.replaceChildren(...(list || []).map((w) => h('div', { class: 'callout error small' }, h('strong', {}, 'Link: '), w)));
+  }
+  function update() {
+    const text = source.value;
+    preview.replaceChildren(renderMarkdown(text));
+    const heads = headings(text);
+    outline.replaceChildren(h('option', { value: '' }, heads.length ? 'Jump to heading…' : 'No headings'),
+      ...heads.map((x) => h('option', { value: x.line }, `${'  '.repeat(x.level - 1)}${x.text}`)));
+    const dirty = text !== original;
+    counter.textContent = `${text.split('\n').length} lines · ${new Blob([text]).size} B${dirty ? ' · unsaved' : ''}`;
+    save.disabled = !STATE.batch || !dirty || !text.trim();
+    const isFinal = r.status === 'final';
+    accept.disabled = !STATE.batch || dirty || isFinal;
+    accept.lastChild.textContent = isFinal ? 'Already final' : 'Accept as final';
+    revert.disabled = !dirty;
+    const base = detail.base ?? '';
+    const diff = base === text.replace(/\s+$/, '') + '\n' || base === text ? [] : lineDiff(base.replace(/\n$/, ''), text.replace(/\n$/, ''));
+    const changed = diff.filter((d) => d.op !== ' ');
+    if (!changed.length) {
+      changes.replaceChildren(h('span', { class: 'small muted' }, detail.base === null ? 'New file: not on main.' : 'Same as main.'));
+    } else {
+      // Show changed lines with one line of context, collapsing the rest.
+      const keep = diff.map((d, i) => d.op !== ' ' || diff[i - 1]?.op !== ' ' && diff[i - 1] || diff[i + 1]?.op !== ' ' && diff[i + 1]);
+      const rows = [];
+      diff.forEach((d, i) => {
+        if (keep[i]) rows.push(h('div', { class: d.op === '+' ? 'add' : d.op === '-' ? 'del' : 'muted' }, `${d.op} ${d.text}`));
+        else if (keep[i - 1]) rows.push(h('div', { class: 'muted' }, '  …'));
+      });
+      changes.replaceChildren(h('div', { class: 'row-flex small' }, h('b', {}, 'Changes against main'),
+        h('span', { class: 'add' }, `+${changed.filter((d) => d.op === '+').length}`), h('span', { class: 'del' }, `−${changed.filter((d) => d.op === '-').length}`)),
+      h('div', { class: 'diffbox', style: 'max-height:280px;overflow:auto' }, rows));
+    }
+  }
+  const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'View' }, ['edit', 'split', 'preview'].map((m) =>
+    h('button', { type: 'button', 'data-mode': m, onclick: () => { mode = m; keep('mdmode', m); layout(); } }, m)));
+
+  save.addEventListener('click', () => guard(async () => {
+    const res = await api('/api/markdown/save', { body: { row: r.id, text: source.value, status: status.value } });
+    toast(`Saved ${r.file}${res.warnings.length ? ` with ${res.warnings.length} link warning(s)` : ''}`);
+    await refresh(); route();
+  }));
+  accept.addEventListener('click', () => guard(async () => {
+    await api('/api/accept', { body: { row: r.id } });
+    toast(`Accepted ${r.file} as final`);
+    await refresh(); route();
+  }));
+  source.addEventListener('input', update);
+  source.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); if (!save.disabled) save.click(); }
+    if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault();
+      const { selectionStart: a, selectionEnd: b } = source;
+      source.setRangeText('  ', a, b, 'end');
+      update();
+    }
+  });
+  const leave = (e) => { if (source.value !== original) { e.preventDefault(); e.returnValue = ''; } };
+  window.addEventListener('beforeunload', leave);
+  cleanup.push(() => window.removeEventListener('beforeunload', leave));
+
+  grid.append(h('div', { class: 'stack', style: 'gap:6px' }, source, counter), preview);
+  app.replaceChildren(rowHeader(detail),
+    h('div', { class: 'content', style: 'padding-top:16px' }, batchGate(),
+      h('div', { class: 'row-flex' }, seg, outline, h('span', { class: 'grow' }),
+        h('span', { class: 'small muted' }, 'Ctrl+S saves · Tab indents')),
+      grid, warnings, changes,
+      h('div', { class: 'row-flex', style: 'padding-top:14px;border-top:1px solid var(--bd)' },
+        h('label', { class: 'row-flex small dim', style: 'gap:6px' }, 'Status after saving', status), save, accept, revert,
+        h('span', { class: 'small dim' }, `Saving records origin “human (${STATE.reviewer}, ${STATE.today})”; accepting keeps the text and adds “Accepted as final by ${STATE.reviewer}, ${STATE.today}.”`))));
+  showWarnings(detail.warnings);
+  layout();
   update();
 }
 
@@ -947,6 +1058,7 @@ function changeLine(c) {
   else if (b.status !== r.status && r.status === 'final' && b.origin === r.origin) action = r.wildcard ? 'accepted as final · * row updated' : 'accepted as final';
   else if (c.kind === 'texture' || c.kind === 'model' || c.kind === 'sound') action = `${c.kind} replaced`;
   else if (c.strings && c.strings.length) action = 'string replaced';
+  else if (c.diff && c.diff.length) action = 'text replaced';
   return h('div', { class: 'change' }, visual,
     h('div', { class: 'stack grow', style: 'gap:5px;min-width:0' },
       h('div', { class: 'row-flex', style: 'gap:4px 10px' }, h('a', { href: rowHref(r.id), class: 'mono small', style: 'color:var(--fg);text-decoration:none;overflow-wrap:anywhere' }, h('span', { class: 'muted' }, dir), leaf),
@@ -956,6 +1068,8 @@ function changeLine(c) {
       c.strings && c.strings.length ? h('div', { class: 'strings' }, c.strings.map((s) => [
         h('span', { class: 'dim' }, h('span', { class: 'mono del' }, '− '), h('s', {}, s.before ?? '(none)')),
         h('span', {}, h('span', { class: 'mono add' }, '+ '), s.after)])) : null,
+      c.diff && c.diff.length ? h('details', {}, h('summary', { class: 'small dim' }, `Diff against main (${c.diff.filter((l) => /^[+-][^+-]/.test(l)).length} lines changed)`),
+        h('div', { class: 'diffbox', style: 'max-height:320px;overflow:auto' }, c.diff.map((l) => h('div', { class: l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : 'muted' }, l)))) : null,
       b && b.notes !== r.notes ? h('span', { class: 'small dim' }, 'Notes: ', r.notes.startsWith(b.notes.replace(/\.?$/, '')) ? `…${r.notes.slice(b.notes.length)}` : r.notes) : null,
       c.new && r.key ? h('span', { class: 'small dim' }, 'Overrides the shared * row for this key; that row is unchanged.') : null),
     h('button', { type: 'button', class: 'btn sm', style: 'align-self:flex-start', onclick: () => guard(async () => {

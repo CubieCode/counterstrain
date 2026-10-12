@@ -221,6 +221,17 @@ class Handler(BaseHTTPRequestHandler):
         self.app.checked = None
         return {"row": row.to_dict()}
 
+    def post_markdown_save(self):
+        b = self.body()
+        row, warnings = self.app.editor.markdown_save(b.get("row", ""), b.get("text"), b.get("status", "draft"))
+        self.app.checked = None
+        return {"row": row.to_dict(), "warnings": warnings}
+
+    def post_accept(self):
+        row = self.app.editor.accept_row(self.body().get("row", ""))
+        self.app.checked = None
+        return {"row": row.to_dict()}
+
     def post_upload(self):
         b = self.body()
         try:

@@ -33,6 +33,10 @@ class TextureChecksTest(unittest.TestCase):
         big = fixture.solid(32, 32, marker=True)
         self.assertEqual(states(textures.validate(big, "placeholder")[0])["marker"], "pass")
 
+    def test_gui_images_use_a_label_not_the_marker(self):
+        checks = states(textures.validate(fixture.solid(16, 16), "placeholder", marker_rule=False)[0])
+        self.assertEqual(checks["marker"], "info")
+
     def test_animation_strip_needs_mcmeta(self):
         strip = fixture.solid(16, 64)
         without = states(textures.validate(strip, "draft", original=ORIGINAL)[0])

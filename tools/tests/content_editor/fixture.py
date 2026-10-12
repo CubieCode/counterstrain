@@ -47,6 +47,8 @@ LANG_TEXT = textwrap.dedent("""\
     }
     """)
 
+LORE_TEXT = "# Lore outline\n\nSee the [ledger](CONTENT-PROVENANCE.md).\n\n## Premise\n\nA survey ship breaks up.\n"
+
 LEDGER_TEXT = textwrap.dedent(f"""\
     # Content provenance
 
@@ -75,6 +77,12 @@ LEDGER_TEXT = textwrap.dedent(f"""\
 
     | Path / ID | Type | Origin | Status | Notes |
     | --- | --- | --- | --- | --- |
+
+    ## Lore
+
+    | Path / ID | Type | Origin | Status | Notes |
+    | --- | --- | --- | --- | --- |
+    | `docs/LORE.md` (premise, arc) | lore | ai (test) | draft | Story outline (P11.1). |
 
     ## Lang strings
 
@@ -105,6 +113,7 @@ class TempRepo:
         git(self.root, "config", "commit.gpgsign", "false")
         files = {
             "docs/CONTENT-PROVENANCE.md": LEDGER_TEXT,
+            "docs/LORE.md": LORE_TEXT,
             LANG: LANG_TEXT,
             ".gitignore": ".local/\n",
             GEN_MODEL: '{\n  "parent": "minecraft:block/cube_all",\n  "textures": {\n    "all": "remission:block/stone"\n  }\n}',

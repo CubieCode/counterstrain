@@ -51,11 +51,12 @@ def frame_size(width, height, animation):
     return fw, fh, (width // fw) * (height // fh)
 
 
-def validate(data, status, original=None, original_mcmeta=None, mcmeta=None):
+def validate(data, status, original=None, original_mcmeta=None, mcmeta=None, marker_rule=True):
     """Run every check. Returns (checks, info); a write needs no check in state 'fail'.
 
     data: the uploaded bytes. status: the row's status after the write.
-    original: the current file's bytes, or None for a new row.
+    original: the current file's bytes, or None for a new row. marker_rule: False for gui, icon and other
+    images, which mark placeholders with a visible "PLACEHOLDER" label instead of the #FF00FF corner.
     original_mcmeta / mcmeta: text of the .mcmeta beside the current file and the one
     that will sit beside the new file (an uploaded one, else the current one).
     """
@@ -112,6 +113,13 @@ def validate(data, status, original=None, original_mcmeta=None, mcmeta=None):
                                     f"{fw}×{fh} is neither {ofw}×{ofh} nor its aspect ratio at a power-of-two scale"))
 
     size, marked = png.marker(data)
+    if not marker_rule:
+        checks.append(check("marker", "Placeholder label", True,
+                            "not a block, item or entity texture: placeholders carry a visible PLACEHOLDER label "
+                            "instead of the corner marker; check it by eye", "info"))
+        info["marker"] = marked
+        info["image"] = image
+        return checks, info
     if status == "placeholder":
         checks.append(check("marker", "Placeholder marker", marked,
                             f"{size}×{size} #FF00FF marker {'present' if marked else 'missing'}; "

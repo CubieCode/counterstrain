@@ -12,7 +12,7 @@ import posixpath
 import secrets
 import time
 
-from . import host, lang, models, png, textures
+from . import host, lang, markdown, models, png, textures
 from .ledger import Ledger, LedgerError, append_note
 from .repo import RepoError, Resolver, Workspace, git, show
 
@@ -38,9 +38,11 @@ def normalize(rel):
 
 
 def kind_of(row):
-    """What the editor can do with a row: lang, texture, model, sound, or None (view only)."""
+    """What the editor can do with a row: lang, markdown, texture, model, sound, or None (view only)."""
     if row.key is not None:
         return "lang" if row.file.endswith(".json") and "/lang/" in row.file else None
+    if row.file.endswith(".md"):
+        return "markdown"
     if row.file.endswith(".png"):
         return "texture"
     if row.file.endswith(".ogg"):
@@ -211,6 +213,11 @@ class Editor:
         elif kind == "sound":
             data = self.read(row.file)
             detail["bytes"] = len(data) if data is not None else None
+        elif kind == "markdown":
+            text = (self.read(row.file) or b"").decode("utf-8", "replace")
+            base = self.read(row.file, "base")
+            detail.update(text=text, base=base.decode("utf-8", "replace") if base is not None else None,
+                          warnings=markdown.link_warnings(text, row.file, self.root))
         return detail
 
     def _lang_keys(self, ledger, row):
@@ -342,6 +349,40 @@ class Editor:
         self._save_ledger(ledger)
         return ledger.find(f"{file}:{key}") or ledger.find(owner.path_id)
 
+    # --- markdown ------------------------------------------------------------
+
+    def markdown_save(self, row_id, text, status="draft"):
+        """Replace a Markdown text row's file (lore now; store copy, journal and books later)."""
+        if status not in ("draft", "final"):
+            raise EditorError("replaced text is draft or final")
+        ledger = self.ledger()
+        row = ledger.require(row_id)
+        if kind_of(row) != "markdown":
+            raise EditorError(f"`{row_id}` is not a Markdown row")
+        try:
+            data = markdown.normalize(text)
+        except ValueError as e:
+            raise EditorError(str(e))
+        if data == self.read(row.file):
+            raise EditorError("nothing changed")
+        self._write(row.file, data, ledger)
+        ledger.set_fields(row, origin=self.human_origin(), status=status)
+        self._save_ledger(ledger)
+        return ledger.find(row_id), markdown.link_warnings(data.decode("utf-8"), row.file, self.root)
+
+    def accept_row(self, row_id):
+        """Accept a whole row (lang or Markdown) unchanged as final, recording the reviewer and date."""
+        ledger = self.ledger()
+        row = ledger.require(row_id)
+        if kind_of(row) not in ("lang", "markdown"):
+            raise EditorError(f"`{row_id}` is accepted through its upload page, not as text")
+        if row.status == "final":
+            raise EditorError(f"`{row.key or row.file}` is already final")
+        self._target(row.file, ledger)
+        ledger.set_fields(row, status="final", notes=append_note(row.notes, self.accepted_note()))
+        self._save_ledger(ledger)
+        return ledger.find(row_id)
+
     # --- uploads -------------------------------------------------------------
 
     def stage_upload(self, row_id, data, status=None, mcmeta=None):
@@ -368,7 +409,7 @@ class Editor:
             original_meta = self.read(row.file + ".mcmeta")
             return textures.validate(data, status, original=original,
                                      original_mcmeta=original_meta.decode("utf-8", "replace") if original_meta else None,
-                                     mcmeta=mcmeta)
+                                     mcmeta=mcmeta, marker_rule=row.type == "texture")
         if kind == "model":
             checks, _ = models.validate(data, self.resolver)
             return checks, {"bytes": len(data)}
@@ -462,6 +503,10 @@ class Editor:
                       "before": before.to_dict() if before else None}
             if kind_of(row) == "lang":
                 change["strings"] = self._changed_strings(ledger, row)
+            elif kind_of(row) == "markdown":
+                base_text = self.read(row.file, "base")
+                change["diff"] = markdown.diff((base_text or b"").decode("utf-8", "replace"),
+                                               (self.read(row.file) or b"").decode("utf-8", "replace"), row.file)
             changes.append(change)
         stats = self.workspace.numstat()
         files = [{"status": s, "path": p, "added": stats.get(p, ("", ""))[0], "deleted": stats.get(p, ("", ""))[1]}
@@ -499,7 +544,7 @@ class Editor:
                     if s["before"] is not None:
                         current = current.with_value(s["key"], s["before"])
                 current.save(self._target(row.file, ledger))
-        elif kind_of(row) in ("texture", "model", "sound"):
+        elif kind_of(row) in ("texture", "model", "sound", "markdown"):
             for rel in (row.file, row.file + ".mcmeta"):
                 data = show(root, self.workspace.base(), rel)
                 target = os.path.join(root, rel)
