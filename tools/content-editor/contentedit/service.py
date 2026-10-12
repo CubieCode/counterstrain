@@ -245,9 +245,9 @@ class Editor:
             detail["bytes"] = len(data) if data is not None else None
         elif kind == "properties":
             current = props.PropsFile.load(self.path(row.file))
-            base = self.read(row.file, "base")
+            base = self._base_props(row.file)
             detail.update(value=current.get(row.key), line=current.lines[row.key] + 1,
-                          base=props.PropsFile(base.decode("iso-8859-1")).values.get(row.key) if base else None,
+                          base=base.values.get(row.key) if base else None,
                           gate=row.file == "mod/gradle.properties")
         elif kind == "markdown":
             text = (self.read(row.file) or b"").decode("utf-8", "replace")
@@ -257,9 +257,7 @@ class Editor:
         return detail
 
     def _lang_keys(self, ledger, row):
-        current = lang.LangFile.load(self.path(row.file))
-        base_data = show(self.root, self.workspace.base(), row.file)
-        base = lang.LangFile(base_data.decode("utf-8")) if base_data else None
+        current, base = self._lang_versions(row.file)
         keys = []
         line_of = {}
         for i, line in enumerate(current.text.split("\n"), 1):
@@ -276,20 +274,20 @@ class Editor:
                          "line": line_of.get(key)})
         return keys
 
-    def _model_id(self, rel):
+    @staticmethod
+    def _asset_id(rel, kind):
+        """`namespace:path` for a file under assets/<namespace>/<kind>/ (extension dropped), else None."""
         parts = rel.split("/")
-        if "assets" in parts and "models" in parts:
-            a = parts.index("assets")
-            m = parts.index("models")
-            return f"{parts[a + 1]}:{'/'.join(parts[m + 1:])[:-5]}"
+        if "assets" in parts and kind in parts:
+            a, k = parts.index("assets"), parts.index(kind)
+            return f"{parts[a + 1]}:{posixpath.splitext('/'.join(parts[k + 1:]))[0]}"
         return None
 
+    def _model_id(self, rel):
+        return self._asset_id(rel, "models")
+
     def _texture_id(self, rel):
-        parts = rel.split("/")
-        if "assets" in parts and "textures" in parts:
-            a, t = parts.index("assets"), parts.index("textures")
-            return f"{parts[a + 1]}:{'/'.join(parts[t + 1:])[:-4]}"
-        return None
+        return self._asset_id(rel, "textures")
 
     def _models_using(self, texture_rel):
         tex_id = self._texture_id(texture_rel)
@@ -411,8 +409,14 @@ class Editor:
             data = markdown.normalize(text)
         except ValueError as e:
             raise EditorError(str(e))
-        if data == self.read(row.file):
-            raise EditorError("nothing changed")
+        current = self.read(row.file) or b""
+        try:
+            tidied = markdown.normalize(current.decode("utf-8", "replace"))
+        except ValueError:
+            tidied = current
+        if data == current or data == tidied:
+            # Only line endings or whitespace would change: saving would record the AI text as human-written.
+            raise EditorError("nothing changed; use Accept as final to keep the text as it is")
         self._write(row.file, data, ledger)
         ledger.set_fields(row, origin=self.human_origin(), status=status)
         self._save_ledger(ledger)
@@ -471,8 +475,8 @@ class Editor:
             now = props.PropsFile.load(self.path(row.file)).values.get(row.key)
         except OSError:
             return []
-        base = self.read(row.file, "base")
-        before = props.PropsFile(base.decode("iso-8859-1")).values.get(row.key) if base else None
+        base = self._base_props(row.file)
+        before = base.values.get(row.key) if base else None
         return [] if before == now else [{"key": row.key, "before": before, "after": now}]
 
     # --- vocabulary ------------------------------------------------------------
@@ -507,6 +511,8 @@ class Editor:
             raise EditorError(f"`{row.file}` is datagen output and read-only here")
         if kind not in ("texture", "model", "sound"):
             raise EditorError(f"`{row_id}` takes no file uploads")
+        if mcmeta is not None and kind != "texture":
+            raise EditorError("only textures take an .mcmeta (animation strips)")
         checks, info = self._validate(kind, row, data, status or row.status, mcmeta)
         info.pop("image", None)
         if len(self.uploads) >= MAX_UPLOADS:
@@ -547,7 +553,7 @@ class Editor:
             raise EditorError(f"the upload fails its checks for status {status}: {failed}")
         origin_text = self.origin(origin)
         self._write(row.file, upload["data"], ledger)
-        if upload["mcmeta"] is not None:
+        if upload["mcmeta"] is not None and upload["kind"] == "texture":
             self._write(row.file + ".mcmeta", upload["mcmeta"].encode("utf-8"), ledger)
         notes = append_note(row.notes, note) if note and note.strip() else row.notes
         ledger.set_fields(row, origin=origin_text, status=status, notes=notes)
@@ -577,6 +583,8 @@ class Editor:
         """The mob texture with stage `stage`'s overlay, as a PNG."""
         if mob not in host.MOBS:
             raise EditorError(f"unknown mob '{mob}'")
+        if not isinstance(stage, int) or stage < 1:
+            raise EditorError(f"host stages start at 1, not {stage}")
         _, model_kind, texture = host.MOBS[mob]
         if texture is None:
             base_image = host.mannequin(model_kind)
@@ -609,7 +617,9 @@ class Editor:
         """Every row that differs from the base ledger, with what changed, plus the changed files."""
         ledger, base = self.ledger(), self.base_ledger()
         changes = []
-        changed_paths = {p for _, p in self.workspace.changed_files()}
+        base_commit = self.workspace.base()
+        changed = self.workspace.changed_files(base_commit)
+        changed_paths = {p for _, p in changed}
         for row in ledger.rows:
             before = base.find(row.path_id)
             same_row = before is not None and (before.origin, before.status, before.notes) == \
@@ -629,12 +639,11 @@ class Editor:
                 change["diff"] = markdown.diff((base_text or b"").decode("utf-8", "replace"),
                                                (self.read(row.file) or b"").decode("utf-8", "replace"), row.file)
             changes.append(change)
-        base_commit = self.workspace.base()
         stats = self.workspace.numstat(base_commit)
         files = [{"status": s, "path": p, "added": stats.get(p, ("", ""))[0], "deleted": stats.get(p, ("", ""))[1]}
-                 for s, p in self.workspace.changed_files(base_commit)]
+                 for s, p in changed]
         return {"changes": changes, "files": files, "branch": self.workspace.branch(), "behind": self.workspace.behind(),
-                "base": self.workspace.base()[:9], "worktree": self.workspace.worktree,
+                "base": base_commit[:9], "worktree": self.workspace.worktree,
                 "uncommitted": self.workspace.uncommitted(), "commits": self.workspace.commits()}
 
     def _content_changed(self, ledger, row, changed_paths):
@@ -661,10 +670,15 @@ class Editor:
         if hit is None:  # GETs run concurrently: build into a local and return that, never re-read the dict
             current = lang.LangFile.load(self.path(rel))
             base_data = show(self.root, base_commit, rel)
-            hit = (current, lang.LangFile(base_data.decode("utf-8")).values if base_data else {})
+            hit = (current, lang.LangFile(base_data.decode("utf-8")) if base_data else None)
             cache.clear()
             cache[key] = hit
         return hit
+
+    def _base_props(self, rel):
+        """main's version of a .properties file (ISO-8859-1, as Gradle reads it), or None."""
+        data = self.read(rel, "base")
+        return props.PropsFile(data.decode("iso-8859-1")) if data is not None else None
 
     def _changed_strings(self, ledger, row):
         try:
@@ -673,7 +687,8 @@ class Editor:
             return []
         if versions is None:
             return []
-        current, base = versions
+        current, base_file = versions
+        base = base_file.values if base_file else {}
         out = []
         for key in ledger.keys(row, current.keys()):
             if ledger.owner(row.file, key) is not row:
@@ -691,9 +706,7 @@ class Editor:
         if kind_of(row) == "lang":
             strings = self._changed_strings(ledger, row)
             if strings:
-                current = lang.LangFile.load(self.path(row.file))
-                base_data = show(root, self.workspace.base(), row.file)
-                base_file = lang.LangFile(base_data.decode("utf-8")) if base_data else None
+                current, base_file = self._lang_versions(row.file)
                 for s in strings:
                     if s["before"] is None:
                         continue
@@ -703,10 +716,10 @@ class Editor:
                         else current.with_value(s["key"], s["before"])
                 current.save(self._target(row.file, ledger))
         elif kind_of(row) == "properties":
-            base_data = self.read(row.file, "base")
+            base_file = self._base_props(row.file)
             for s in self._changed_property(row):
                 current = props.PropsFile.load(self.path(row.file))
-                raw = props.PropsFile(base_data.decode("iso-8859-1")).raw.get(row.key) if base_data else None
+                raw = base_file.raw.get(row.key) if base_file else None
                 current = current.with_raw(row.key, raw) if raw is not None else current.with_value(row.key, s["before"])
                 current.save(self._target(row.file, ledger))
         elif kind_of(row) in ("texture", "model", "sound", "markdown"):

@@ -25,6 +25,8 @@ def is_host_pattern(path):
 
 def stage_pattern(stage):
     """The pattern file for a stage (1 or more); stages above 3 use stage 3's, as HostOverlayLayer does."""
+    if not isinstance(stage, int) or stage < 1:
+        raise ValueError(f"host stages start at 1, not {stage}")
     return STAGE_PATTERNS[min(stage, len(STAGE_PATTERNS)) - 1]
 
 

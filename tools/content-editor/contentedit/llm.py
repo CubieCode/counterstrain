@@ -6,6 +6,7 @@ file. That keeps provenance honest: anything a person saves is recorded as their
 library only (urllib); nothing happens unless Ollama answers and has the model.
 """
 import json
+import re
 import time
 import urllib.error
 import urllib.request
@@ -51,8 +52,9 @@ class Reviewer:
         """[{quote, problem}] (quotes not found in the text are dropped), or raise RuntimeError."""
         if not self.available():
             raise RuntimeError(f"no local reviewer: Ollama at {self.url} with {self.model} is not reachable")
-        prompt = PROMPT.replace("{glossary}", glossary[:8000]).replace("{notes}", notes or "(none)") \
-            .replace("{kind}", kind).replace("{text}", text[:12000])
+        fields = {"glossary": glossary[:8000], "notes": notes or "(none)", "kind": kind, "text": text[:12000]}
+        # One pass, so a placeholder inside a filled-in value (e.g. notes containing "{text}") stays literal.
+        prompt = re.sub(r"\{(glossary|notes|kind|text)\}", lambda m: fields[m.group(1)], PROMPT)
         body = json.dumps({"model": self.model, "stream": False, "format": "json", "keep_alive": "1m",
                            "options": {"temperature": 0.2, "num_ctx": 8192},
                            "messages": [{"role": "user", "content": prompt}]}).encode("utf-8")

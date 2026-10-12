@@ -85,7 +85,12 @@ class Handler(BaseHTTPRequestHandler):
         return secrets.compare_digest(given.encode("utf-8", "replace"), app.token.encode("ascii"))
 
     def body(self):
-        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            raise EditorError("bad Content-Length")
+        if length < 0:
+            raise EditorError("bad Content-Length")  # rfile.read(-1) would block until the client hangs up
         if length > MAX_BODY:
             raise EditorError(f"request too large ({length} bytes; the limit is {MAX_BODY})")
         data = self.rfile.read(length) if length else b"{}"
@@ -164,7 +169,7 @@ class Handler(BaseHTTPRequestHandler):
     def get_state(self):
         state = self.app.editor.state()
         state["lan"] = self.app.lan
-        state["checked"] = self.app.checked is not None
+        state["checked"] = bool(self.app.checked and self.app.checked[0])  # a failed run stores (None, results)
         return state
 
     def get_rows(self):

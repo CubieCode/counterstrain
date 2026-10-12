@@ -118,14 +118,14 @@ def validate(data, status, original=None, original_mcmeta=None, mcmeta=None, mar
                 checks.append(check("size", "Size", False,
                                     f"{fw}×{fh} is neither {ofw}×{ofh} nor its aspect ratio at a power-of-two scale"))
 
-    size, marked = png.marker(data)
-    if not marker_rule:
+    if not marker_rule:  # gui, icon and other images: no corner marker, so never compute it (wide images
+        # can be shorter than the marker square)
         checks.append(check("marker", "Placeholder label", True,
                             "not a block, item or entity texture: placeholders carry a visible PLACEHOLDER label "
                             "instead of the corner marker; check it by eye", "info"))
-        info["marker"] = marked
         info["image"] = image
         return checks, info
+    size, marked = png.marker(data)
     if status == "placeholder":
         checks.append(check("marker", "Placeholder marker", marked,
                             f"{size}×{size} #FF00FF marker {'present' if marked else 'missing'}; "
