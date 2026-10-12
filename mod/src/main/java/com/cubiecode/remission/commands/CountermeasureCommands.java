@@ -20,7 +20,8 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * {@code /remission countermeasure} (under {@link RemissionCommands}' permission level; P5.7): {@code grant <targets>
- * <hazard>} and {@code revoke <targets> <hazard>} act on each target and their online teammates, as a protocol does;
+ * <hazard>} acts on each target and their online teammates, as a protocol does; {@code revoke <targets> <hazard>} on
+ * each target's whole team, offline members at their next login;
  * {@code list <target>} reports what one player holds. Hazards are plain ids; Remission's and every held one are
  * suggested, and any id is accepted, so an integration's hazard works before anything uses it.
  */
@@ -67,7 +68,7 @@ final class CountermeasureCommands {
         return count;
     }
 
-    /** Revokes from each target and their online teammates; returns how many players lost it. */
+    /** Revokes from each target's team; returns how many players lost it, offline ones included. */
     private static int revoke(CommandSourceStack source, Collection<ServerPlayer> targets, ResourceLocation hazard) {
         int lost = 0;
         for (ServerPlayer target : targets) {

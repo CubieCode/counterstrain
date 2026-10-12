@@ -84,7 +84,10 @@ public final class StrainHazards {
                 hazard.toString());
     }
 
-    /** Takes the countermeasure from the player and their online teammates. Returns how many lost it. Server thread. */
+    /**
+     * Takes the countermeasure from the player's whole team: online members at once, offline members' records at once
+     * and their attachments at their next login. Returns how many lost it, offline ones included. Server thread.
+     */
     public static int revoke(ServerPlayer player, ResourceLocation hazard) {
         return Countermeasures.revoke(player, hazard);
     }

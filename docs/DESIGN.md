@@ -163,6 +163,7 @@ Remission is played alone or together, and nothing it adds may make a solo game 
 
 - **Teams come from the pack.** Remission asks one team query (P4.12) wherever a rule involves teammates. Counterstrain answers it from FTB Teams. With no team source, each player is their own team.
 - **Research and progress are shared by a team; exposure is personal.** Bestiary progress, scan credit, standing and quest progress belong to the team (P6.4; FTB Quests already tracks quests per team). Countermeasures belong to the team too. Viral load, succumbing, revenants and their owners belong to one player, though teammates can reclaim a revenant's items.
+- **Countermeasures move with a player.** A player who joins another team carries their countermeasures into it and gains the new team's: joining pools both ways (P5.7).
 - **Credit goes to everyone who took part.** Group achievements, starting with destroying a nidus, credit every player who contributed, not only the player who acted last (P4.10).
 - **Fights scale with the group.** Nidus vitality and the surges it starts scale with the number of players fighting it (P4.10).
 - **Some mechanics need other players.** Shedding (P5.6), stabilising a succumbing player and injecting someone else (P7.6) need a second player. Each is server-configurable and defined so that a solo player is never worse off.

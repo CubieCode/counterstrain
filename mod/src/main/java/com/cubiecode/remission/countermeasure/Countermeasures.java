@@ -107,8 +107,10 @@ public final class Countermeasures {
     }
 
     /**
-     * Takes the countermeasure from the player and every online teammate, so the team share does not hand it back.
-     * Offline teammates keep theirs and share it again when they log in. Returns how many players lost it.
+     * Takes the countermeasure from the player's team: from the attachments of the player and every online teammate,
+     * and from the records of every recorded teammate who is offline, whose attachment loses it when they next log in
+     * (see {@link #onLogin}). Afterwards the team no longer holds it. Returns how many players lost it, offline ones
+     * included.
      */
     public static int revoke(ServerPlayer player, ResourceLocation hazard) {
         return revoke(player, hazard, online(player.server));
@@ -119,10 +121,22 @@ public final class Countermeasures {
         List<ServerPlayer> team = new ArrayList<>();
         team.add(player);
         team.addAll(onlineTeammates(player, online));
+        Set<UUID> handled = new HashSet<>();
         for (ServerPlayer member : team) {
+            handled.add(member.getUUID());
             CountermeasureSet old = get(member);
             if (old.holds(hazard)) {
                 store(member, old.without(hazard));
+                lost++;
+            }
+        }
+        CountermeasureRecords records = CountermeasureRecords.get(player.server);
+        for (Map.Entry<UUID, CountermeasureSet> entry : List.copyOf(records.players().entrySet())) {
+            UUID offline = entry.getKey();
+            if (!handled.contains(offline) && entry.getValue().holds(hazard)
+                    && TeamQueries.areTeammates(player.server, player.getUUID(), offline)) {
+                records.put(offline, entry.getValue().without(hazard));
+                records.addRevoked(offline, hazard);
                 lost++;
             }
         }
@@ -322,9 +336,39 @@ public final class Countermeasures {
     @SubscribeEvent
     static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player && !(player instanceof FakePlayer)) {
-            CountermeasureRecords.get(player.server).put(player.getUUID(), get(player));
-            shareWithTeam(player, online(player.server));
+            logIn(player, online(player.server));
         }
+    }
+
+    /**
+     * A player joined: applies the countermeasures revoked from their team while they were offline (each one the team
+     * does not hold again by now), records their set and pools it with their online teammates.
+     */
+    public static void logIn(ServerPlayer player, Collection<ServerPlayer> online) {
+        CountermeasureRecords records = CountermeasureRecords.get(player.server);
+        CountermeasureSet set = get(player);
+        for (ResourceLocation hazard : records.takeRevoked(player.getUUID()).hazards()) {
+            if (set.holds(hazard) && !teamHoldsExcept(player.server, player.getUUID(), hazard)) {
+                set = set.without(hazard);
+            }
+        }
+        if (!set.equals(get(player))) {
+            store(player, set);
+        } else {
+            records.put(player.getUUID(), set);
+        }
+        shareWithTeam(player, online);
+    }
+
+    /** Whether a recorded teammate of {@code player}, other than the player, holds the countermeasure. */
+    private static boolean teamHoldsExcept(MinecraftServer server, UUID player, ResourceLocation hazard) {
+        for (Map.Entry<UUID, CountermeasureSet> entry : CountermeasureRecords.get(server).players().entrySet()) {
+            if (!entry.getKey().equals(player) && entry.getValue().holds(hazard)
+                    && TeamQueries.areTeammates(server, player, entry.getKey())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @SubscribeEvent

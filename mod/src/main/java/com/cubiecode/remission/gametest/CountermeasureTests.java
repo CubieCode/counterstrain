@@ -178,6 +178,58 @@ public final class CountermeasureTests {
     }
 
     @GameTest(template = "empty")
+    public static void revokeReachesOfflineTeammates(GameTestHelper helper) {
+        BlockPos pos = helper.absolutePos(new BlockPos(1, 2, 1));
+        ServerPlayer a = SurgeTests.player(helper, pos);
+        ServerPlayer b = SurgeTests.player(helper, pos);
+        ServerPlayer c = SurgeTests.player(helper, pos);
+        ResourceLocation hazard = Remission.id("test_revoked_" + UUID.randomUUID().toString().substring(0, 8));
+        ResourceLocation regranted = Remission.id("test_regranted_" + UUID.randomUUID().toString().substring(0, 8));
+        withTeam(Set.of(a.getUUID(), b.getUUID(), c.getUUID()), () -> {
+            Countermeasures.grant(a, hazard, CountermeasureGrantedEvent.Cause.OTHER, List.of(a, b, c));
+            Countermeasures.grant(a, regranted, CountermeasureGrantedEvent.Cause.OTHER, List.of(a, b, c));
+
+            // B and C log off; A revokes both for the team, then gains one of them back while they are away.
+            helper.assertValueEqual(Countermeasures.revoke(a, hazard, List.of(a)), 3, "players who lost it");
+            helper.assertTrue(StrainHazards.applies(a, hazard), "revoke left the hazard stopped by offline holders");
+            helper.assertFalse(StrainHazards.teamHolds(helper.getLevel().getServer(), b.getUUID(), hazard),
+                    "the offline teammate's record still holds it");
+            Countermeasures.revoke(a, regranted, List.of(a));
+            Countermeasures.grant(a, regranted, CountermeasureGrantedEvent.Cause.OTHER, List.of(a));
+
+            // B's later login does not bring the revoked one back, and keeps the one the team holds again.
+            Countermeasures.logIn(b, List.of(a, b));
+            helper.assertFalse(StrainHazards.holds(b, hazard), "login restored a revoked countermeasure");
+            helper.assertFalse(StrainHazards.holds(a, hazard), "login pooled a revoked countermeasure back to the team");
+            helper.assertTrue(StrainHazards.applies(a, hazard), "hazard stopped again after the login");
+            helper.assertTrue(StrainHazards.holds(b, regranted), "login dropped a countermeasure the team holds again");
+
+            // A revocation is applied once: C still loses it on their own login.
+            Countermeasures.logIn(c, List.of(a, b, c));
+            helper.assertFalse(StrainHazards.holds(c, hazard), "second offline teammate kept the revoked countermeasure");
+        });
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void protocolHeldByOfflineTeammateIsNotUsed(GameTestHelper helper) {
+        BlockPos pos = helper.absolutePos(new BlockPos(1, 2, 1));
+        ServerPlayer user = SurgeTests.player(helper, pos);
+        ServerPlayer holder = SurgeTests.player(helper, pos);
+        ResourceLocation hazard = Remission.id("test_team_held_" + UUID.randomUUID().toString().substring(0, 8));
+        withTeam(Set.of(user.getUUID(), holder.getUUID()), () -> {
+            // The holder gains it alone and logs off before the user joins the team.
+            Countermeasures.grant(holder, hazard, CountermeasureGrantedEvent.Cause.OTHER, List.of(holder));
+            ItemStack protocol = CountermeasureProtocolItem.of(RemissionItems.COUNTERMEASURE_PROTOCOL.get(), hazard);
+            user.setItemInHand(InteractionHand.MAIN_HAND, protocol);
+            InteractionResult result = protocol.use(helper.getLevel(), user, InteractionHand.MAIN_HAND).getResult();
+            helper.assertFalse(result.consumesAction(), "protocol used although the team holds it: " + result);
+            helper.assertValueEqual(user.getMainHandItem().getCount(), 1, "protocols left");
+        });
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
     public static void hazardEventHoldsBackAndCountermeasureOverrides(GameTestHelper helper) {
         BlockPos pos = helper.absolutePos(new BlockPos(1, 2, 1));
         ServerPlayer held = SurgeTests.player(helper, pos);

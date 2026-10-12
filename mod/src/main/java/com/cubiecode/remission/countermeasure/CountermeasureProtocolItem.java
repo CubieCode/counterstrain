@@ -21,7 +21,8 @@ import net.minecraft.world.level.Level;
 /**
  * {@code remission:countermeasure_protocol} (P5.7): a data item whose {@code remission:hazard} component names a Strain
  * hazard. Using it grants that countermeasure to the user and their online teammates and uses up one protocol; a
- * protocol for a countermeasure the user already holds, or one that names no hazard, does nothing.
+ * protocol for a countermeasure the user's team already holds (offline members included), or one that names no
+ * hazard, does nothing.
  */
 public class CountermeasureProtocolItem extends Item {
     public CountermeasureProtocolItem(Properties properties) {
@@ -42,7 +43,10 @@ public class CountermeasureProtocolItem extends Item {
         if (hazard == null) {
             return InteractionResultHolder.pass(stack);
         }
-        if (Countermeasures.holds(player, hazard)) {
+        // The client knows only its own set; the server also asks the team, offline members included.
+        boolean held = Countermeasures.holds(player, hazard) || (player instanceof ServerPlayer serverHolder
+                && Countermeasures.teamHolds(serverHolder.server, serverHolder.getUUID(), hazard));
+        if (held) {
             if (!level.isClientSide()) {
                 player.displayClientMessage(Component.translatable("message.remission.countermeasure.held",
                         StrainHazards.displayName(hazard)), true);
