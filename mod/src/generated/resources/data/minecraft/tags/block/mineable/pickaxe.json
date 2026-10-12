@@ -1,6 +1,9 @@
 {
   "values": [
     "remission:festered_stone",
-    "remission:festered_deepslate"
+    "remission:festered_deepslate",
+    "remission:analyzer",
+    "remission:sequencer",
+    "remission:synthesizer"
   ]
 }

@@ -27,6 +27,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -37,6 +38,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
@@ -45,7 +48,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * scanner would, without needing a scanner interaction. {@code harness player break <pos>}, {@code harness player scan_host
  * <targets>} and {@code harness player scan_block <pos>} make every player break the block or scan with a scanner (put
  * in the main hand, cooldown cleared) through the same server code a real break or scanner use runs, so stats,
- * advancement triggers and quest tasks see a player's action. {@code harness fester <from> <to> <level>} sets the
+ * advancement triggers and quest tasks see a player's action. {@code harness player use <pos>} makes every player use the
+ * block with whatever it holds (a machine opens its menu, P7.2). {@code harness fester <from> <to> <level>} sets the
  * Strain level of the chunks a box covers and festers them at once; {@code harness resend <from> <to>} sends the chunks a
  * box covers to clients again (P4.2). {@code harness surge hosts <centre> <count> <radius>} and {@code harness surge
  * clouds <centre> <count>} spawn surge hosts and release miasma clouds through the surge code with a fixed seed (P4.3).
@@ -96,6 +100,13 @@ final class HarnessCommands {
                                             Scanning.scanEntity(withScanner(player), living, InteractionHand.MAIN_HAND);
                                         }
                                     }));
+                                })))
+                        .then(Commands.literal("use").then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .executes(context -> {
+                                    BlockPos pos = BlockPosArgument.getLoadedBlockPos(context, "pos");
+                                    return eachPlayer(context, player -> player.gameMode.useItemOn(player, player.level(),
+                                            player.getMainHandItem(), InteractionHand.MAIN_HAND,
+                                            new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false)));
                                 })))
                         .then(Commands.literal("scan_block").then(Commands.argument("pos", BlockPosArgument.blockPos())
                                 .executes(context -> {

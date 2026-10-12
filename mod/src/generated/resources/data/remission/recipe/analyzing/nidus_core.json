@@ -1,0 +1,26 @@
+{
+  "type": "remission:analyzing",
+  "energy": 8000,
+  "fluid_result": {
+    "amount": 1000,
+    "id": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "count": 1,
+      "item": "remission:nidus_core"
+    }
+  ],
+  "results": [
+    {
+      "components": {
+        "remission:scan_data": {
+          "block": "remission:nidus"
+        }
+      },
+      "count": 1,
+      "id": "remission:block_scan"
+    }
+  ],
+  "time": 200
+}

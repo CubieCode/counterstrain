@@ -86,9 +86,12 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
      * camera move, before the shot settles: changes to chunks an earlier shot already loaded
      * on the client. {@code hud} shows the GUI (hidden otherwise) at {@code gui_scale} (0, the default, is auto), to
      * review HUD elements; chat is cleared before the shot.
+     * {@code recipes} names a recipe category (e.g. {@code remission:analyzing}) to open in the recipe
+     * viewer, EMI when it is loaded, else JEI (P7.2). {@code screen} says a shot command opens a screen (such as
+     * {@code harness player use} on a machine); the shot then waits for it. {@code press} and {@code recipes} imply it.
      */
     record Shot(String name, Camera camera, CameraType view, Optional<String> press, List<String> commands, boolean hud,
-                int guiScale) {
+                int guiScale, Optional<ResourceLocation> recipes, boolean screen) {
         private static final Codec<CameraType> VIEW_CODEC = Codec.STRING.comapFlatMap(
                 v -> Arrays.stream(CameraType.values()).filter(t -> t.name().toLowerCase(Locale.ROOT).equals(v))
                         .findFirst().map(DataResult::success)
@@ -105,8 +108,15 @@ record Scene(long time, String weather, List<Step> setup, List<Shot> shots) {
                 Codec.STRING.optionalFieldOf("press").forGetter(Shot::press),
                 Codec.STRING.listOf().optionalFieldOf("commands", List.of()).forGetter(Shot::commands),
                 Codec.BOOL.optionalFieldOf("hud", false).forGetter(Shot::hud),
-                Codec.intRange(0, 8).optionalFieldOf("gui_scale", 0).forGetter(Shot::guiScale)
+                Codec.intRange(0, 8).optionalFieldOf("gui_scale", 0).forGetter(Shot::guiScale),
+                ResourceLocation.CODEC.optionalFieldOf("recipes").forGetter(Shot::recipes),
+                Codec.BOOL.optionalFieldOf("screen", false).forGetter(Shot::screen)
         ).apply(i, Shot::new));
+
+        /** Whether the shot shows a screen rather than the world. */
+        boolean wantsScreen() {
+            return screen || press.isPresent() || recipes.isPresent();
+        }
     }
 
     static Scene load(String id) throws IOException {

@@ -1,9 +1,12 @@
 package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.tech.MachineBlockEntity;
+import com.cubiecode.remission.tech.MachineKind;
 import com.cubiecode.remission.world.NidusBlockEntity;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -14,6 +17,16 @@ public final class RemissionBlockEntities {
 
     public static final Supplier<BlockEntityType<NidusBlockEntity>> NIDUS = BLOCK_ENTITY_TYPES.register("nidus",
             () -> BlockEntityType.Builder.of(NidusBlockEntity::new, RemissionBlocks.NIDUS.get()).build(null));
+
+    // Machines (P7.2)
+    public static final Supplier<BlockEntityType<MachineBlockEntity>> ANALYZER = machine(MachineKind.ANALYZER, RemissionBlocks.ANALYZER);
+    public static final Supplier<BlockEntityType<MachineBlockEntity>> SEQUENCER = machine(MachineKind.SEQUENCER, RemissionBlocks.SEQUENCER);
+    public static final Supplier<BlockEntityType<MachineBlockEntity>> SYNTHESIZER = machine(MachineKind.SYNTHESIZER, RemissionBlocks.SYNTHESIZER);
+
+    private static Supplier<BlockEntityType<MachineBlockEntity>> machine(MachineKind kind, Supplier<? extends Block> block) {
+        return BLOCK_ENTITY_TYPES.register(kind.blockName(),
+                () -> BlockEntityType.Builder.<MachineBlockEntity>of((pos, state) -> new MachineBlockEntity(kind, pos, state), block.get()).build(null));
+    }
 
     private RemissionBlockEntities() {
     }

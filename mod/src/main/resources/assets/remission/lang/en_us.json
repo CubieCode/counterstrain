@@ -79,5 +79,19 @@
   "commands.remission.surge.failed.no_nidus": "No nidus reaches that position",
   "commands.remission.surge.failed.none": "No surge is under way in this dimension",
   "death.attack.remission.viral_load": "%1$s succumbed to the Strain",
-  "death.attack.remission.viral_load.player": "%1$s succumbed to the Strain while fighting %2$s"
+  "death.attack.remission.viral_load.player": "%1$s succumbed to the Strain while fighting %2$s",
+  "block.remission.analyzer": "Analyzer",
+  "block.remission.sequencer": "Sequencer",
+  "block.remission.synthesizer": "Synthesizer",
+  "item.remission.strain_sequence": "Strain Sequence",
+  "gui.remission.machine.energy": "Energy: %s / %s FE",
+  "gui.remission.machine.input_tank": "Input tank",
+  "gui.remission.machine.output_tank": "Output tank",
+  "gui.remission.machine.tank": "%s: %s / %s mB",
+  "gui.remission.machine.tank_empty": "Empty",
+  "gui.remission.recipe.analyzing": "Analyzing",
+  "gui.remission.recipe.sequencing": "Sequencing",
+  "gui.remission.recipe.synthesizing": "Synthesizing",
+  "gui.remission.recipe.cost": "%s FE, %s s",
+  "tag.item.remission.scans": "Scans"
 }

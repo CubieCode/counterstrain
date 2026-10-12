@@ -36,6 +36,8 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Resistant mutations | **variants** | "sequence the variant"; `CorruptionState` field `variant` |
 | Endgame cure | **the Counterstrain** | "unstable Counterstrain prototypes", "the final deployment" |
 | Samples | host tissue, **nidus cores**, festered soil | `remission:host_tissue`, `remission:nidus_core`, `remission:festered_soil` |
+| Machines that process the Strain | **analyzer**, **sequencer**, **synthesizer** | blocks `remission:analyzer`, `remission:sequencer`, `remission:synthesizer`; recipe types `remission:analyzing`, `remission:sequencing`, `remission:synthesizing`; "analyze the sample, sequence the Strain, synthesize the serum" |
+| A sequenced record of the Strain, made by the sequencer from a scan and host tissue | **strain sequence** | item `remission:strain_sequence`; the synthesizer's input, from which serums are made (P7.3) |
 | Items carried through festering land | **contaminated** (verb: decontaminate) | data component `remission:contaminated` (planned, P10.6) |
 | Drifting airborne Strain | **miasma clouds** | entity `remission:miasma_cloud`; released by surges, drifting above festering land; players inside gain viral load |
 | The Counterstrain's deployable carrier | **dispersal payload** | block `remission:dispersal_payload`; can also ride a moving Create contraption through the optional integration |
@@ -87,14 +89,14 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 
 ### Research
 
-- A scanner turns hosts and blocks into data items (host scans and block scans, built in P6.1). Scanning samples is not assigned to a roadmap item yet: the samples exist since P7.1, and the analyzer (P7.2) is planned to turn them into data.
+- A scanner turns hosts and blocks into data items (host scans and block scans, built in P6.1). Scanning samples with the scanner is not assigned to a roadmap item; instead the analyzer (P7.2) turns samples into miasma and, for festered soil and nidus cores, block scans.
 - A bestiary of host types that grows with installed mods, because host forms are derived from entity types at runtime (built in P6.2): each host scan records the type and its highest scanned host stage for that player, and a key (default M) opens the list.
 
 ### Tech chain
 
 - Miasma as a fluid (and Mekanism chemical when Mekanism is present).
 - Samples: host tissue, nidus cores, festered soil.
-- Machines: analyzer, sequencer, synthesizer, each a recipe type KubeJS can edit.
+- Machines: analyzer (samples into miasma and scans), sequencer (a scan and host tissue in miasma into a strain sequence), synthesizer (strain sequences into products), each a recipe type packs and KubeJS can edit, fed by hand or through standard item, fluid and energy capabilities (built in P7.2).
 - Products: personal serums, purifier fuel, unstable Counterstrain prototypes.
 
 ### Endgame: the Counterstrain

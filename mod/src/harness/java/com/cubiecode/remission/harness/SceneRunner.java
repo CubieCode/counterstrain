@@ -87,6 +87,7 @@ final class SceneRunner {
     private int stableTicks;
     private boolean captureRequested;
     private boolean pressed;
+    private boolean recipesOpened;
 
     SceneRunner(String sceneId, Path outputDir, long timeoutSeconds) {
         this.sceneId = sceneId;
@@ -153,6 +154,7 @@ final class SceneRunner {
                     return;
                 }
                 pressKey(mc);
+                openRecipes(mc);
                 stableTicks = isSettled(mc) ? stableTicks + 1 : 0;
                 if (stableTicks >= SETTLE_TICKS) {
                     captureRequested = true;
@@ -391,6 +393,7 @@ final class SceneRunner {
             mc.setScreen(null);
         }
         pressed = false;
+        recipesOpened = false;
         Scene.Shot shot = scene.shots().get(index);
         Scene.Camera camera = shot.camera();
         mc.options.setCameraType(shot.view());
@@ -417,7 +420,7 @@ final class SceneRunner {
      * the server or the client (a shot command may step the frozen world; the shot shows where the steps end).
      */
     private boolean isSettled(Minecraft mc) {
-        boolean wantsScreen = scene.shots().get(shotIndex).press().isPresent();
+        boolean wantsScreen = scene.shots().get(shotIndex).wantsScreen();
         if (!pending.isDone() || mc.level == null || mc.player == null || (mc.screen != null) != wantsScreen
                 || mc.getOverlay() != null) {
             return false;
@@ -465,6 +468,27 @@ final class SceneRunner {
         KeyMapping.click(mapping.getKey());
         pressed = true;
         RemissionHarness.LOGGER.debug("Scene {}: pressed {}", sceneId, name);
+    }
+
+    /**
+     * Opens the shot's {@code recipes} category in the recipe viewer once the camera move reached the server, retrying
+     * every tick until the viewer has loaded its recipes (both load after the world joins).
+     */
+    private void openRecipes(Minecraft mc) {
+        ResourceLocation category = scene.shots().get(shotIndex).recipes().orElse(null);
+        if (category == null || recipesOpened || !pending.isDone()) {
+            return;
+        }
+        if (ModList.get().isLoaded("emi")) {
+            recipesOpened = EmiRecipes.open(mc, category);
+        } else if (ModList.get().isLoaded("jei")) {
+            recipesOpened = JeiRecipes.open(mc, category);
+        } else {
+            throw new IllegalStateException("shot " + scene.shots().get(shotIndex).name() + " needs EMI or JEI for recipes " + category);
+        }
+        if (recipesOpened) {
+            RemissionHarness.LOGGER.info("Scene {}: opened recipes {}", sceneId, category);
+        }
     }
 
     private void fail(String message, Throwable cause) {

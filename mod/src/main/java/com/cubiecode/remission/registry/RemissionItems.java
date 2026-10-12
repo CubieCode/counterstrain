@@ -43,6 +43,12 @@ public final class RemissionItems {
 
     // Festering veins (P4.8)
     public static final DeferredItem<BlockItem> FESTERING_VEIN = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_VEIN);
+    // Machines (P7.2)
+    public static final DeferredItem<BlockItem> ANALYZER = ITEMS.registerSimpleBlockItem(RemissionBlocks.ANALYZER);
+    public static final DeferredItem<BlockItem> SEQUENCER = ITEMS.registerSimpleBlockItem(RemissionBlocks.SEQUENCER);
+    public static final DeferredItem<BlockItem> SYNTHESIZER = ITEMS.registerSimpleBlockItem(RemissionBlocks.SYNTHESIZER);
+    /** Sequencer product (P7.2): the synthesizer's input, and what serums are made from (P7.3). */
+    public static final DeferredItem<Item> STRAIN_SEQUENCE = ITEMS.registerSimpleItem("strain_sequence");
 
     private RemissionItems() {
     }

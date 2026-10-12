@@ -1,0 +1,25 @@
+{
+  "type": "remission:sequencing",
+  "energy": 6000,
+  "fluid_ingredient": {
+    "amount": 250,
+    "fluid": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "count": 1,
+      "tag": "remission:scans"
+    },
+    {
+      "count": 1,
+      "item": "remission:host_tissue"
+    }
+  ],
+  "results": [
+    {
+      "count": 1,
+      "id": "remission:strain_sequence"
+    }
+  ],
+  "time": 200
+}

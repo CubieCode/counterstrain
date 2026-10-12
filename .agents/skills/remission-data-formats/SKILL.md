@@ -237,17 +237,56 @@ True when the chunk holding the loot `origin` is at festering stage `min_stage` 
 
 A 25% chance of one `remission:festered_soil` on top of the normal drops when a block in `#remission:festered_soil_sources` breaks (by hand, tool or explosion) in a chunk at festering stage 2 or higher. Block tag `data/<ns>/tags/block/festered_soil_sources.json` defaults to `#minecraft:dirt` (dirt, grass, podzol, mycelium, mud, moss and the rest of vanilla's tag, plus `remission:festering_grass`, which is in that tag); packs extend it (other festering blocks, modded soils) or replace it with `"replace": true`, and override or drop the modifier as for host samples.
 
-## Recipe types (planned, P7.2)
+## Machine recipes (built, P7.2)
 
-`remission:analyzing`, `remission:sequencing`, `remission:synthesizing`, files `data/<ns>/recipe/<name>.json`:
+Three recipe types, one per machine, sharing one schema (Java `tech/MachineRecipe`, one serializer per type): `remission:analyzing` (analyzer, 1 input slot), `remission:sequencing` (sequencer, 2), `remission:synthesizing` (synthesizer, 3). Files `data/<ns>/recipe/<path>.json`; ordinary datapack recipes, so `/reload` applies them, and packs add recipes, override a default by its path, or remove one by overriding it with a `neoforge:false` load condition.
 
 ```json
-{ "type": "remission:analyzing", "ingredient": {"item": "remission:host_tissue"}, "fluid": {"id": "remission:miasma", "amount": 250}, "results": [{"id": "remission:data_fragment", "count": 1}], "energy": 2000, "time": 100 }
+{
+  "type": "remission:sequencing",
+  "ingredients": [{ "tag": "remission:scans", "count": 1 }, { "item": "remission:host_tissue" }],
+  "fluid_ingredient": { "fluid": "remission:miasma", "amount": 250 },
+  "results": [{ "id": "remission:strain_sequence", "count": 1 }],
+  "fluid_result": { "id": "remission:miasma", "amount": 50 },
+  "energy": 6000,
+  "time": 200
+}
 ```
 
-1.21.1 ingredient objects are `{"item": ...}`/`{"tag": ...}`; results `{"id", "count"}`. Final fields are fixed in P7.2.
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `ingredients` | list of 1 to (input slots) NeoForge flat sized ingredients: an ingredient object (`{"item"}`, `{"tag"}`, or a typed one such as `neoforge:components`) plus optional `count` (≥ 1, default 1) | Shapeless: each takes its own input slot holding at least `count`, in any order, and every filled input slot must be taken by one (no extra items). `count` items are used per craft. |
+| `fluid_ingredient` | optional NeoForge flat sized fluid ingredient: `{"fluid"}` or `{"tag"}` plus `amount` in mB (default 1000) | Must be in the input tank, at least `amount`; used per craft. Without it the input tank is ignored. |
+| `results` | list of 0–2 item stacks `{"id", "count", "components"}` | Put into the two output slots (stacking where they can). |
+| `fluid_result` | optional fluid stack `{"id", "amount", "components"}` | Filled into the output tank. |
+| `energy` | int ≥ 0, default 0 | FE used per craft, spread evenly over `time` (exactly `energy` in total). 0 runs without power. |
+| `time` | int ≥ 1, required | Ticks per craft. |
 
-**KubeJS schemas:** Remission ships `data/remission/kubejs/recipe_schema/<type>.json` (keys with `name`, `role` input/output/other, `type` such as `ingredient`, `item_stack`, `ticks`, `optional`, `function_names`) so KubeJS 2101 can create and edit these recipes without a Java dependency on KubeJS. Model them on KubeJS's own `data/minecraft/kubejs/recipe_schema/cooking.json`. Recipe schema changes are contract changes.
+A recipe needs `results` or a `fluid_result`; fluid amounts are at most the tank capacity (4000 mB). Errors are reported by the recipe loader and the recipe is skipped. Wire format (`MachineRecipe.streamCodec`): the same fields in order (sized ingredients, optional sized fluid ingredient, item stacks, optional fluid stack, var-int energy, var-int time); changing it is a protocol change for recipe sync.
+
+**Machines** (blocks `remission:analyzer`, `remission:sequencer`, `remission:synthesizer`; block entities and menus with the same ids; Java `tech/MachineBlock`, `MachineBlockEntity`, `MachineMenu`): input slots as above, 2 output slots, an input and an output tank of 4000 mB each, and a 20,000 FE buffer that accepts up to 1,000 FE per call. A machine looks for a recipe when its inputs or input tank change, then advances one tick at a time while the outputs have room for every result and the buffer holds that tick's share of `energy`; otherwise it waits, keeping its progress. When the inputs stop matching, or match another recipe, progress restarts. Progress and the recipe in progress are saved with the block, so a reload continues the craft. Breaking a machine drops its items; fluids and energy are lost. Using it opens its menu; using it with a fluid container fills the input tank or empties the output tank. Recipe types, fixed slot counts and capacities are code constants, not config.
+
+**Capabilities** (registered in `tech/MachineCapabilities`, the same handler on every side and the null side), so pipes, cables and storage networks (AE2, Mekanism, Create) can run them: `Capabilities.ItemHandler.BLOCK` (slots 0..n-1 are inputs: insert only; the last 2 are outputs: extract only), `Capabilities.FluidHandler.BLOCK` (tank 0 the input tank: fill only, tank 1 the output tank: drain only), `Capabilities.EnergyStorage.BLOCK` (receive only).
+
+**Defaults** (datagen, `data/remission/recipe/`; generic and pack-overridable):
+
+| Recipe | Inputs | Outputs | Energy, time |
+| --- | --- | --- | --- |
+| `analyzing/host_tissue` | `remission:host_tissue` | 100 mB miasma | 2000 FE, 100 ticks |
+| `analyzing/festered_soil` | `remission:festered_soil` | `remission:block_scan` of `remission:festering_grass`, 50 mB miasma | 2000 FE, 100 ticks |
+| `analyzing/nidus_core` | `remission:nidus_core` | `remission:block_scan` of `remission:nidus`, 1000 mB miasma | 8000 FE, 200 ticks |
+| `sequencing/strain_sequence` | `#remission:scans`, `remission:host_tissue`, 250 mB miasma | `remission:strain_sequence` | 6000 FE, 200 ticks |
+| `synthesizing/host_tissue` | `remission:strain_sequence`, `remission:host_tissue`, 500 mB miasma | 2 `remission:host_tissue` | 4000 FE, 200 ticks |
+
+The synthesizing default is a placeholder until serums: no default recipe makes `remission:nidus_core` (cores stay a rare sample). Crafting recipes `remission:analyzer`, `remission:sequencer`, `remission:synthesizer` (iron, glass, redstone around a spyglass, comparator or brewing stand) make the machines from vanilla parts.
+
+**Strain sequence:** item `remission:strain_sequence` (no data components), the sequencer's product and the synthesizer's input. Contract for P7.3: serums and the other Counterstrain products are `remission:synthesizing` recipes that take `remission:strain_sequence`; P7.3 may replace the placeholder default but keeps the item and the schema.
+
+**Item tag** `#remission:scans` (`data/<ns>/tags/item/scans.json`): `remission:host_scan` and `remission:block_scan`, for recipes that take any scan.
+
+**Recipe viewers:** a JEI plugin (`integration/jei/RemissionJeiPlugin`) adds one category per type, with the same ids as the recipe types, the machine as catalyst and the machine screen's progress arrow opening it; EMI shows the same categories through its JEI compatibility. Remission does not require JEI or EMI.
+
+**KubeJS schemas (planned, P7.3):** Remission ships `data/remission/kubejs/recipe_schema/<type>.json` (keys with `name`, `role` input/output/other, `type` such as `ingredient`, `item_stack`, `ticks`, `optional`, `function_names`) so KubeJS 2101 can create and edit these recipes without a Java dependency on KubeJS. Model them on KubeJS's own `data/minecraft/kubejs/recipe_schema/cooking.json`. Recipe schema changes are contract changes.
 
 ## Advancement triggers and stats (built, P8.1)
 

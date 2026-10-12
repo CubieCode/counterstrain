@@ -36,5 +36,8 @@ public final class RemissionBlockTagsProvider extends BlockTagsProvider {
         tag(Contact.INFECTIOUS).add(RemissionBlocks.FESTERING_GRASS.get(), RemissionBlocks.FESTERING_LOG.get(),
                 RemissionBlocks.FESTERING_LEAVES.get(), RemissionBlocks.FESTERED_STONE.get(),
                 RemissionBlocks.FESTERED_DEEPSLATE.get(), RemissionBlocks.FESTERING_VEIN.get());
+        // Machines (P7.2): any pickaxe.
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(RemissionBlocks.ANALYZER.get(), RemissionBlocks.SEQUENCER.get(),
+                RemissionBlocks.SYNTHESIZER.get());
     }
 }

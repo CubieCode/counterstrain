@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "remission:block/analyzer",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "remission:block/analyzer"
+    },
+    "facing=south": {
+      "model": "remission:block/analyzer",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "remission:block/analyzer",
+      "y": 270
+    }
+  }
+}
