@@ -88,8 +88,6 @@ public final class SurgeTests {
     private static final int FAR = 160;
     // Wide enough that squares of tests placed a few chunks apart on the grid never come within cloud range of another.
     private static final int SQUARE = 24;
-    /** Ticks for a freshly forced square to become entity-ticking. */
-    private static final int LOAD_TICKS = 20;
     /** Level 30: festering stage 2 with the default thresholds (grass and trees fester, stone stays). */
     private static final int LAND_LEVEL = 30;
     private static final SpreadSettings SPREAD = new SpreadSettings(400, 5, 2, 10, 40, 256, 32);
@@ -143,6 +141,17 @@ public final class SurgeTests {
         return new Land(level, centre, chunks);
     }
 
+    /**
+     * Runs {@code test} once every chunk of {@code land} is entity-ticking: entities added before that stay out of the
+     * level's area queries, and how long a freshly forced chunk takes varies with the machine's load.
+     */
+    private static void whenTicking(GameTestHelper helper, Land land, Runnable test) {
+        helper.startSequence()
+                .thenWaitUntil(() -> land.chunks().forEach(chunk -> helper.assertTrue(
+                        land.level().isPositionEntityTicking(chunk.getPos().getWorldPosition()), "chunk is not entity-ticking")))
+                .thenExecute(test);
+    }
+
     private static <E extends Event> List<E> listen(Class<E> type, List<Consumer<?>> listeners) {
         List<E> events = new ArrayList<>();
         Consumer<E> listener = events::add;
@@ -178,8 +187,7 @@ public final class SurgeTests {
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = 200)
     public static void scheduledSurgeRunsItsCourse(GameTestHelper helper) {
         Land land = land(helper, 0, LAND_LEVEL);
-        // Entities are found by area queries only once the forced chunks are ticking.
-        helper.runAfterDelay(LOAD_TICKS, () -> {
+        whenTicking(helper, land, () -> {
             ServerLevel level = land.level();
             BlockPos nidus = land.ground(0, 0);
             level.setBlockAndUpdate(nidus, RemissionBlocks.NIDUS.get().defaultBlockState());
@@ -397,8 +405,7 @@ public final class SurgeTests {
     @GameTest(template = "empty", batch = BATCH)
     public static void hostsSpawnOnTheSurface(GameTestHelper helper) {
         Land land = land(helper, 3, LAND_LEVEL);
-        // Entities are found by area queries only once the forced chunks are ticking.
-        helper.runAfterDelay(LOAD_TICKS, () -> {
+        whenTicking(helper, land, () -> {
             Land clean = land(helper, 4, 0);
             ServerLevel level = land.level();
             try {
@@ -484,8 +491,7 @@ public final class SurgeTests {
     @GameTest(template = "empty", batch = BATCH)
     public static void cloudsReleaseOverFesteringLand(GameTestHelper helper) {
         Land land = land(helper, 6, LAND_LEVEL);
-        // Entities are found by area queries only once the forced chunks are ticking.
-        helper.runAfterDelay(LOAD_TICKS, () -> {
+        whenTicking(helper, land, () -> {
             ServerLevel level = land.level();
             try {
                 LevelChunk cleanChunk = land.chunks().getFirst();
