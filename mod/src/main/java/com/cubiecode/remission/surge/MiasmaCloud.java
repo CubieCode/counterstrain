@@ -25,7 +25,7 @@ import net.minecraft.world.phys.AABB;
  * heading at {@link #ALTITUDE} blocks above the ground and stays above festering land: when its next step would leave
  * a loaded chunk at festering stage 1 or higher it turns (right, left, then back) and holds still if every way out
  * leaves festering land. It dissipates after its lifetime. The area is its bounding box ({@link #getRadius()} each way
- * horizontally, {@link #HEIGHT} tall); it does nothing to what it touches yet (viral load is P5.1). Not attackable,
+ * horizontally, {@link #HEIGHT} tall); players inside it gain viral load (P5.1), mobs are unaffected. Not attackable,
  * pushed or collided with; it saves with its chunk.
  */
 public class MiasmaCloud extends Entity {

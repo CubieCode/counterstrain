@@ -323,7 +323,7 @@ Goals: the player can survive the Strain and push it back locally.
 
 ### P5.1: Viral load
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p5.1-viral-load
 - PR:
 - Depends on: P4.1, P4.4, P4.3, P8.1

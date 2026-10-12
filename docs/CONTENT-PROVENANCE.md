@@ -76,10 +76,11 @@ Datagen block and item models are `procedural (datagen)` and follow their textur
 
 ## GUI art, icons and logos
 
-None yet. Placeholders carry a visible "PLACEHOLDER" label.
+Placeholders carry a visible "PLACEHOLDER" label. HUD sprites too small for a label (9×9 on screen) carry the texture marker instead and are typed `texture`, so `tools/check-provenance.sh` checks the marker.
 
 | Path / ID | Type | Origin | Status | Notes |
 | --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/textures/gui/sprites/hud/viral_load.png` | texture | ai (Claude Opus 5.5, 2026-10-12; pixel script, not kept) | placeholder | Viral load meter icon (P5.1), GUI sprite `remission:hud/viral_load`, 16×16 drawn at 9×9 at the right end of the meter row above the hunger bar: a violet virion with spikes and a sickly-green core, 2×2 marker (about one GUI pixel on screen). The bar beside it is drawn in code (dark frame; fill pale green, yellow, orange, then Strain violet by quarter; a pale chevron while rising or falling), so the art pass may replace both with a sprite set; keep the row 9 pixels tall and 81 wide like vanilla's, and the icon readable on bright and dark ground. |
 
 ## Particles
 
@@ -149,6 +150,8 @@ None yet.
 | `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.bar.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Surge boss bar names: "Surge incoming" during the warning and "Surge" while it runs (P4.3). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.started` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Action bar line when a surge starts: hosts are rising (P4.3). |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.ended` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Action bar line when a surge ends (P4.3). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:death.attack.remission.viral_load*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | Death messages for viral load damage (P5.1): "%1$s succumbed to the Strain", and "... while fighting %2$s" when a killer is credited. Should match vanilla's death message tone. |
+| `mod/src/generated/resources/data/remission/damage_type/viral_load.json` | metadata | procedural (datagen, `RemissionDamageTypeProvider`) | draft | Damage type `remission:viral_load` (P5.1): message id `remission.viral_load`, which selects the death messages above; no scaling, no exhaustion. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.surge.*` | lang | ai (Claude Opus 5.5, 2026-10-12) | draft | `/remission surge start`, `stop` and `status` feedback and errors (P4.3): origin, intensity and ticks until start or end; a surge already running, no nidus reaching the position, no surge to stop. |
 
 ## Mod and pack metadata

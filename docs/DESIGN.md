@@ -29,7 +29,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Boundary between festering land and reclaimed land | **frontier** | "hold the frontier" |
 | Periodic spread bursts from one nidus, telegraphed by a warning | **surges** | config `[surges]`; trigger `remission:surge_survived`, stat `remission:surges_survived`; `/remission surge start`; entity tag `#remission:surge_hosts`; "the nidus surges at the season change", "survive the surge" |
 | Extracted resource | **miasma** | fluid `remission:miasma`; Mekanism chemical `remission:miasma` when Mekanism is present |
-| Player exposure meter | **viral load** | player attachment `viral_load` |
+| Player exposure meter | **viral load** | player attachment `viral_load`; config `[viral_load]`; trigger `remission:viral_load_changed`; damage type `remission:viral_load` (death message "succumbed to the Strain"); "viral load is at 60", "the viral load meter" |
 | Radius wards | **quarantine pylons** | `remission:quarantine_pylon` |
 | Cleansing plants | **mendroot** | `remission:mendroot` |
 | Reclaimed land | **remission zones** | "chunks in remission" |
@@ -37,7 +37,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Endgame cure | **the Counterstrain** | "unstable Counterstrain prototypes", "the final deployment" |
 | Samples | host tissue, **nidus cores**, festered soil | `remission:host_tissue`, `remission:nidus_core`, `remission:festered_soil` |
 | Items carried through festering land | **contaminated** (verb: decontaminate) | data component `remission:contaminated` (planned, P10.6) |
-| Drifting airborne Strain | **miasma clouds** | entity `remission:miasma_cloud`; released by surges, drifting above festering land; viral load for anything inside arrives with P5.1 |
+| Drifting airborne Strain | **miasma clouds** | entity `remission:miasma_cloud`; released by surges, drifting above festering land; players inside gain viral load |
 | The Counterstrain's deployable carrier | **dispersal payload** | block `remission:dispersal_payload`; can also ride a moving Create contraption through the optional integration |
 | Research records made by the scanner | **scans**: **host scans** and **block scans** | item `remission:scanner`; data items `remission:host_scan`, `remission:block_scan`; data component `remission:scan_data` |
 | A player who died to the Strain, risen as a host carrying their items | **revenant** | entity `remission:revenant`; item `remission:revenant_tracker` (planned, P5.3 and P5.4); "kill your revenant to get your gear back" |
