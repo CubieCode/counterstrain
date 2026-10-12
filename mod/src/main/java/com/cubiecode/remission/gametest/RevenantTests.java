@@ -151,7 +151,10 @@ public final class RevenantTests {
     @GameTest(template = "empty", batch = "revenant_viral_land")
     public static void viralLoadAndFesteringLandDeaths(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        LevelChunk chunk = level.getChunkAt(helper.absolutePos(BlockPos.ZERO));
+        // The chunk the players stand in: the template origin's chunk can be a different one when the origin is at x or z
+        // 15 of its chunk.
+        BlockPos standing = helper.absolutePos(new BlockPos(1, 1, 1));
+        LevelChunk chunk = level.getChunkAt(standing);
         ChunkCorruption before = chunk.getExistingDataOrNull(RemissionAttachments.CHUNK_CORRUPTION);
         try {
             ServerPlayer poisoned = player(helper, new BlockPos(1, 1, 1));
@@ -174,7 +177,7 @@ public final class RevenantTests {
             clearDrops(helper);
 
             chunk.setData(RemissionAttachments.CHUNK_CORRUPTION, new ChunkCorruption(1, level.getGameTime()));
-            helper.assertValueEqual(CorruptionQueries.stageAt(level, helper.absolutePos(BlockPos.ZERO)), 1, "chunk stage");
+            helper.assertValueEqual(CorruptionQueries.stageAt(level, standing), 1, "chunk stage");
             ServerPlayer fallen = player(helper, new BlockPos(1, 1, 1));
             fallen.moveTo(fallen.getX(), level.getMinBuildHeight() + 2, fallen.getZ());
             List<ItemStack> fallenItems = loadout(fallen);
