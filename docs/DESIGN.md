@@ -24,6 +24,8 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | How far the Strain has taken a host | **Strain level** (0–100) and **host stage** | config `hosts.stageThresholds`; `CorruptionState` fields `level`, `stage` |
 | Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone`, `remission:festered_deepslate`, biome `remission:fester`; data map `remission:festers_into` |
 | The fester biome a particular source biome turns into | **fester variant** | data map `remission:fester_variant`; "plains festers into `remission:fester`, a pack's lavender field into its own fester variant" |
+| Growth that creeps over the faces of blocks in festering land, player builds included | **festering veins** | block `remission:festering_vein`; block tag `#remission:vein_resistant` (planned, P4.8); "veins are creeping up the wall" |
+| A mob turning into a host by touching festered blocks or swimming in water in festering land | **contact infection** | block tag `#remission:infectious`; config `[infection] contactTicks` (planned, P4.8) |
 | Boundary between festering land and reclaimed land | **frontier** | "hold the frontier" |
 | Periodic spread bursts from one nidus, telegraphed by a warning | **surges** | config `[surges]`; trigger `remission:surge_survived`, stat `remission:surges_survived`; `/remission surge start`; entity tag `#remission:surge_hosts`; "the nidus surges at the season change", "survive the surge" |
 | Extracted resource | **miasma** | fluid `remission:miasma`; Mekanism chemical `remission:miasma` when Mekanism is present |
@@ -63,7 +65,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - A Data Attachment on `LivingEntity` holds corruption level and stage (and later, `variant`). Synced to tracking clients through NeoForge 21.1's built-in attachment sync (decided in P2.1; ARCHITECTURE).
 - **Visuals:** a render layer added to every living-entity renderer in `EntityRenderersEvent.AddLayers` re-renders the mob's own model with a Strain overlay (tint, emissive veins, particles by stage).
 - **Behaviour:** on `EntityJoinLevelEvent`, host `Mob`s lose passive goals (breed, tempt, flee, follow parent) and gain targeting and melee/ranged attack goals. `Attributes.ATTACK_DAMAGE` (and anything else attacks need) is added to every entity type via `EntityAttributeModificationEvent`. Fallbacks for brain-based mobs (villagers, piglins, axolotls), flying and swimming mobs.
-- **Infection:** a kill by a host, or prolonged time in festering land, infects the victim. The `convert_to` override can replace the victim with another entity type.
+- **Infection:** a kill by a host, touching festered blocks (contact infection, quick), or prolonged time in festering land (exposure, slow) infects the victim. The `convert_to` override can replace the victim with another entity type.
 - **Drops:** a Global Loot Modifier gated on the `remission:is_corrupted` loot condition adds host tissue and other samples.
 - **Overrides:** `#remission:immune` entity tag; per-mob JSON loaded from datapacks (attributes, behaviour profile, convert-to entity). Schemas: remission-data-formats skill.
 
@@ -71,6 +73,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 
 - Per-chunk corruption level (chunk Data Attachment) driving visible festering stages: festering grass, festering trees and foliage, festered stone, and finally a biome flip to `remission:fester` (or a per-biome fester variant set by data, so modded biomes fester too).
 - **Underground:** a festering chunk is festering at every height. From a late stage its caves fester too, as a skin on the blocks facing cave air (rock inside the ground and ores are left alone, so mining stays viable), looking clearly different from sculk. Caves and underground bases are no refuge.
+- **Festering veins** creep over the faces of blocks in festering chunks without replacing them, player builds included, so a base inside festering land is overgrown unless it is warded by a quarantine pylon or cleansed.
 - The Strain spreads from **nidi** (blocks or structures). Destroying a nidus stops its spread but does not cleanse land.
 - **Catch-up:** unloaded chunks record a timestamp; on load they fast-forward deterministically, bounded per tick.
 - **Surges:** periodic events that accelerate spread, spawn hosts (in caves under festering land as well as on the surface) and release miasma clouds that drift above festering land, telegraphed to players.
@@ -78,7 +81,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 ### Viral load and purification
 
 - **Viral load:** a player attachment that rises in festering chunks, with escalating debuffs; serums and gear reduce it. Drinking water from, or swimming in, water in festering chunks also adds viral load, and so does flying through a miasma cloud. Gain from festering land falls off with height above the ground (config: on/off and the falloff curve), so anything airborne, from elytra to airships, can cross festering zones above the worst of it. Below the ground there is no falloff: caves and tunnels under a festering chunk count in full. There are no climate mods: viral load is the only exposure system.
-- **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot.
+- **Tools by scale:** handheld purifier, quarantine pylons with a radius, large powered purifiers, mendroot. A quarantine pylon is the base ward: inside its radius the Strain does not spread, fester, grow veins or infect by contact, and the crash-site start is built around one.
 - **Remission zones:** purified chunks enter remission and grant bonuses (spawn safety, growth, resource yields; tunable).
 - **Revenants:** a player who dies to the Strain (killed by a host or revenant, by viral load, or anywhere in a festering chunk) rises as a revenant: a host with their skin, wearing their armour and holding their weapon, that keeps their items and experience and stays near where they fell. Other deaths drop items as usual, and `keepInventory` turns revenants off. Anyone can fight a revenant, but its items can be picked up only by its owner, and by their team where the pack defines one (Counterstrain uses FTB Teams), until a timeout frees them. A craftable **revenant tracker**, worn in a Curios slot or carried anywhere in the inventory, shows your revenants as JourneyMap waypoints, or as a HUD pointer without JourneyMap.
 

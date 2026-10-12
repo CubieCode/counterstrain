@@ -23,6 +23,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P4.5 (follow-up to P4.1) runs before P4.3 or alone; it owns `world/SpreadEngine`.
 - P6.3 (follow-up to P6.2) can join any wave or run alone; it owns `research/Bestiary` and the bestiary scene reference.
 - E: P4.2 (done), then P4.3 (after P4.5 and P8.1, both done). P4.3 owns surge scheduling, miasma clouds, its surge API events and the surge survived trigger and stat, and is the remission-data-formats owner while it runs; append-only edits in `api/` and `quest/`.
+- P4.8 (follow-up to P4.6 and P4.7) runs alone or before wave F; it owns the vein block and the contact source and must merge before P5.2.
 - P4.6 and P4.7 (follow-ups to P4.2 and P3.3) can join wave E with P4.3 or run alone. P4.6 owns `world/FesteringStages` and `world/FesterMaps` and runs before P5.2; P4.7 owns `infection/`. With P4.3 in the same wave, appoint one owner for config specs and one for remission-data-formats.
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - P5.3 → P5.4 serially, after P5.1. P5.3 owns the revenant entity, `integration/curios/` and its build-file entries; P5.4 owns its payload and coordinates `integration/journeymap/` with P8.2 (never in the same wave).
@@ -282,7 +283,18 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing
 - Parallel: Owns `infection/` and its config section; appends to `api/CorruptionCause`.
 
-Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, P4.6 and P4.7, follow-ups added after P4.4, are not part of these exit criteria.
+### P4.8: Festering veins and contact infection
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.2, P4.6, P4.7
+- Scope: Festering veins: a `remission:festering_vein` multiface block (as vanilla glow lichen and sculk veins) that creeps over the solid faces of blocks in festering chunks from a minimum stage, on the surface and in caves, without replacing them. Veins grow over any solid face, player-built blocks and bases included, so festering land threatens what the player builds; packs keep them off chosen blocks with a block tag (`#remission:vein_resistant`, empty by default). Growth is deterministic, budgeted per tick like the cave pass, resumes after an unload and catches up with the chunk's stage; a vein drops nothing without Silk Touch. Veins must read clearly differently from sculk veins. Contact infection: a `Mob` touching a block in `#remission:infectious` (standing on it, inside it, or against it; Remission ships festering grass, the festered blocks and festering veins) or in water in a festering chunk at or above the minimum stage (fish, squid, drowned, axolotls; the water itself is not replaced, the biome flip already tints it), becomes a host after `[infection] contactTicks` of contact (0 = on first touch), with a new `CorruptionCause` (contact), through the same eligibility and `convert_to` path as P4.7. Festering land exposure (P4.7) is unchanged and stays the slow background source. Players never take contact infection; P5.1 turns contact into viral load gain. Config: veins on/off and minimum stage, contact infection on/off and `contactTicks`. Posts `BlockFesteredEvent` per vein placed. Documents the block, tags, cause and config in remission-data-formats and docs/ARCHITECTURE.md.
+- Acceptance: Gametests: veins grow only from the minimum stage, onto any solid face including placed blocks, never onto `#remission:vein_resistant`; growth is deterministic and resumes after an unload; an eligible mob on, in or against an infectious block, or swimming in water in a festering chunk, becomes a host after `contactTicks` (and on first touch at 0); immune mobs, hosts, players and mobs whose profile sets `conversion.festering_land` to false never do; nothing happens with either source turned off; `convert_to` applies; `HostCorruptedEvent` carries the new cause. Per-tick cost of vein growth and contact checks measured on foundry next to P4.6's cave pass and P4.7's tracker and recorded in the PR. Harness scene `world/veins` (veins over terrain, a cave and a small build, next to sculk veins), reviewed. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, minecraft-world-generation, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns the vein block and its growth pass, and the contact source in `infection/`; appends to `api/CorruptionCause`, the registry and the `[festering]` and `[infection]` config sections. Do not run alongside P5.2, which must also clear veins.
+
+Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5, P4.6, P4.7 and P4.8, follow-ups added after P4.4, are not part of these exit criteria.
 
 ## Phase 5: Viral load and early purification
 
@@ -303,8 +315,8 @@ Goals: the player can survive the Strain and push it back locally.
 - Status: `todo`
 - Owner:
 - PR:
-- Depends on: P4.1, P4.2, P4.4, P8.1
-- Scope: Handheld purifier item, `remission:quarantine_pylon` block with radius, `remission:mendroot` cleansing plant (plantable, so automation can place it); purified chunks enter remission and grant remission zone bonuses (config). Emits block purified and chunk entered remission. Adds the region-cleansed advancement trigger (share of chunks in remission around a point) and a chunks-cleansed stat, following P8.1's conventions.
+- Depends on: P4.1, P4.2, P4.4, P4.8, P8.1
+- Scope: Handheld purifier item, `remission:quarantine_pylon` block with radius (inside it, spread, festering, vein growth and contact infection stop and festered blocks and veins are cleansed; it is the ward a base or the crash site is built around), `remission:mendroot` cleansing plant (plantable, so automation can place it); purified chunks enter remission and grant remission zone bonuses (config). Emits block purified and chunk entered remission. Adds the region-cleansed advancement trigger (share of chunks in remission around a point) and a chunks-cleansed stat, following P8.1's conventions.
 - Acceptance: Gametests for radius, cleansing and remission entry; harness scene `purification/pylon_radius` (before/after). Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, visual-checks, content-provenance
 
@@ -570,7 +582,7 @@ Goals: Counterstrain becomes a playable pack.
 - Owner:
 - PR:
 - Depends on: P11.1, P10.2, P10.3, P10.4, P10.5, P10.6
-- Scope: Starting structure/map, KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
+- Scope: Starting structure/map (the crash site holds a working quarantine pylon, so the player starts inside a warded radius), KubeJS progression gating across Mekanism/AE2/Create/Ars Nouveau and the phase 10 integration gates (kinetics before holding a frontier, pressure tech before automated reclamation, shielded cabling for the research network, sealed storage for expeditions, Mekanism for the late-game lab, boss-gated spells), datapack worldgen tweaks for nidi.
 - Acceptance: New world starts at the crash site; gated recipes verified in EMI; each DESIGN integration gate is enforced in a playtest; harness scene `start/crash_site`. Ledger updated; placeholders marked.
 - Skills: kubejs-scripting, minecraft-datapack, minecraft-world-generation, playtesting, visual-checks, content-provenance
 
