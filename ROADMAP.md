@@ -422,7 +422,7 @@ Goals: quests and scripts can observe and drive Remission.
 - Scope: Triggers and stats for region % cleansed, nidus destroyed (`remission:nidus_destroyed`, stat `remission:nidi_destroyed`), host scanned, surge survived, and others the pack needs.
 - Acceptance: Schemas in remission-data-formats; FTB Quests tasks gate on them in a dev run.
 - Skills: neoforge-mod-dev, remission-data-formats, ftb-quests-authoring
-- Built: triggers `remission:nidus_destroyed`, `remission:host_scanned`, `remission:block_scanned` and stats `remission:nidi_destroyed`, `remission:hosts_scanned`, `remission:blocks_scanned`. Deferred to the systems they observe, which are not on main (coordinator decision): region % cleansed (`region_cleansed`, stat `chunks_cleansed`) to P5.2, surge survived to P4.3, viral load to P5.1.
+- Built: triggers `remission:nidus_destroyed`, `remission:host_scanned`, `remission:block_scanned` and stats `remission:nidi_destroyed`, `remission:hosts_scanned`, `remission:blocks_scanned`. Deferred to the systems they observe (coordinator decision): region % cleansed (`region_cleansed`, stat `chunks_cleansed`) to P5.2 and viral load to P5.1; surge survived went to P4.3, which built `remission:surge_survived` and the stat `remission:surges_survived`.
 
 ### P8.2: Quest-fired events and map overlay
 
