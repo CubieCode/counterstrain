@@ -1,0 +1,764 @@
+"""The editor's operations, independent of HTTP: listing rows, editing lang strings,
+staging and writing uploads, the host preview and the batch summary.
+
+Every write goes through `Editor._target`, which only allows files a ledger row
+names (plus a texture's `.mcmeta` sidecar and the lang and ledger files the rows
+point at), never generated output, and only inside the content worktree.
+"""
+import datetime
+import json
+import os
+import posixpath
+import re
+import secrets
+import time
+
+from . import files as atomic, glossary, host, lang, llm, markdown, models, png, props, textures
+from .ledger import Ledger, LedgerError, append_note
+from .repo import PACK_INDEX, RepoError, Resolver, Workspace, git, show
+
+LEDGER = "docs/CONTENT-PROVENANCE.md"
+MODS_TOML = "mod/src/main/templates/META-INF/neoforge.mods.toml"
+TRIPLE = "'" * 3
+GENERATED = "mod/src/generated/"
+NEW_ROW_PREFIXES = ("mod/src/main/resources/assets/", "pack/")
+SOUND_BYTES = 8 * 1024 * 1024
+MAX_UPLOADS = 20
+
+
+class EditorError(ValueError):
+    """A refused request; the message is shown to the user."""
+
+
+def normalize(rel):
+    rel = (rel or "").replace("\\", "/")
+    if not rel or rel.startswith("/") or ":" in rel.split("/", 1)[0]:
+        raise EditorError(f"`{rel}` is not a repository path")
+    norm = posixpath.normpath(rel)
+    if norm.startswith("../") or norm == ".." or norm != rel:
+        raise EditorError(f"`{rel}` is not a plain repository path")
+    return norm
+
+
+def kind_of(row):
+    """What the editor can do with a row: lang, markdown, texture, model, sound, or None (view only)."""
+    if row.key is not None:
+        if row.file.endswith(".properties"):
+            return "properties"
+        return "lang" if row.file.endswith(".json") and "/lang/" in row.file else None
+    if row.file.endswith(".md"):
+        return "markdown"
+    if row.file.endswith(".png"):
+        return "texture"
+    if row.file.endswith(".ogg"):
+        return "sound"
+    if row.file.endswith(".json") and "/models/" in row.file:
+        return "model"
+    return None
+
+
+class Editor:
+    def __init__(self, tool_root, worktree=None, reviewer=None, clock=None, llm_reviewer=None):
+        self.workspace = Workspace(tool_root, worktree)
+        self.llm = llm_reviewer or llm.Reviewer(enabled=False)
+        self.resolver = Resolver(self.workspace)
+        self.reviewer = reviewer
+        self.clock = clock or datetime.date.today
+        self.uploads = {}
+
+    # --- basics --------------------------------------------------------------
+
+    @property
+    def root(self):
+        return self.workspace.root
+
+    def who(self):
+        if self.reviewer:
+            return self.reviewer
+        name = git(self.root, "config", "user.name", check=False).stdout.strip()
+        return name or "unknown"
+
+    def today(self):
+        return self.clock().isoformat()
+
+    def path(self, rel):
+        return os.path.join(self.root, rel)
+
+    def ledger(self):
+        return Ledger.load(self.path(LEDGER))
+
+    def base_ledger(self):
+        data = show(self.root, self.workspace.base(), LEDGER)
+        return Ledger(data.decode("utf-8")) if data is not None else Ledger("")
+
+    def read(self, rel, rev="worktree"):
+        rel = normalize(rel)
+        if rev == "base":
+            return show(self.root, self.workspace.base(), rel)
+        try:
+            with open(self.path(rel), "rb") as f:
+                return f.read()
+        except OSError:
+            return None
+
+    def readable(self, rel):
+        """Files the UI may fetch: anything a row names, its .mcmeta, and assets under the scanned trees."""
+        rel = normalize(rel)
+        files = self._ledger_files()
+        return (rel in files or (rel.endswith(".mcmeta") and rel[:-7] in files)
+                or rel.startswith(("mod/src/main/resources/assets/", "mod/src/generated/resources/assets/", "pack/")))
+
+    def _ledger_files(self):
+        """Files the ledger names, re-read only when the ledger file changes (thumbnails ask per image)."""
+        path = self.path(LEDGER)
+        try:
+            key = (path, os.stat(path).st_mtime_ns)
+        except OSError:
+            return set()
+        if getattr(self, "_files_cache", (None,))[0] != key:
+            self._files_cache = (key, self.ledger().files())
+        return self._files_cache[1]
+
+    def _target(self, rel, ledger, allow_new=False):
+        """The absolute path to write `rel` to, or EditorError when the editor must not write it."""
+        root = self.workspace.require_batch()
+        rel = normalize(rel)
+        if rel.startswith(GENERATED):
+            raise EditorError(f"`{rel}` is datagen output; change its provider or add a hand-authored file under "
+                              "mod/src/main/resources/ instead")
+        named = rel in ledger.files() or (rel.endswith(".mcmeta") and rel[:-7] in ledger.files())
+        if not named and not (allow_new and rel.startswith(NEW_ROW_PREFIXES)):
+            raise EditorError(f"`{rel}` is not named by a ledger row; the editor only writes ledgered paths")
+        return os.path.join(root, rel)
+
+    def _write(self, rel, data, ledger, allow_new=False):
+        atomic.write(self._target(rel, ledger, allow_new), data)
+
+    def _save_ledger(self, ledger):
+        self.workspace.require_batch()
+        ledger.save(self.path(LEDGER))
+
+    @staticmethod
+    def _live(row):
+        """Rows with status removed describe deleted files: the editor never edits or accepts them."""
+        if row.status == "removed":
+            raise EditorError(f"`{row.path_id}` is marked removed; its file no longer exists")
+        return row
+
+    def human_origin(self):
+        return f"human ({self.who()}, {self.today()})"
+
+    def origin(self, spec):
+        spec = spec or {}
+        if spec.get("kind", "human") == "human":
+            return self.human_origin()
+        if spec.get("kind") == "licensed":
+            source, licence = (spec.get("source") or "").strip(), (spec.get("license") or "").strip()
+            if not source or not licence:
+                raise EditorError("a licensed origin needs both a source and a licence")
+            return f"licensed ({source}, {licence})"
+        raise EditorError("origin must be human or licensed")
+
+    def accepted_note(self):
+        return f"Accepted as final by {self.who()}, {self.today()}."
+
+    # --- listing -------------------------------------------------------------
+
+    def state(self):
+        ws = self.workspace
+        return {"batch": ws.writable, "branch": ws.branch(), "worktree": ws.worktree, "root": ws.root,
+                "base": ws.base()[:9], "reviewer": self.who(), "batches": ws.batches(),
+                "vanilla": self.resolver.jar() is not None, "today": self.today(),
+                "llm": self.llm.model if self.llm.available() else None}
+
+    def rows(self):
+        ledger, base = self.ledger(), self.base_ledger()
+        out, keys_by_file = [], {}
+
+        def file_keys(rel):  # parse each lang file once per listing, not once per `*` row
+            if rel not in keys_by_file:
+                try:
+                    keys_by_file[rel] = lang.LangFile.load(self.path(rel)).keys()
+                except (OSError, lang.LangError):
+                    keys_by_file[rel] = None
+            return keys_by_file[rel]
+
+        exact = [r for r in ledger.rows if r.key is not None and not r.wildcard]
+        changed_paths = {p for _, p in self.workspace.changed_files()} if self.workspace.writable else set()
+        for row in ledger.rows:
+            item = row.to_dict()
+            item["kind"] = kind_of(row)
+            item["editable"] = item["kind"] is not None and not row.generated and row.status != "removed"
+            before = base.find(row.path_id)
+            item["pending"] = before is None or (before.origin, before.status, before.notes) != \
+                (row.origin, row.status, row.notes) or self._content_changed(ledger, row, changed_paths)
+            item["new"] = before is None
+            if row.wildcard:
+                item["overridden"] = sum(1 for r in exact if r.file == row.file and row.covers(r.key))
+                keys = file_keys(row.file)
+                item["keyCount"] = len(ledger.keys(row, keys)) if keys is not None else None
+            item["host"] = host.is_host_pattern(row.file)
+            out.append(item)
+        return out
+
+    def row_detail(self, row_id):
+        ledger = self.ledger()
+        row = ledger.find(row_id)
+        if row is None:
+            raise EditorError(f"no ledger row `{row_id}`")
+        detail = {"row": row.to_dict(), "kind": kind_of(row), "base": self.workspace.base()[:9]}
+        detail["row"]["kind"] = detail["kind"]
+        kind = detail["kind"]
+        if kind == "lang":
+            detail["keys"] = self._lang_keys(ledger, row)
+            detail["siblings"] = [r.path_id for r in ledger.rows if r.file == row.file and r.items == row.items
+                                  and r.items] or [row.path_id]
+        elif kind == "texture":
+            data = self.read(row.file)
+            detail["exists"] = data is not None
+            if data is not None:
+                try:
+                    w, h, _ = png.header(data)
+                    size, marked = png.marker(data)
+                    detail.update(width=w, height=h, bytes=len(data), marker=marked, markerSize=size)
+                except png.PngError as e:
+                    detail["error"] = str(e)
+            detail["mcmeta"] = (self.read(row.file + ".mcmeta") or b"").decode("utf-8", "replace") or None
+            detail["usedBy"] = self._models_using(row.file)
+            detail["host"] = host.is_host_pattern(row.file)
+            if detail["host"]:
+                detail["mobs"] = [{"id": k, "label": v[0], "kind": v[1],
+                                   "available": v[2] is None or self.resolver.jar() is not None}
+                                  for k, v in host.MOBS.items()]
+        elif kind == "model":
+            data = self.read(row.file)
+            detail["json"] = data.decode("utf-8", "replace") if data is not None else None
+            detail["modelId"] = self._model_id(row.file)
+            if data is not None:
+                try:
+                    model = json.loads(data)
+                    detail["textures"] = [self._texture_info(ledger, var, ref) for var, ref in models.texture_refs(model)]
+                except json.JSONDecodeError as e:
+                    detail["error"] = str(e)
+        elif kind == "sound":
+            data = self.read(row.file)
+            detail["bytes"] = len(data) if data is not None else None
+        elif kind == "properties":
+            current = props.PropsFile.load(self.path(row.file))
+            base = self._base_props(row.file)
+            detail.update(value=current.get(row.key), line=current.lines[row.key] + 1,
+                          base=base.values.get(row.key) if base else None,
+                          gate=row.file == "mod/gradle.properties")
+        elif kind == "markdown":
+            text = (self.read(row.file) or b"").decode("utf-8", "replace")
+            base = self.read(row.file, "base")
+            detail.update(text=text, base=base.decode("utf-8", "replace") if base is not None else None,
+                          warnings=markdown.link_warnings(text, row.file, self.root))
+        return detail
+
+    def _lang_keys(self, ledger, row):
+        current, base = self._lang_versions(row.file)
+        keys = []
+        line_of = {}
+        for i, line in enumerate(current.text.split("\n"), 1):
+            m = lang.ENTRY.match(line)
+            if m:
+                line_of.setdefault(json.loads(m.group(2)), i)
+        for key in ledger.keys(row, current.keys()):
+            owner = ledger.owner(row.file, key)
+            value = current.get(key)
+            keys.append({"key": key, "value": value, "base": base.values.get(key) if base else None,
+                         "args": len(lang.format_args(value)), "owner": owner.path_id if owner else None,
+                         "ownerStatus": owner.status if owner else None,
+                         "ownerOrigin": owner.origin if owner else None,
+                         "line": line_of.get(key)})
+        return keys
+
+    @staticmethod
+    def _asset_id(rel, kind):
+        """`namespace:path` for a file under assets/<namespace>/<kind>/ (extension dropped), else None."""
+        parts = rel.split("/")
+        if "assets" in parts and kind in parts:
+            a, k = parts.index("assets"), parts.index(kind)
+            return f"{parts[a + 1]}:{posixpath.splitext('/'.join(parts[k + 1:]))[0]}"
+        return None
+
+    def _model_id(self, rel):
+        return self._asset_id(rel, "models")
+
+    def _texture_id(self, rel):
+        return self._asset_id(rel, "textures")
+
+    def _models_using(self, texture_rel):
+        tex_id = self._texture_id(texture_rel)
+        if not tex_id:
+            return []
+        short = tex_id.split(":", 1)[1] if tex_id.startswith("minecraft:") else None
+        users = []
+        for tree in ("mod/src/main/resources/assets", "mod/src/generated/resources/assets"):
+            base = self.path(tree)
+            for dirpath, _, names in os.walk(base):
+                for name in names:
+                    if not name.endswith(".json") or "/models/" not in dirpath.replace(os.sep, "/") + "/":
+                        continue
+                    full = os.path.join(dirpath, name)
+                    try:
+                        with open(full, encoding="utf-8") as f:
+                            model = json.load(f)
+                    except (OSError, ValueError):
+                        continue
+                    refs = [ref for _, ref in models.texture_refs(model)] if isinstance(model, dict) else []
+                    if tex_id in refs or (short and short in refs):
+                        rel = os.path.relpath(full, self.root).replace(os.sep, "/")
+                        users.append({"path": rel, "modelId": self._model_id(rel),
+                                      "generated": rel.startswith(GENERATED)})
+        return sorted(users, key=lambda u: (not u["path"].startswith(GENERATED + "resources/assets/remission/models/block"),
+                                            u["path"]))
+
+    def _texture_info(self, ledger, var, ref):
+        namespace, _, path = ref.rpartition(":")
+        namespace = namespace or "minecraft"
+        rel = self.resolver.repo_path(namespace, "textures", path, ".png")
+        row = ledger.find(rel) if rel else None
+        return {"var": var, "id": f"{namespace}:{path}", "path": rel, "row": row.path_id if row else None,
+                "status": row.status if row else None,
+                "exists": bool(rel) or self.resolver.exists(namespace, "textures", path, ".png")}
+
+    # --- lang ----------------------------------------------------------------
+
+    def lang_save(self, file, key, value, status="draft"):
+        """Replace one string; the governing row records the change (an exact-key row for a shared `*` row)."""
+        if status not in ("draft", "final"):
+            raise EditorError("a replaced string is draft or final")
+        ledger = self.ledger()
+        owner = ledger.owner(file, key)
+        if owner is None:
+            raise EditorError(f"no ledger row covers `{file}:{key}`; add one first")
+        self._live(owner)
+        current = lang.LangFile.load(self.path(file))
+        try:
+            edited = current.with_value(key, value)
+        except lang.LangError as e:
+            raise EditorError(str(e))
+        if edited.values[key] == current.values[key]:
+            # Saving the AI text unchanged would record it as human-written; Accept as final is that path.
+            raise EditorError("nothing changed; use Accept as final to keep the string as it is")
+        target = self._target(file, ledger)
+        origin = self.human_origin()
+        row = self._row_for_key(ledger, owner, file, key, current.keys(), origin, status)
+        if row is owner or row.path_id == owner.path_id:
+            ledger.set_fields(owner, origin=origin, status=status)
+        edited.save(target)
+        self._save_ledger(ledger)
+        return ledger.find(f"{file}:{key}") or ledger.find(owner.path_id)
+
+    def _row_for_key(self, ledger, owner, file, key, all_keys, origin, status, notes=None):
+        """The row a one-key change is recorded on: the owner itself unless it is a `*` row governing other keys."""
+        if not owner.wildcard:
+            return owner
+        others = [k for k in ledger.keys(owner, all_keys) if k != key and ledger.owner(file, k) is owner]
+        if not others:
+            return owner
+        return ledger.insert_after(owner, f"{file}:{key}", owner.type, origin, status,
+                                   notes if notes is not None else owner.notes)
+
+    def lang_accept(self, file, key=None, row_id=None):
+        """Accept a string (or every string of a row) unchanged as final, recording the reviewer and date."""
+        ledger = self.ledger()
+        note = self.accepted_note()
+        if row_id is not None:
+            row = ledger.require(row_id)
+            self._live(row)
+            if kind_of(row) != "lang":
+                raise EditorError(f"`{row_id}` is not a lang row")
+            if row.status == "final":
+                raise EditorError(f"`{row.key}` is already final")
+            self._target(row.file, ledger)
+            ledger.set_fields(row, status="final", notes=append_note(row.notes, note))
+            self._save_ledger(ledger)
+            return ledger.find(row_id)
+        owner = ledger.owner(file, key)
+        if owner is None:
+            raise EditorError(f"no ledger row covers `{file}:{key}`")
+        self._live(owner)
+        if owner.status == "final":
+            raise EditorError(f"`{key}` is already final (row `{owner.key}`)")
+        self._target(file, ledger)
+        all_keys = lang.LangFile.load(self.path(file)).keys()
+        if key not in all_keys:
+            raise EditorError(f"no key '{key}' in {file}")
+        row = self._row_for_key(ledger, owner, file, key, all_keys, owner.origin, "final",
+                                append_note(owner.notes, note))
+        if row.path_id == owner.path_id:
+            ledger.set_fields(owner, status="final", notes=append_note(owner.notes, note))
+        self._save_ledger(ledger)
+        return ledger.find(f"{file}:{key}") or ledger.find(owner.path_id)
+
+    # --- markdown ------------------------------------------------------------
+
+    def markdown_save(self, row_id, text, status="draft"):
+        """Replace a Markdown text row's file (lore now; store copy, journal and books later)."""
+        if status not in ("draft", "final"):
+            raise EditorError("replaced text is draft or final")
+        ledger = self.ledger()
+        row = ledger.require(row_id)
+        self._live(row)
+        if kind_of(row) != "markdown":
+            raise EditorError(f"`{row_id}` is not a Markdown row")
+        try:
+            data = markdown.normalize(text)
+        except ValueError as e:
+            raise EditorError(str(e))
+        current = self.read(row.file) or b""
+        try:
+            tidied = markdown.normalize(current.decode("utf-8", "replace"))
+        except ValueError:
+            tidied = current
+        if data == current or data == tidied:
+            # Only line endings or whitespace would change: saving would record the AI text as human-written.
+            raise EditorError("nothing changed; use Accept as final to keep the text as it is")
+        self._write(row.file, data, ledger)
+        ledger.set_fields(row, origin=self.human_origin(), status=status)
+        self._save_ledger(ledger)
+        return ledger.find(row_id), markdown.link_warnings(data.decode("utf-8"), row.file, self.root)
+
+    def accept_row(self, row_id):
+        """Accept a whole row (lang or Markdown) unchanged as final, recording the reviewer and date."""
+        ledger = self.ledger()
+        row = ledger.require(row_id)
+        self._live(row)
+        if kind_of(row) not in ("lang", "markdown", "properties"):
+            raise EditorError(f"`{row_id}` is accepted through its upload page, not as text")
+        if row.status == "final":
+            raise EditorError(f"`{row.key or row.file}` is already final")
+        self._target(row.file, ledger)
+        ledger.set_fields(row, status="final", notes=append_note(row.notes, self.accepted_note()))
+        self._save_ledger(ledger)
+        return ledger.find(row_id)
+
+    # --- properties ----------------------------------------------------------
+
+    def properties_save(self, row_id, value, status="draft"):
+        """Replace one `file.properties:key` value (e.g. the mod description) in place."""
+        if status not in ("draft", "final"):
+            raise EditorError("replaced text is draft or final")
+        ledger = self.ledger()
+        row = ledger.require(row_id)
+        self._live(row)
+        if kind_of(row) != "properties":
+            raise EditorError(f"`{row_id}` is not a properties row")
+        if isinstance(value, str) and row.key in self._toml_literal_keys(row.file) and \
+                (TRIPLE in value or value.rstrip().endswith("'")):
+            raise EditorError(f"{row.key} is expanded inside {TRIPLE}...{TRIPLE} in neoforge.mods.toml: it may not "
+                              f"contain {TRIPLE} or end with a single quote")
+        try:
+            edited = props.PropsFile.load(self.path(row.file)).with_value(row.key, value)
+        except props.PropsError as e:
+            raise EditorError(str(e))
+        target = self._target(row.file, ledger)
+        if edited.values[row.key] == props.PropsFile.load(target).values[row.key]:
+            raise EditorError("nothing changed")
+        edited.save(target)
+        ledger.set_fields(row, origin=self.human_origin(), status=status)
+        self._save_ledger(ledger)
+        return ledger.find(row_id)
+
+    def _toml_literal_keys(self, rel):
+        """gradle.properties keys the mods.toml template wraps in a TOML multi-line literal string."""
+        if rel != "mod/gradle.properties":
+            return set()
+        template = (self.read(MODS_TOML) or b"").decode("utf-8", "replace")
+        return set(re.findall(TRIPLE + r"\$\{(\w+)\}" + TRIPLE, template))
+
+    def _changed_property(self, row):
+        try:
+            now = props.PropsFile.load(self.path(row.file)).values.get(row.key)
+        except OSError:
+            return []
+        base = self._base_props(row.file)
+        before = base.values.get(row.key) if base else None
+        return [] if before == now else [{"key": row.key, "before": before, "after": now}]
+
+    # --- vocabulary ------------------------------------------------------------
+
+    def _design(self):
+        return (self.read("docs/DESIGN.md") or b"").decode("utf-8", "replace")
+
+    def vocabulary(self, text):
+        """Avoided words found in `text`, and the glossary terms it uses."""
+        if not isinstance(text, str):
+            raise EditorError("text must be a string")
+        return {"hits": glossary.check(text), "used": glossary.used(text, glossary.terms(self._design()))}
+
+    def review(self, row_id, text):
+        """Problems a local model points out in `text` (advisory; it never writes text)."""
+        row = self.ledger().require(row_id)
+        try:
+            return {"issues": self.llm.review(text, row.type, row.notes, glossary.section(self._design())),
+                    "model": self.llm.model}
+        except RuntimeError as e:
+            raise EditorError(str(e))
+
+    # --- uploads -------------------------------------------------------------
+
+    def stage_upload(self, row_id, data, status=None, mcmeta=None):
+        """Check an upload against a row without writing it. Returns {id, checks, info}."""
+        ledger = self.ledger()
+        row = ledger.require(row_id)
+        self._live(row)
+        kind = kind_of(row)
+        if row.generated:
+            raise EditorError(f"`{row.file}` is datagen output and read-only here")
+        if kind not in ("texture", "model", "sound"):
+            raise EditorError(f"`{row_id}` takes no file uploads")
+        if mcmeta is not None and kind != "texture":
+            raise EditorError("only textures take an .mcmeta (animation strips)")
+        checks, info = self._validate(kind, row, data, status or row.status, mcmeta)
+        info.pop("image", None)
+        if len(self.uploads) >= MAX_UPLOADS:
+            oldest = min(self.uploads, key=lambda k: self.uploads[k]["at"])
+            del self.uploads[oldest]
+        upload_id = secrets.token_hex(8)
+        self.uploads[upload_id] = {"row": row_id, "data": data, "mcmeta": mcmeta, "at": time.time(), "kind": kind}
+        return {"id": upload_id, "checks": checks, "info": info, "ok": textures.passed(checks)}
+
+    def _validate(self, kind, row, data, status, mcmeta):
+        if kind == "texture":
+            original = self.read(row.file)
+            original_meta = self.read(row.file + ".mcmeta")
+            return textures.validate(data, status, original=original,
+                                     original_mcmeta=original_meta.decode("utf-8", "replace") if original_meta else None,
+                                     mcmeta=mcmeta, marker_rule=row.type == "texture")
+        if kind == "model":
+            checks, _ = models.validate(data, self.resolver)
+            return checks, {"bytes": len(data)}
+        if len(data) > SOUND_BYTES:
+            return [textures.check("ogg", "Ogg Vorbis", False, f"{len(data)} bytes; the limit is {SOUND_BYTES}")], {}
+        ok = data[:4] == b"OggS" and b"vorbis" in data[:64]
+        return [textures.check("ogg", "Ogg Vorbis", ok, "Ogg Vorbis stream" if ok else
+                               "not an Ogg Vorbis file (Minecraft plays .ogg Vorbis only)")], {"bytes": len(data)}
+
+    def write_upload(self, upload_id, status, origin=None, note=None):
+        upload = self.uploads.get(upload_id)
+        if upload is None:
+            raise EditorError("that upload has expired; choose the file again")
+        ledger = self.ledger()
+        row = ledger.require(upload["row"])
+        self._live(row)
+        if status not in ("placeholder", "draft", "final"):
+            raise EditorError("status must be placeholder, draft or final")
+        checks, _ = self._validate(upload["kind"], row, upload["data"], status, upload["mcmeta"])
+        if not textures.passed(checks):
+            failed = "; ".join(f"{c['label']}: {c['detail']}" for c in checks if c["state"] == "fail")
+            raise EditorError(f"the upload fails its checks for status {status}: {failed}")
+        origin_text = self.origin(origin)
+        self._write(row.file, upload["data"], ledger)
+        if upload["mcmeta"] is not None and upload["kind"] == "texture":
+            self._write(row.file + ".mcmeta", upload["mcmeta"].encode("utf-8"), ledger)
+        notes = append_note(row.notes, note) if note and note.strip() else row.notes
+        ledger.set_fields(row, origin=origin_text, status=status, notes=notes)
+        self._save_ledger(ledger)
+        del self.uploads[upload_id]
+        return ledger.find(row.path_id)
+
+    def upload_bytes(self, upload_id):
+        upload = self.uploads.get(upload_id)
+        return upload["data"] if upload else None
+
+    def add_row(self, rel, type_, section, notes):
+        """A new row for an asset the user is about to add under the mod's assets/ or pack/."""
+        ledger = self.ledger()
+        rel = normalize(rel)
+        self._target(rel, ledger, allow_new=True)
+        try:
+            row = ledger.add_row(section, rel, type_, self.human_origin(), "draft", notes or "Added in the content editor.")
+        except LedgerError as e:
+            raise EditorError(str(e))
+        self._save_ledger(ledger)
+        return row
+
+    # --- host preview ----------------------------------------------------------
+
+    def host_png(self, stage, mob="mannequin", intensity=1.0, rev="worktree", upload_id=None, glow=True):
+        """The mob texture with stage `stage`'s overlay, as a PNG."""
+        if mob not in host.MOBS:
+            raise EditorError(f"unknown mob '{mob}'")
+        if not isinstance(stage, int) or stage < 1:
+            raise EditorError(f"host stages start at 1, not {stage}")
+        _, model_kind, texture = host.MOBS[mob]
+        if texture is None:
+            base_image = host.mannequin(model_kind)
+        else:
+            data, _ = self.resolver.read("minecraft", "textures", texture, ".png")
+            if data is None:
+                raise EditorError("vanilla mob textures need the client resources jar; run ./gradlew build in mod/")
+            base_image = png.decode(data)
+        upload = self.uploads.get(upload_id) if upload_id else None
+        upload_path = None
+        if upload:
+            upload_path = self.ledger().require(upload["row"]).file
+
+        def pattern(name):
+            rel = host.HOST_DIR + name
+            if upload_path == rel:
+                return png.decode(upload["data"])
+            data = self.read(rel, rev)
+            if data is None:
+                raise EditorError(f"`{rel}` is missing")
+            return png.decode(data)
+
+        glow_image = pattern(host.GLOW_PATTERN) if glow and stage >= host.GLOW_STAGE else None
+        image = host.composite(base_image, pattern(host.stage_pattern(stage)), glow_image, intensity)
+        return png.encode(image)
+
+    # --- batch ---------------------------------------------------------------
+
+    def batch(self):
+        """Every row that differs from the base ledger, with what changed, plus the changed files."""
+        ledger, base = self.ledger(), self.base_ledger()
+        changes = []
+        base_commit = self.workspace.base()
+        changed = self.workspace.changed_files(base_commit)
+        changed_paths = {p for _, p in changed}
+        for row in ledger.rows:
+            before = base.find(row.path_id)
+            same_row = before is not None and (before.origin, before.status, before.notes) == \
+                (row.origin, row.status, row.notes)
+            # A re-edit on the same day can leave the row text identical (same origin and date), so also list
+            # rows whose governed content differs from the base.
+            if same_row and not self._content_changed(ledger, row, changed_paths):
+                continue
+            change = {"row": row.to_dict(), "kind": kind_of(row), "new": before is None,
+                      "before": before.to_dict() if before else None, "contentOnly": same_row}
+            if kind_of(row) == "lang":
+                change["strings"] = self._changed_strings(ledger, row)
+            elif kind_of(row) == "properties":
+                change["strings"] = self._changed_property(row)
+            elif kind_of(row) == "markdown":
+                base_text = self.read(row.file, "base")
+                change["diff"] = markdown.diff((base_text or b"").decode("utf-8", "replace"),
+                                               (self.read(row.file) or b"").decode("utf-8", "replace"), row.file)
+            changes.append(change)
+        stats = self.workspace.numstat(base_commit)
+        files = [{"status": s, "path": p, "added": stats.get(p, ("", ""))[0], "deleted": stats.get(p, ("", ""))[1]}
+                 for s, p in changed]
+        return {"changes": changes, "files": files, "branch": self.workspace.branch(), "behind": self.workspace.behind(),
+                "base": base_commit[:9], "worktree": self.workspace.worktree,
+                "uncommitted": self.workspace.uncommitted(), "commits": self.workspace.commits()}
+
+    def _content_changed(self, ledger, row, changed_paths):
+        """True when the file content this row governs differs from the base."""
+        if row.file not in changed_paths:
+            return False
+        kind = kind_of(row)
+        if kind == "lang":
+            return bool(self._changed_strings(ledger, row))
+        if kind == "properties":
+            return bool(self._changed_property(row))
+        return row.key is None
+
+    def _lang_versions(self, rel):
+        """(current LangFile, base values) for a lang file, cached by base commit and file mtime: the queue
+        asks once per lang row, and those rows mostly share one en_us.json."""
+        base_commit = self.workspace.base()
+        try:
+            key = (rel, base_commit, os.stat(self.path(rel)).st_mtime_ns)
+        except OSError:
+            return None
+        cache = self.__dict__.setdefault("_lang_cache", {})
+        hit = cache.get(key)
+        if hit is None:  # GETs run concurrently: build into a local and return that, never re-read the dict
+            current = lang.LangFile.load(self.path(rel))
+            base_data = show(self.root, base_commit, rel)
+            hit = (current, lang.LangFile(base_data.decode("utf-8")) if base_data else None)
+            cache.clear()
+            cache[key] = hit
+        return hit
+
+    def _base_props(self, rel):
+        """main's version of a .properties file (ISO-8859-1, as Gradle reads it), or None."""
+        data = self.read(rel, "base")
+        return props.PropsFile(data.decode("iso-8859-1")) if data is not None else None
+
+    def _changed_strings(self, ledger, row):
+        try:
+            versions = self._lang_versions(row.file)
+        except lang.LangError:
+            return []
+        if versions is None:
+            return []
+        current, base_file = versions
+        base = base_file.values if base_file else {}
+        out = []
+        for key in ledger.keys(row, current.keys()):
+            if ledger.owner(row.file, key) is not row:
+                continue
+            if base.get(key) != current.values[key]:
+                out.append({"key": key, "before": base.get(key), "after": current.values[key]})
+        return out
+
+    def undo(self, row_id):
+        """Put a row and the content it governs back as they are at the base commit."""
+        root = self.workspace.require_batch()
+        ledger, base = self.ledger(), self.base_ledger()
+        row = ledger.require(row_id)
+        before = base.find(row_id)
+        if kind_of(row) == "lang":
+            strings = self._changed_strings(ledger, row)
+            if strings:
+                current, base_file = self._lang_versions(row.file)
+                for s in strings:
+                    if s["before"] is None:
+                        continue
+                    literal = base_file.literals.get(s["key"]) if base_file else None
+                    # Put the base literal back verbatim so the file matches main byte for byte.
+                    current = current.with_literal(s["key"], literal) if literal is not None \
+                        else current.with_value(s["key"], s["before"])
+                current.save(self._target(row.file, ledger))
+        elif kind_of(row) == "properties":
+            base_file = self._base_props(row.file)
+            for s in self._changed_property(row):
+                current = props.PropsFile.load(self.path(row.file))
+                raw = base_file.raw.get(row.key) if base_file else None
+                current = current.with_raw(row.key, raw) if raw is not None else current.with_value(row.key, s["before"])
+                current.save(self._target(row.file, ledger))
+        elif kind_of(row) in ("texture", "model", "sound", "markdown"):
+            for rel in (row.file, row.file + ".mcmeta"):
+                data = show(root, self.workspace.base(), rel)
+                target = os.path.join(root, rel)
+                if data is not None:
+                    self._write(rel, data, ledger, allow_new=True)
+                elif os.path.exists(target):
+                    os.unlink(target)  # added in this batch (not at the base), including a new row's asset
+        if before is None:
+            del ledger.lines[row.index]
+            ledger._parse()
+        else:
+            ledger.lines[row.index] = base.lines[before.index]
+            ledger._parse()
+        self._save_ledger(ledger)
+
+    def pr_body(self, summary=None):
+        summary = summary or self.batch()
+        lines = ["Replaces player-facing content through the local content editor (`tools/content-editor.sh`).", "",
+                 "Changed ledger rows:"]
+        for c in summary["changes"]:
+            row, before = c["row"], c["before"]
+            if before is None:
+                what = f"new row, {row['origin']}, {row['status']}"
+            else:
+                parts = []
+                if before["status"] != row["status"]:
+                    parts.append(f"{before['status']} → {row['status']}")
+                if before["origin"] != row["origin"]:
+                    parts.append(row["origin"])
+                if before["notes"] != row["notes"] and not parts:
+                    parts.append("notes updated")
+                what = ", ".join(parts) or "updated"
+            lines.append(f"- `{row['path']}`: {what}")
+        pack = " `tools/pack.sh refresh` updated `pack/index.toml` and `pack/pack.toml`, then `tools/pack.sh check`." \
+            if any(f["path"].startswith("pack/") and f["path"] not in PACK_INDEX for f in summary["files"]) else ""
+        lines += ["", "Checks run before the commit: `tools/check-provenance.sh`, `python3 -I tools/check-docs.py`, "
+                      "`git diff --check`." + pack, "",
+                  "A batch that touches `en_us.json` or texture references rebases and reruns its checks before merge."]
+        return "\n".join(lines) + "\n"

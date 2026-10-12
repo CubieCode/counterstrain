@@ -12,7 +12,9 @@ with zlib). Fails when:
   lacks it while its status is `placeholder`;
 - a row points at a repository file that does not exist, unless its status is
   `removed` (and a `removed` row whose file still exists fails too);
-- a row has an unknown status, or two rows name the same file.
+- a row has an unknown status, or two rows name the same file or the same text ID
+  (an exact `file:key` row overriding a `file:prefix*` row is fine: the most
+  specific row wins).
 
 Scanned trees: mod/src/main/resources/assets/, mod/src/generated/resources/assets/
 and pack/ (except pack/mods/, packwiz metadata). Gitignored files are skipped.
@@ -73,19 +75,34 @@ def scanned_assets(root):
                   if p.startswith(SCAN_ROOTS) and not p.startswith(SKIP_PREFIXES) and kind(p))
 
 
+def parse_row(line):
+    """The stripped cells of a ledger table row, or None for anything else (prose, header, separator).
+
+    Shared with the content editor (tools/content-editor/contentedit/ledger.py) so both agree on what a row is.
+    """
+    if not line.startswith("|"):
+        return None
+    cells = [c.strip() for c in line.strip().strip("|").split("|")]
+    if len(cells) < 5 or cells[0] in ("Path / ID",) or set(cells[0]) <= set("-: "):
+        return None
+    return cells
+
+
+def row_path_id(cell):
+    """A row's Path / ID: the backticked part of the first cell, else the whole cell."""
+    ticked = re.search(r"`([^`]+)`", cell)
+    return (ticked.group(1) if ticked else cell).strip()
+
+
 def parse_ledger(path):
     """Yield (line_no, path_id, type, status) for each table row."""
     with open(path, encoding="utf-8") as f:
         lines = f.read().splitlines()
     for line_no, line in enumerate(lines, 1):
-        if not line.startswith("|"):
+        cells = parse_row(line)
+        if cells is None:
             continue
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) < 5 or cells[0] in ("Path / ID",) or set(cells[0]) <= set("-: "):
-            continue
-        ticked = re.search(r"`([^`]+)`", cells[0])
-        path_id = (ticked.group(1) if ticked else cells[0]).strip()
-        yield line_no, path_id, cells[1].strip("` ").lower(), cells[3].strip("` ").lower()
+        yield line_no, row_path_id(cells[0]), cells[1].strip("` ").lower(), cells[3].strip("` ").lower()
 
 
 # --- PNG ---------------------------------------------------------------------
@@ -97,7 +114,11 @@ class PngError(Exception):
 def png_top_left(path, size):
     """Return (width, height, rows) where rows holds RGBA tuples for the top-left size x size pixels."""
     with open(path, "rb") as f:
-        data = f.read()
+        return png_top_left_bytes(f.read(), size)
+
+
+def png_top_left_bytes(data, size):
+    """png_top_left for PNG bytes already in memory (the content editor checks uploads this way)."""
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise PngError("not a PNG file")
     pos, idat, palette, trns, header = 8, [], None, None, None
@@ -198,14 +219,19 @@ def marker_size(width):
 
 def has_marker(path):
     with open(path, "rb") as f:
-        header = f.read(24)
+        return has_marker_bytes(f.read())
+
+
+def has_marker_bytes(data):
+    """(marker size, marked) for PNG bytes: the solid #FF00FF top-left square scaled with the width."""
+    header = data[:24]
     if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n":
         raise PngError("not a PNG file")
     width, height = struct.unpack(">II", header[16:24])
     size = marker_size(width)
     if size > width or size > height:
         raise PngError(f"{width}x{height} is too small for a {size}x{size} marker")
-    _, _, rows = png_top_left(path, size)
+    _, _, rows = png_top_left_bytes(data, size)
     return size, all(px == MAGENTA for row in rows for px in row)
 
 
@@ -218,7 +244,7 @@ def check(root, ledger):
     def fail(where, message):
         failures.append(f"{where}: {message}")
 
-    rows = {}
+    rows, text_rows = {}, {}
     for line_no, path_id, ctype, status in parse_ledger(ledger):
         where = f"{ledger_rel}:{line_no}"
         if status not in STATUSES:
@@ -235,7 +261,12 @@ def check(root, ledger):
             fail(where, f"`{file_part}` does not exist; restore it, fix the path, or set status removed "
                         "with a note saying when and why")
         if ":" in path_id:
-            continue  # a text row (file:key) never covers a whole asset file
+            # A text row (file:key) never covers a whole asset file. An exact key row may override a
+            # `*` row (the most specific row wins), but two rows for the same ID are ambiguous.
+            if path_id in text_rows:
+                fail(where, f"`{path_id}` already has a row at line {text_rows[path_id]}; edit that row instead")
+            text_rows.setdefault(path_id, line_no)
+            continue
         if path_id in rows:
             fail(where, f"`{path_id}` already has a row at line {rows[path_id][0]}; edit that row instead")
             continue

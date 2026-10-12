@@ -1,0 +1,7 @@
+# Test ledger for the duplicate-text-rows case (tools/check-provenance.py --self-test).
+
+| Path / ID | Type | Origin | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.bar.*` | lang | ai (fixture) | draft | Shared row. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.bar.warning` | lang | human (fixture) | draft | Exact row overriding the shared one: allowed. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.bar.warning` | lang | human (fixture) | final | Second exact row for the same key. |

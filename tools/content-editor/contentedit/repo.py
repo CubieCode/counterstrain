@@ -1,0 +1,458 @@
+"""Git side of the editor: the content worktree and branch, the batch checks, commit and PR.
+
+Edits only ever happen in a dedicated worktree on a `content/<date>-<slug>`
+branch made from origin/main. Nothing here pushes to main, merges or publishes.
+"""
+import datetime
+import glob
+import json
+import os
+import re
+import contextlib
+import subprocess
+import tempfile
+import threading
+import time
+import zipfile
+
+SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
+BRANCH_PREFIX = "content/"
+CHECKS = (
+    ("tools/check-provenance.sh", ["tools/check-provenance.sh"]),
+    ("python3 -I tools/check-docs.py", ["python3", "-I", "tools/check-docs.py"]),
+    ("git diff --check", ["git", "diff", "--cached", "--check"]),
+)
+# Files under pack/ are hashed in pack/index.toml (and its hash in pack/pack.toml): a batch that edits one
+# refreshes the index before the checks and adds the pack check. Mod assets ship in the jar, not the index.
+PACK_INDEX = ("pack/index.toml", "pack/pack.toml")
+PACK_CHECK = ("tools/pack.sh check", ["tools/pack.sh", "check"])
+
+
+class RepoError(RuntimeError):
+    pass
+
+
+# Reads run alongside writes (the server does not lock GETs), so git must never take index.lock just to
+# refresh stat data during a read; writes such as add and commit still lock the index as usual.
+GIT_ENV = {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}
+
+
+def git(cwd, *args, check=True, binary=False, timeout=120):
+    out = subprocess.run(["git", "-C", cwd, *args], capture_output=True, text=not binary, timeout=timeout, env=GIT_ENV)
+    if check and out.returncode != 0:
+        err = out.stderr if not binary else out.stderr.decode("utf-8", "replace")
+        raise RepoError(f"git {' '.join(args)}: {err.strip()}")
+    return out
+
+
+def show(cwd, rev, path):
+    """Bytes of `path` at `rev`, or None when it does not exist there."""
+    out = git(cwd, "show", f"{rev}:{path}", check=False, binary=True)
+    return out.stdout if out.returncode == 0 else None
+
+
+class Workspace:
+    """The checkout the tool runs from plus, once a batch starts, its content worktree."""
+
+    def __init__(self, tool_root, worktree=None):
+        self.tool_root = tool_root
+        self._pinned = threading.local()
+        self.state_dir = os.path.join(tool_root, ".local", "content-editor")
+        self.worktree = None
+        if worktree:
+            self.resume(worktree)
+        else:
+            saved = self._read_state()
+            if saved and os.path.isdir(saved):
+                try:
+                    self.resume(saved)
+                except RepoError:
+                    self.worktree = None
+
+    # --- state ---------------------------------------------------------------
+
+    def _state_file(self):
+        return os.path.join(self.state_dir, "active")
+
+    def _read_state(self):
+        try:
+            with open(self._state_file(), encoding="utf-8") as f:
+                return f.read().strip()
+        except OSError:
+            return None
+
+    def _write_state(self):
+        os.makedirs(self.state_dir, exist_ok=True)
+        with open(self._state_file(), "w", encoding="utf-8") as f:
+            f.write(self.worktree or "")
+
+    @property
+    def root(self):
+        """Where the editor reads from: the content worktree, or the tool's checkout before a batch starts."""
+        return self.worktree or self.tool_root
+
+    @property
+    def writable(self):
+        return self.worktree is not None
+
+    def branch(self):
+        if not self.worktree:
+            return None
+        return git(self.worktree, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+
+    def upstream(self):
+        for ref in ("origin/main", "main"):
+            if git(self.tool_root, "rev-parse", "--verify", "--quiet", ref, check=False).returncode == 0:
+                return ref
+        raise RepoError("neither origin/main nor main exists")
+
+    @contextlib.contextmanager
+    def pinned_base(self):
+        """Compute base() once for the duration of one request (per thread) instead of per call."""
+        self._pinned.value = None
+        self._pinned.active = True
+        try:
+            yield
+        finally:
+            self._pinned.active = False
+            self._pinned.value = None
+
+    def base(self):
+        """The commit the batch branched from; 'on disk' previews read files at this commit."""
+        if getattr(self._pinned, "active", False):
+            if self._pinned.value is None:
+                self._pinned.value = self._base()
+            return self._pinned.value
+        return self._base()
+
+    def _base(self):
+        root = self.root
+        if not self.worktree:
+            return git(root, "rev-parse", "HEAD").stdout.strip()
+        return git(root, "merge-base", "HEAD", self.upstream()).stdout.strip()
+
+    def batches(self):
+        """Existing content worktrees: [{path, branch}]."""
+        out = git(self.tool_root, "worktree", "list", "--porcelain").stdout
+        found, path = [], None
+        for line in out.splitlines():
+            if line.startswith("worktree "):
+                path = line[9:]
+            elif line.startswith("branch refs/heads/" + BRANCH_PREFIX):
+                found.append({"path": path, "branch": line[len("branch refs/heads/"):]})
+        return found
+
+    def resume(self, path):
+        path = os.path.abspath(path)
+        branch = git(path, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+        if not branch.startswith(BRANCH_PREFIX):
+            raise RepoError(f"{path} is on {branch}, not a {BRANCH_PREFIX}<date>-<slug> branch")
+        self.worktree = path
+        if getattr(self._pinned, "active", False):
+            self._pinned.value = None
+        self._write_state()
+
+    def start(self, slug, today=None, fetch=True):
+        """Create the content worktree and branch content/<date>-<slug> from origin/main."""
+        if not SLUG.match(slug or ""):
+            raise RepoError("the batch name must be 1-40 lower-case letters, digits or hyphens")
+        name = f"{(today or datetime.date.today()).isoformat()}-{slug}"
+        branch = BRANCH_PREFIX + name
+        path = os.path.join(self.state_dir, "worktrees", name)
+        if os.path.exists(path):
+            # Starting the same batch twice (a double submit, or the same name later that day) resumes it.
+            existing = git(path, "rev-parse", "--abbrev-ref", "HEAD", check=False).stdout.strip()
+            if existing != branch:
+                raise RepoError(f"{path} exists but is not on {branch}; remove it or pick another name")
+            self.resume(path)
+            return branch
+        if fetch:
+            git(self.tool_root, "fetch", "--quiet", "origin", "main", check=False, timeout=60)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        git(self.tool_root, "worktree", "add", "--quiet", "-b", branch, path, self.upstream())
+        self.resume(path)
+        return branch
+
+    # --- batch ---------------------------------------------------------------
+
+    def require_batch(self):
+        if not self.worktree:
+            raise RepoError("start a batch first: edits go to a content/<date>-<slug> worktree, never this checkout")
+        branch = self.branch()
+        if not branch.startswith(BRANCH_PREFIX):
+            raise RepoError(f"the content worktree is on {branch}; refusing to write")
+        return self.worktree
+
+    def _untracked(self):
+        out = git(self.worktree, "ls-files", "--others", "--exclude-standard").stdout
+        return [p for p in out.splitlines() if p]
+
+    def changed_files(self, base=None):
+        """[(status, path)] for every file that differs from the base, committed or not. Read-only: it
+        never touches the index, so listing a batch cannot change what the next commit contains."""
+        if not self.worktree:
+            return []
+        out = git(self.worktree, "diff", "--name-status", base or self.base()).stdout
+        changed = [tuple(line.split("\t", 1)) for line in out.splitlines() if line.strip()]
+        return changed + [("A", p) for p in self._untracked()]
+
+    def behind(self):
+        """Commits on the upstream (as last fetched) that the batch does not have."""
+        if not self.worktree:
+            return 0
+        out = git(self.worktree, "rev-list", "--count", f"HEAD..{self.upstream()}", check=False)
+        return int(out.stdout.strip() or 0) if out.returncode == 0 else 0
+
+    def update_from_main(self, fetch=True):
+        """Rebase the committed batch onto origin/main. On a conflict, abort and name the files."""
+        root = self.require_batch()
+        if self.uncommitted():
+            raise RepoError("commit (or undo) the batch's changes before updating it from main")
+        if fetch:
+            git(self.tool_root, "fetch", "--quiet", "origin", "main", check=False, timeout=60)
+        upstream = self.upstream()
+        before = git(root, "rev-parse", "HEAD").stdout.strip()
+        out = git(root, "rebase", "--quiet", upstream, check=False, timeout=120)
+        if out.returncode != 0:
+            conflicts = git(root, "diff", "--name-only", "--diff-filter=U", check=False).stdout.split()
+            git(root, "rebase", "--abort", check=False)
+            raise RepoError("main changed the same lines; nothing was changed here. Conflicting files: "
+                            + (", ".join(conflicts) or "unknown") + ". Resolve them by hand in " + root
+                            + " (git rebase " + upstream + "), or undo those rows and redo them.")
+        after = git(root, "rev-parse", "HEAD").stdout.strip()
+        return before != after
+
+    def pr(self):
+        """{url, state, headRefOid} of the branch's most recent PR, or None (needs gh)."""
+        branch = self.branch()
+        if not branch:
+            return None
+        try:
+            out = subprocess.run(["gh", "pr", "list", "--head", branch, "--state", "all", "--json", "url,state,headRefOid",
+                                  "--jq", ".[0] // empty"], cwd=self.worktree, capture_output=True, text=True,
+                                 timeout=60)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if out.returncode != 0 or not out.stdout.strip():
+            return None
+        return json.loads(out.stdout)
+
+    def finish(self, discard_name=None):
+        """Remove the content worktree and its local branch once its PR is merged or closed.
+
+        A batch with no PR (never pushed) is only removed when discard_name repeats the branch name.
+        """
+        root = self.require_batch()
+        branch = self.branch()
+        pr = self.pr()
+        if pr and pr.get("state") == "OPEN":
+            raise RepoError(f"its PR is still open ({pr.get('url')}); merge or close it first")
+        if discard_name != branch:
+            if not pr:
+                raise RepoError(f"{branch} has no PR; type its name to discard its changes for good")
+            # Work after the PR (edits, or commits it never received) would be lost: ask for the name too.
+            head = pr.get("headRefOid")
+            unpushed = not head or git(root, "merge-base", "--is-ancestor", "HEAD", head, check=False).returncode != 0
+            if self.uncommitted() or unpushed:
+                raise RepoError(f"{branch} has work its {pr.get('state', '').lower()} PR does not contain; "
+                                "type its name to discard it for good")
+        git(self.tool_root, "worktree", "remove", "--force", root)
+        git(self.tool_root, "branch", "-D", branch, check=False)
+        self.worktree = None
+        self._write_state()
+        return branch, pr
+
+    def uncommitted(self):
+        """True when the content worktree has changes not yet committed to its branch."""
+        if not self.worktree:
+            return False
+        return bool(git(self.worktree, "status", "--porcelain").stdout.strip())
+
+    def commits(self):
+        """[{sha, subject}] for the branch's commits since the base, newest first."""
+        if not self.worktree:
+            return []
+        out = git(self.worktree, "log", "--format=%h%x09%s", f"{self.base()}..HEAD").stdout
+        return [dict(zip(("sha", "subject"), line.split("\t", 1))) for line in out.splitlines() if line]
+
+    def numstat(self, base=None):
+        if not self.worktree:
+            return {}
+        out = git(self.worktree, "diff", "--numstat", base or self.base()).stdout
+        stats = {}
+        for line in out.splitlines():
+            added, deleted, path = line.split("\t", 2)
+            stats[path] = (added, deleted)
+        for path in self._untracked():  # new files git diff does not see yet
+            try:
+                with open(os.path.join(self.worktree, path), "rb") as f:
+                    data = f.read()
+            except OSError:
+                continue
+            stats[path] = ("-", "-") if b"\0" in data else (str(data.count(b"\n") + (not data.endswith(b"\n") and bool(data))), "0")
+        return stats
+
+    def touches_pack(self):
+        # Includes index.toml and pack.toml themselves: after a refresh and an Undo of the pack edit, the index
+        # is the only change left and must be refreshed (back to main's) and checked again.
+        return any(path.startswith("pack/") for _, path in self.changed_files())
+
+    def run_checks(self):
+        root = self.require_batch()
+        results, checks = [], list(CHECKS)
+        if self.touches_pack():
+            start = time.monotonic()
+            try:
+                out = subprocess.run(["tools/pack.sh", "refresh"], cwd=root, capture_output=True, text=True, timeout=300)
+                ok, output = out.returncode == 0, (out.stdout + out.stderr).strip()
+            except (OSError, subprocess.TimeoutExpired) as e:
+                ok, output = False, str(e)
+            results.append({"cmd": "tools/pack.sh refresh", "ok": ok, "output": output,
+                            "seconds": round(time.monotonic() - start, 1)})
+            checks.append(PACK_CHECK)
+        git(root, "add", "--all")
+        for label, cmd in checks:
+            start = time.monotonic()
+            try:
+                out = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=300)
+                ok, output = out.returncode == 0, (out.stdout + out.stderr).strip()
+            except (OSError, subprocess.TimeoutExpired) as e:
+                ok, output = False, str(e)
+            results.append({"cmd": label, "ok": ok, "output": output, "seconds": round(time.monotonic() - start, 1)})
+        tree = git(root, "write-tree").stdout.strip()
+        return results, tree
+
+    def commit(self, message, checked_tree):
+        root = self.require_batch()
+        message = (message or "").strip()
+        if not message or "\n" in message:
+            raise RepoError("the commit message must be one non-empty line")
+        git(root, "add", "--all")
+        tree = git(root, "write-tree").stdout.strip()
+        if tree != checked_tree:
+            raise RepoError("files changed since the checks ran; run them again")
+        if git(root, "diff", "--cached", "--quiet", check=False).returncode == 0:
+            raise RepoError("nothing to commit")
+        git(root, "commit", "--quiet", "-m", message)
+        return git(root, "rev-parse", "--short", "HEAD").stdout.strip()
+
+    def open_pr(self, title, body, draft=True):
+        """Push the content branch and open a PR against main, or update the branch's open PR.
+
+        Returns (url, updated). Never pushes main, merges or publishes.
+        """
+        root = self.require_batch()
+        branch = self.branch()
+        if branch in ("main", "master") or not branch.startswith(BRANCH_PREFIX):
+            raise RepoError(f"refusing to push {branch}")
+        if git(root, "status", "--porcelain").stdout.strip():
+            raise RepoError("commit the batch before opening a PR")
+        # --force-with-lease: after "Update from main" the rebased branch replaces the pushed one, but never
+        # over commits someone else pushed to it. Only content/* branches get here.
+        git(root, "push", "--quiet", "--force-with-lease", "-u", "origin", f"{branch}:{branch}", timeout=120)
+        found = subprocess.run(["gh", "pr", "list", "--head", branch, "--state", "open", "--json", "url",
+                                "--jq", ".[0].url // empty"], cwd=root, capture_output=True, text=True, timeout=60)
+        existing = found.stdout.strip() if found.returncode == 0 else ""
+        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as f:
+            f.write(body)
+            body_file = f.name
+        try:
+            if existing:
+                # The push already added the new commits; refresh the body so it lists every changed row. Uses the
+                # REST API: `gh pr edit` fails on repositories that still report classic project cards.
+                number = existing.rstrip("/").rsplit("/", 1)[-1]
+                cmd = ["gh", "api", "-X", "PATCH", f"repos/{{owner}}/{{repo}}/pulls/{number}", "-F", f"body=@{body_file}",
+                       "--silent"]
+            else:
+                cmd = ["gh", "pr", "create", "--base", "main", "--head", branch, "--title", title,
+                       "--body-file", body_file]
+                if draft:
+                    cmd.append("--draft")
+            out = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=120)
+        finally:
+            os.unlink(body_file)
+        if out.returncode != 0:
+            raise RepoError(f"{'updating' if existing else 'opening'} the PR failed: {out.stderr.strip()}")
+        if existing:
+            return existing, True
+        url = pr_url(out.stdout + "\n" + out.stderr) or (self.pr() or {}).get("url")
+        if not url:
+            raise RepoError("gh reported success but printed no PR URL; check GitHub for the branch's PR")
+        return url, False
+
+
+class Resolver:
+    """Finds models and textures the 3D preview needs: the repo's assets, then vanilla's.
+
+    Vanilla assets come from the NeoForge client resources jar that ModDevGradle
+    leaves under mod/build/moddev/artifacts/; they are read at run time and never
+    copied into the repository.
+    """
+
+    TREES = ("mod/src/main/resources/assets", "mod/src/generated/resources/assets", "pack/kubejs/assets")
+
+    def __init__(self, workspace):
+        self.workspace = workspace
+        self._jar = None
+
+    def jar(self):
+        if self._jar is None:
+            found = sorted(glob.glob(os.path.join(self.workspace.tool_root, "mod", "build", "moddev", "artifacts",
+                                                  "*client-extra*.jar")))
+            self._jar = zipfile.ZipFile(found[-1]) if found else False
+        return self._jar or None
+
+    def repo_path(self, namespace, kind, path, ext):
+        for tree in self.TREES:
+            rel = f"{tree}/{namespace}/{kind}/{path}{ext}"
+            if os.path.isfile(os.path.join(self.workspace.root, rel)):
+                return rel
+        return None
+
+    def read(self, namespace, kind, path, ext, rev="worktree"):
+        """(bytes, source) or (None, None). rev 'base' reads repo files at the batch's base commit."""
+        if not re.match(r"^[a-z0-9_.-]+$", namespace) or not re.match(r"^[a-z0-9_./-]+$", path) or ".." in path:
+            return None, None
+        if rev == "base":
+            for tree in self.TREES:
+                rel = f"{tree}/{namespace}/{kind}/{path}{ext}"
+                data = show(self.workspace.root, self.workspace.base(), rel)
+                if data is not None:
+                    return data, rel
+        else:
+            rel = self.repo_path(namespace, kind, path, ext)
+            if rel:
+                with open(os.path.join(self.workspace.root, rel), "rb") as f:
+                    return f.read(), rel
+        jar = self.jar()
+        if jar is not None:
+            name = f"assets/{namespace}/{kind}/{path}{ext}"
+            try:
+                return jar.read(name), "vanilla:" + name
+            except KeyError:
+                pass
+        return None, None
+
+    def exists(self, namespace, kind, path, ext):
+        """True, False, or None when only vanilla could have it and the jar is missing."""
+        if self.repo_path(namespace, kind, path, ext):
+            return True
+        jar = self.jar()
+        if jar is None:
+            return None if namespace == "minecraft" else False
+        try:
+            jar.getinfo(f"assets/{namespace}/{kind}/{path}{ext}")
+            return True
+        except KeyError:
+            return False
+
+
+def pr_url(text):
+    """The first GitHub pull request URL in gh's output (some versions print it to stderr), or None."""
+    match = re.search(r"https://\S+/pull/\d+", text or "")
+    return match.group(0) if match else None
+
+
+def split_id(resource_id, default_namespace="minecraft"):
+    namespace, _, path = resource_id.rpartition(":")
+    return (namespace or default_namespace), path
