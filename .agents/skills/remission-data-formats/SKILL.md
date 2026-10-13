@@ -839,7 +839,7 @@ Queries, `CorruptionQueries` (static):
 | `isRevenant(Entity)` (P5.3) | whether the entity is a `remission:revenant` | both |
 | `viralLoad(Player)` (P5.1) | the player's viral load, 0–100 (`MAX_VIRAL_LOAD`) | server for any player; a client knows only its own player's (others read 0) |
 
-Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; the default `festers_into` map turns grass at 1, trees and foliage at 2 and stone at 3, and the last stage flips the biome; Festering stages, above). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
+Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; veins grow from 1 (`veinMinStage`), the default `festers_into` map turns grass and fern plants at 2 and grass blocks and stone at 3, and the last stage flips the biome; Festering stages, above). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
 
 Team query, `TeamQueries` (static, P4.12): the one answer to "are these two players teammates?". Every Remission rule that involves teammates asks it (DESIGN, Teams and multiplayer); Remission has no teams of its own.
 
