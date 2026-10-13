@@ -205,6 +205,12 @@ class Handler(BaseHTTPRequestHandler):
                                         q.get("upload") or None, q.get("glow", "1") != "0")
         self.binary(data, ".png")
 
+    def get_harness_status(self):
+        return self.app.editor.held_run.status()
+
+    def get_harness_shot(self):
+        self.binary(self.app.editor.held_run.shot(self.query().get("name", "")), ".png")
+
     def get_batch(self):
         summary = self.app.editor.batch()
         summary["prBody"] = self.app.editor.pr_body(summary)
@@ -212,6 +218,9 @@ class Handler(BaseHTTPRequestHandler):
         return summary
 
     # --- writes --------------------------------------------------------------
+
+    def post_harness_held(self):
+        return self.app.editor.held_run_start(self.body().get("row", ""))
 
     def post_batch_start(self):
         branch = self.app.editor.workspace.start(self.body().get("slug", ""))

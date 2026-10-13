@@ -11,12 +11,12 @@ Always launch with the wrapper:
 
 ```sh
 tools/run-client-headless.sh --timeout 180 [--resolution 1920x1080] [--no-framebuffer] [-- <extra gradle args>]
-tools/run-client-headless.sh --scene <area/subject> [--timeout 600]
+tools/run-client-headless.sh --scene <area/subject> [--scene-arg name=value]... [--timeout 600]
 ```
 
 It runs `xvfb-run -a -s "-screen 0 WxHx24" /opt/VirtualGL/bin/vglrun -d egl ./gradlew runClient --no-daemon` from `mod/` in its own process group. It sizes the window to the display (`-Pclient_width/-Pclient_height`), sets `onboardAccessibility:false` in `mod/run/client/options.txt`, saves the last frame, stops the whole group at the timeout (TERM, then KILL after 30 s), checks nothing is left, and runs `tools/verify-gpu-render.sh`. It first takes the shared GPU lock (`~/.cache/counterstrain/gpu.lock`), waiting up to `--gpu-wait` seconds (default 1800), because parallel Orca lanes and CI jobs share the one RTX 4070; never bypass the lock or run `vglrun` clients outside the script while another run may be active. The exit status is 0 only if the renderer is the GPU, nothing crashed, and teardown was clean. Without `--scene` the client never quits by itself, so reaching the timeout is the normal successful end.
 
-`--scene <id>` runs a dev-only harness scene (`mod/src/harness/resources/harness/scenes/<id>.json`, format in visual-checks). It passes `-Pharness_scene`/`-Pharness_output` to `runClient`, which set `remission.harness.scene`/`remission.harness.output`; the game builds the scene, saves the screenshots and exits by itself. The run passes only if the game exits 0 and `screenshots/harness-result.txt` says `status=ok`; reaching `--timeout` (default 600 with `--scene`) fails it, and the harness has its own 300 s watchdog. A scene run takes about 40 s once the GPU lock is held.
+`--scene <id>` runs a dev-only harness scene (`mod/src/harness/resources/harness/scenes/<id>.json`, format in visual-checks). It passes `-Pharness_scene`/`-Pharness_output` to `runClient`, which set `remission.harness.scene`/`remission.harness.output`; each `--scene-arg` joins `-Pharness_args` (`remission.harness.args`, `name=value,…`), the scene's declared arguments; the game builds the scene, saves the screenshots and exits by itself. The run passes only if the game exits 0 and `screenshots/harness-result.txt` says `status=ok`; reaching `--timeout` (default 600 with `--scene`) fails it, and the harness has its own 300 s watchdog. A scene run takes about 40 s once the GPU lock is held.
 
 Outputs go to `.local/runs/client-<UTC>/`, with `.local/runs/latest` pointing to the newest run:
 - `console.log`: Gradle and game output.

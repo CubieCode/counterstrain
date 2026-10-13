@@ -39,6 +39,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `cd mod && ./gradlew runServer` | Dedicated dev server (`mod/run/server`, accept the EULA there first) |
 | `tools/run-client-headless.sh --timeout 180` | Dev client on foundry's GPU; logs in `.local/runs/latest/` |
 | `tools/run-client-headless.sh --scene smoke/mob_lineup` | Dev-only harness scene: fixed world, screenshots in `.local/runs/latest/screenshots/`, then exits |
+| `tools/run-client-headless.sh --scene items/held --scene-arg item=remission:scanner` | A scene with arguments: here an item held in the first- and third-person hand |
 | `tools/run-client-headless.sh --scene smoke/mob_lineup --record` | The same, plus an H.264 clip of the display in `.local/runs/latest/capture.mp4` (system ffmpeg with `x11grab`) |
 | `tools/run-scenes.sh [--scenes "a/b c/d"] [--record]` | Run every harness scene (or the listed ones) headlessly, compare their screenshots with the references; summary in `.local/scene-runs/latest/` |
 | `tools/verify-gpu-render.sh LOG` | Fail unless a client log names the RTX 4070 |

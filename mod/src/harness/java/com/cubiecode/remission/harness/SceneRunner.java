@@ -132,7 +132,7 @@ final class SceneRunner {
         switch (phase) {
             case WAIT_TITLE -> {
                 if (mc.getOverlay() == null && mc.screen instanceof TitleScreen) {
-                    scene = Scene.load(sceneId);
+                    scene = Scene.load(sceneId, Scene.parseArgs(System.getProperty(RemissionHarness.ARGS_PROPERTY, "")));
                     applyOptions(mc.options);
                     FesterFog.setSuppressed(!scene.festerFog());
                     createWorld(mc);
