@@ -28,9 +28,9 @@ Fix the doc, not the check. If a check is wrong, fix `tools/check-docs.py` in th
 | Data formats, recipe types, triggers, stats, commands, KubeJS schemas | remission-data-formats (stub → current, fields, example), ARCHITECTURE contracts table, kubejs-scripting, ftb-quests-authoring |
 | `mod/build.gradle`, `gradle.properties`, wrapper, dev runtime mods | README stack/commands, ARCHITECTURE runtime and decisions, neoforge-mod-dev, DEV-ENVIRONMENT |
 | `pack/mods`, `pack.toml`, kubejs, quests | README stack, packwiz-pack, kubejs-scripting, ftb-quests-authoring, `pack/CHANGELOG.md` |
-| `tools/*`, `orca.yaml` | README commands/Orca, DEV-ENVIRONMENT, headless-client, playtesting, roadmap-workflow/orchestrate |
-| `.github/workflows/*` | README releases/CI, DEV-ENVIRONMENT runners, release, headless-client |
-| Roadmap progress | ROADMAP item fields, phase exit criteria, README status line, safe waves |
+| `tools/*`, `orca.yaml` | README commands/Contributing, DEV-ENVIRONMENT, headless-client, playtesting, roadmap-workflow/orchestrate |
+| `.github/workflows/*` | README CI and releases, DEV-ENVIRONMENT runners, release, headless-client |
+| Roadmap progress | ROADMAP item fields, phase exit criteria, README status table (one row per phase; keep details in ROADMAP), safe waves |
 | User-visible mod or pack change | `mod/CHANGELOG.md` / `pack/CHANGELOG.md` under Unreleased |
 | Player-facing content (textures, models, sounds, lang, quests, lore, store copy) | docs/CONTENT-PROVENANCE.md rows and markers (content-provenance); `tools/check-provenance.sh` |
 | New concept or name | DESIGN glossary; no reused terms from the pack's inspirations |
