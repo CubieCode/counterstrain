@@ -67,6 +67,8 @@ public final class QuestTriggerTests {
         helper.assertFalse(done(player, any), "nidus edited away fired the trigger");
         helper.assertValueEqual(stat(player, RemissionStats.NIDI_DESTROYED.get()), 0, "nidi destroyed after edit");
 
+        // Survival players fight a nidus down (NidusEncounterTests); a creative player still breaks it at once.
+        player.setGameMode(GameType.CREATIVE);
         helper.assertTrue(player.gameMode.destroyBlock(nidus), "player could not break the nidus");
         helper.assertBlockPresent(Blocks.AIR, new BlockPos(1, 1, 1));
         helper.assertTrue(done(player, any), "nidus_destroyed without conditions did not fire");

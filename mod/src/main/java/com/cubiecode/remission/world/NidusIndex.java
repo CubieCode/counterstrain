@@ -49,6 +49,12 @@ public final class NidusIndex extends SavedData {
         return nidi.containsKey(pos.asLong());
     }
 
+    /** Game time the nidus at {@code pos} was indexed, or {@code fallback} if it is not indexed. */
+    public long since(BlockPos pos, long fallback) {
+        Long since = nidi.get(pos.asLong());
+        return since == null ? fallback : since;
+    }
+
     public int size() {
         return nidi.size();
     }

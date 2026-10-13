@@ -1,6 +1,7 @@
 package com.cubiecode.remission.harness;
 
 import com.cubiecode.remission.api.CorruptionCause;
+import com.cubiecode.remission.api.NidusDamagedEvent;
 import com.cubiecode.remission.api.ViralLoadChangedEvent;
 import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.corruption.Corruption;
@@ -20,6 +21,8 @@ import com.cubiecode.remission.viralload.ViralLoadState;
 import com.cubiecode.remission.world.ChunkCorruption;
 import com.cubiecode.remission.world.FesteringStages;
 import com.cubiecode.remission.world.FesteringVeins;
+import com.cubiecode.remission.world.NidusBlockEntity;
+import com.cubiecode.remission.world.NidusSettings;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -69,10 +72,14 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * and does every queued cleanse at once, as the budgeted passes would over many ticks (P5.2).
  * {@code harness revenant <pos> <owner> <level> <yaw>} raises a revenant of the owner player there, through the
  * revenant code, wearing copies of the owner's armour and main-hand item, at that Strain level and facing (P5.3).
+ * {@code harness nidus <pos> <vitality>} strikes a nidus down to that percent of its vitality through the fight code, as
+ * the nearest player, so the thresholds it passes start their surges (P4.10).
  */
 final class HarnessCommands {
     private static final SimpleCommandExceptionType NO_HOSTS =
             new SimpleCommandExceptionType(Component.literal("None of the targets is a host"));
+    private static final SimpleCommandExceptionType NO_NIDUS =
+            new SimpleCommandExceptionType(Component.literal("No nidus there"));
     private static final SimpleCommandExceptionType NO_SPOT =
             new SimpleCommandExceptionType(Component.literal("No festering spot nearby"));
 
@@ -176,7 +183,36 @@ final class HarnessCommands {
                                                         BlockPosArgument.getBlockPos(context, "pos"),
                                                         EntityArgument.getPlayer(context, "owner"),
                                                         IntegerArgumentType.getInteger(context, "level"),
-                                                        FloatArgumentType.getFloat(context, "yaw")))))))));
+                                                        FloatArgumentType.getFloat(context, "yaw"))))))))
+                .then(Commands.literal("nidus").then(Commands.argument("pos", BlockPosArgument.blockPos())
+                        .then(Commands.argument("vitality", IntegerArgumentType.integer(1, 100))
+                                .executes(context -> nidus(context.getSource().getLevel(),
+                                        BlockPosArgument.getLoadedBlockPos(context, "pos"),
+                                        IntegerArgumentType.getInteger(context, "vitality")))))));
+    }
+
+    /**
+     * Strikes the nidus at {@code pos} down to {@code percent} of its vitality through the fight code, as the nearest
+     * player (P4.10): a first strike starts the fight, then one strike deals the rest, so every threshold it passes starts
+     * its surge and lashes as in a real fight. Fails without a nidus there; does nothing if it is already that low.
+     */
+    private static int nidus(ServerLevel level, BlockPos pos, int percent) throws CommandSyntaxException {
+        if (!(level.getBlockEntity(pos) instanceof NidusBlockEntity nidus)) {
+            throw NO_NIDUS.create();
+        }
+        NidusSettings settings = NidusSettings.current();
+        ServerPlayer player = level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, -1.0, false)
+                instanceof ServerPlayer nearest ? nearest : null;
+        long now = level.getGameTime();
+        if (!nidus.fighting()) {
+            nidus.damage(level, NidusDamagedEvent.Kind.STRIKE, player, null, 0.001F, settings, now);
+        }
+        float max = nidus.maxVitality(settings);
+        float rest = max * (1.0F - percent / 100.0F) - nidus.damageTaken();
+        if (rest > 0) {
+            nidus.damage(level, NidusDamagedEvent.Kind.STRIKE, player, null, rest, settings, now);
+        }
+        return Math.round(nidus.vitality(settings));
     }
 
     /**
