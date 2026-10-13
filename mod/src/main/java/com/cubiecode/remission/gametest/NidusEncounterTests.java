@@ -12,6 +12,7 @@ import com.cubiecode.remission.surge.Surges;
 import com.cubiecode.remission.viralload.ViralLoad;
 import com.cubiecode.remission.world.NidusBlock;
 import com.cubiecode.remission.world.NidusBlockEntity;
+import com.cubiecode.remission.world.NidusDefenceSettings;
 import com.cubiecode.remission.world.NidusEncounters;
 import com.cubiecode.remission.world.NidusIndex;
 import com.cubiecode.remission.world.NidusSettings;
@@ -75,7 +76,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * the core and credits every contributor within the window, vitality and surge intensity scale with players, the
  * damaged event cancels and scales damage, and vitality 0 restores mining. What clients draw (health stage, hit
  * reaction, enraged while its surge runs) follows the fight. Batch {@code nidi} runs on {@link #SETTINGS}
- * (installed for the batch); batch {@code nidi_plain} on the same with vitality 0.
+ * (installed for the batch); batch {@code nidi_plain} on the same with vitality 0. Both run with rallying and
+ * sympathetic surges off (P4.13; {@link NidusDefenceTests}).
  */
 @GameTestHolder(Remission.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -94,21 +96,25 @@ public final class NidusEncounterTests {
     @BeforeBatch(batch = BATCH)
     public static void installSettings(ServerLevel level) {
         NidusSettings.override(SETTINGS);
+        NidusDefenceSettings.override(NidusDefenceTests.OFF);
     }
 
     @AfterBatch(batch = BATCH)
     public static void restoreSettings(ServerLevel level) {
         NidusSettings.override(null);
+        NidusDefenceSettings.override(null);
     }
 
     @BeforeBatch(batch = PLAIN_BATCH)
     public static void installPlainSettings(ServerLevel level) {
         NidusSettings.override(PLAIN);
+        NidusDefenceSettings.override(NidusDefenceTests.OFF);
     }
 
     @AfterBatch(batch = PLAIN_BATCH)
     public static void restorePlainSettings(ServerLevel level) {
         NidusSettings.override(null);
+        NidusDefenceSettings.override(null);
     }
 
     // ---- fixtures ---------------------------------------------------------------------------------------------------

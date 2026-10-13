@@ -5,6 +5,7 @@ import com.cubiecode.remission.api.SurgeEndedEvent;
 import com.cubiecode.remission.api.SurgeStartedEvent;
 import com.cubiecode.remission.quest.QuestProgress;
 import com.cubiecode.remission.world.Nidus;
+import com.cubiecode.remission.world.NidusDefenceSettings;
 import com.cubiecode.remission.world.NidusIndex;
 import com.cubiecode.remission.world.SpreadSettings;
 import it.unimi.dsi.fastutil.HashCommon;
@@ -45,6 +46,15 @@ import org.jetbrains.annotations.Nullable;
  * {@link SurgeEndedEvent} is posted. Destroying the origin nidus ends it at once; a surge stopped or destroyed during
  * its warning never started and posts nothing. A nidus under attack starts its surges with no warning
  * ({@link #startNow}), replacing any surge in the level.
+ *
+ * <p>Sympathetic surges (P4.13): a nidus under attack passing a threshold may queue one surge at another nidus
+ * ({@link #queueSympathetic}); a newer request replaces an older one. The level still runs one surge at a time, so the
+ * request waits: on the first tick with no surge warning or running (before any scheduled surge is considered) it is
+ * taken off the queue and, if its origin is still an indexed nidus other than the attacked one and {@code [nidi]
+ * sympathetic} is still on, its warning begins as for any surge, and when it starts its {@link SurgeStartedEvent}
+ * carries {@link SurgeStartedEvent.Cause#SYMPATHETIC} and the attacked nidus. A later threshold of the fight
+ * ({@link #startNow}) supersedes a sympathetic surge that is warning or running like any other (it does not come back),
+ * and leaves a queued request in place unless that threshold queues a newer one. {@link #stop} also drops the request.
  */
 public final class SurgeController {
     /** Ticks between host waves while a surge runs; the first wave comes when it starts. */
@@ -118,6 +128,14 @@ public final class SurgeController {
         SurgeSettings current = settings.get();
         Surge surge = data.current();
         if (surge == null) {
+            SympatheticRequest sympathetic = data.sympathetic();
+            if (sympathetic != null) {
+                data.setSympathetic(null);
+                if (!sympathetic.origin().equals(sympathetic.attacked()) && NidusDefenceSettings.current().sympathetic()
+                        && start(sympathetic.origin(), sympathetic.intensity(), now, sympathetic.attacked())) {
+                    return;
+                }
+            }
             if (data.nextDue() == SurgeData.UNSCHEDULED) {
                 data.setNextDue(now + current.intervalTicks());
             } else if (current.scheduled() && now >= data.nextDue() && now % CHECK_TICKS == 0) {
@@ -159,12 +177,20 @@ public final class SurgeController {
      * already warning or running here or {@code origin} is not an indexed nidus.
      */
     public boolean start(BlockPos origin, int intensity, long now) {
+        return start(origin, intensity, now, null);
+    }
+
+    /** {@link #start}, for a sympathetic surge when {@code attacked} (the nidus under attack) is not null. */
+    private boolean start(BlockPos origin, int intensity, long now, @Nullable BlockPos attacked) {
         if (data.current() != null || !NidusIndex.get(level).contains(origin)) {
             return false;
         }
         SurgeSettings current = settings.get();
         Surge surge = Surge.warn(origin, Math.clamp(intensity, 1, Surge.MAX_INTENSITY), now, current.warningTicks(),
                 current.durationTicks());
+        if (attacked != null) {
+            surge.markSympathetic(attacked);
+        }
         data.setCurrent(surge);
         List<ServerPlayer> inArea = inArea(origin);
         warnings.warn(inArea);
@@ -198,8 +224,22 @@ public final class SurgeController {
         return true;
     }
 
-    /** Ends the current surge now ({@link SurgeEndedEvent.Reason#STOPPED}). Returns false if there was none. */
+    /**
+     * Queues a sympathetic surge from {@code origin} at {@code intensity}, set off by {@code attacked}, a nidus under
+     * attack (P4.13), replacing any request already queued. Its warning begins once no surge is warning or running.
+     */
+    public void queueSympathetic(BlockPos origin, int intensity, BlockPos attacked) {
+        data.setSympathetic(new SympatheticRequest(origin, Math.clamp(intensity, 1, Surge.MAX_INTENSITY), attacked));
+    }
+
+    /**
+     * Ends the current surge now ({@link SurgeEndedEvent.Reason#STOPPED}) and drops a queued sympathetic surge. Returns
+     * false if no surge was warning or running.
+     */
     public boolean stop(long now) {
+        if (data.sympathetic() != null) {
+            data.setSympathetic(null);
+        }
         Surge surge = data.current();
         if (surge == null) {
             return false;
@@ -265,7 +305,9 @@ public final class SurgeController {
         warnings.started(inArea);
         releaseClouds(level, centres(surge, inArea), Math.min(MAX_CLOUDS, settings.get().clouds() * surge.intensity()), level.getRandom(),
                 chunk -> inArea(surge.origin(), chunk));
-        NeoForge.EVENT_BUS.post(new SurgeStartedEvent(level, surge.origin(), surge.intensity(), surge.endTime()));
+        NeoForge.EVENT_BUS.post(new SurgeStartedEvent(level, surge.origin(), surge.intensity(), surge.endTime(),
+                surge.sympatheticTo().isPresent() ? SurgeStartedEvent.Cause.SYMPATHETIC : SurgeStartedEvent.Cause.DIRECT,
+                surge.sympatheticTo().orElse(null)));
         wave(surge);
         spawnPending(surge);
     }

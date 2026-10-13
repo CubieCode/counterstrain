@@ -95,6 +95,13 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.DoubleValue NIDUS_LASH_VIRAL_LOAD;
     public static final ModConfigSpec.DoubleValue NIDUS_LASH_KNOCKBACK;
     public static final ModConfigSpec.IntValue NIDUS_STRIKE_COOLDOWN_TICKS;
+    public static final ModConfigSpec.BooleanValue NIDUS_RALLY;
+    public static final ModConfigSpec.IntValue NIDUS_RALLY_RADIUS;
+    public static final ModConfigSpec.IntValue NIDUS_RALLY_BATCH;
+    public static final ModConfigSpec.BooleanValue NIDUS_SYMPATHETIC;
+    public static final ModConfigSpec.IntValue NIDUS_SYMPATHETIC_RADIUS;
+    public static final ModConfigSpec.DoubleValue NIDUS_SYMPATHETIC_CHANCE;
+    public static final ModConfigSpec.DoubleValue NIDUS_SYMPATHETIC_INTENSITY;
     public static final ModConfigSpec.DoubleValue SERUM_VIRAL_LOAD_DROP;
     public static final ModConfigSpec.IntValue SERUM_INOCULATION_TICKS;
     public static final ModConfigSpec.DoubleValue SERUM_INOCULATION_FACTOR;
@@ -432,6 +439,31 @@ public final class RemissionCommonConfig {
                 .comment("Game ticks after a player's strike during which their further strikes on that nidus deal nothing, as a mob's",
                         "invulnerability after a hit (10). Clicking faster never beats fully charged swings.")
                 .defineInRange("strikeCooldownTicks", 10, 0, 200);
+        NIDUS_RALLY = BUILDER
+                .comment("Whether hosts rally to a nidus under attack (damaged within contributorWindowTicks): hosts in festering",
+                        "chunks within rallyRadius path toward it, a batch at a time, and those that cannot get closer are left alone.")
+                .define("rally", true);
+        NIDUS_RALLY_RADIUS = BUILDER
+                .comment("Blocks from a nidus under attack within which hosts in festering chunks rally to it.")
+                .defineInRange("rallyRadius", 32, 1, 128);
+        NIDUS_RALLY_BATCH = BUILDER
+                .comment("Hosts a nidus under attack sends for (or sends on again, when they have stopped short) each second, at most:",
+                        "the budget of path searches it may cost, so the fight grows as they arrive rather than all at once.")
+                .defineInRange("rallyBatch", 4, 1, 64);
+        NIDUS_SYMPATHETIC = BUILDER
+                .comment("Whether a nidus passing a vitality threshold may set off a sympathetic surge at the nearest other nidus within",
+                        "sympatheticRadius. It waits until no surge is running in the level, then warns as usual.")
+                .define("sympathetic", true);
+        NIDUS_SYMPATHETIC_RADIUS = BUILDER
+                .comment("Blocks (horizontal) from a nidus under attack within which another nidus may start a sympathetic surge.")
+                .defineInRange("sympatheticRadius", 128, 1, 1024);
+        NIDUS_SYMPATHETIC_CHANCE = BUILDER
+                .comment("Chance that a threshold passed sets off a sympathetic surge (rolled from the game time and the nidus's",
+                        "position, so the same fight replays the same way).")
+                .defineInRange("sympatheticChance", 0.5, 0.0, 1.0);
+        NIDUS_SYMPATHETIC_INTENSITY = BUILDER
+                .comment("Intensity of a sympathetic surge as a fraction of the threshold surge that set it off (at least 1).")
+                .defineInRange("sympatheticIntensity", 0.5, 0.0, 1.0);
         BUILDER.pop();
 
         BUILDER.push("serums");

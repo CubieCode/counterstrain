@@ -108,6 +108,8 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
     /** Who destroyed it, set just before a player's destruction removes the block (read by {@link NidusBlock#onRemove}). */
     @Nullable
     private Destruction destruction;
+    /** Hosts rallying to the nidus while it is under attack (P4.13); transient. */
+    private final NidusRally rally;
 
     /** A player's destruction of the nidus: the player and the credited contributors (the player included). */
     record Destruction(@Nullable ServerPlayer player, List<UUID> contributors) {
@@ -115,6 +117,7 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
 
     public NidusBlockEntity(BlockPos pos, BlockState state) {
         super(RemissionBlockEntities.NIDUS.get(), pos, state);
+        rally = new NidusRally(pos);
     }
 
     @Override
@@ -276,6 +279,7 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
         int intensity = (int) Math.round(index * settings.playerMultiplier(players));
         Surges.controller(level).startNow(worldPosition, intensity, now);
         lash(level, settings);
+        SympatheticSurges.thresholdPassed(level, worldPosition, intensity, NidusDefenceSettings.current(), now);
     }
 
     /**
@@ -361,6 +365,7 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
             Surge surge = Surges.controller(level).current();
             setEnraged(surge != null && surge.started() && surge.origin().equals(worldPosition));
         }
+        rally.tick(level, underAttack(settings, now), NidusDefenceSettings.current(), now);
         if (!fighting()) {
             return;
         }
@@ -463,6 +468,18 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
     public void setRemoved() {
         super.setRemoved();
         bar.removeAllPlayers();
+    }
+
+    // ---- defence (P4.13) --------------------------------------------------------------------------------------------
+
+    /** Whether the nidus is under attack at {@code now}: in a fight and damaged within {@code contributorWindowTicks}. */
+    public boolean underAttack(NidusSettings settings, long now) {
+        return fighting() && settings.encounters() && now - lastDamaged <= settings.contributorWindowTicks();
+    }
+
+    /** The hosts rallying to it. */
+    public NidusRally rally() {
+        return rally;
     }
 
     // ---- appearance -------------------------------------------------------------------------------------------------

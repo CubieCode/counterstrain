@@ -340,6 +340,17 @@ public final class RemissionKubeEvents {
         public long getEndTime() {
             return event.getEndTime();
         }
+
+        /** {@code DIRECT}, or {@code SYMPATHETIC} for a surge set off by a nidus under attack. */
+        public SurgeStartedEvent.Cause getCause() {
+            return event.getCause();
+        }
+
+        /** For a sympathetic surge, the nidus under attack that set it off; null otherwise. */
+        @Nullable
+        public BlockPos getAttackedNidus() {
+            return event.getAttackedNidus().orElse(null);
+        }
     }
 
     public static final class SurgeEnded extends Land {
