@@ -52,7 +52,7 @@ RemissionEvents.strainSpreadAttempt(event => {
   for (let dx = -1; dx <= 1; dx++) {
     for (let dz = -1; dz <= 1; dz++) {
       if ((dx != 0 || dz != 0) && firebreakHolds(level, to.x + dx, to.z + dz)) {
-        event.rateMultiplier = event.rateMultiplier * NEIGHBOUR_RATE
+        event.setRateMultiplier(event.rateMultiplier * NEIGHBOUR_RATE)
         return
       }
     }
