@@ -1,9 +1,11 @@
 package com.cubiecode.remission.counterstrain;
 
 import com.cubiecode.remission.api.PurificationCause;
+import com.cubiecode.remission.api.ViralLoadChangedEvent;
 import com.cubiecode.remission.purification.Cleansing;
 import com.cubiecode.remission.purification.Purification;
 import com.cubiecode.remission.surge.MiasmaCloud;
+import com.cubiecode.remission.viralload.ViralLoad;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -19,7 +21,8 @@ import net.minecraft.world.phys.Vec3;
  * Unstable Counterstrain prototypes (P7.3): what a thrown {@code remission:counterstrain_prototype} does where it lands.
  * Usually it cleanses the festered blocks and veins around it and lowers its chunk's Strain level, through the same
  * purification path as the handheld purifier (cause {@link PurificationCause#PROTOTYPE}); sometimes it is unstable and
- * backfires, releasing a miasma cloud (P4.3's {@link MiasmaCloud}) instead.
+ * backfires instead, releasing a miasma cloud (P4.3's {@link MiasmaCloud}) and giving every player within its radius a
+ * dose of viral load ({@link ViralLoadChangedEvent.Cause#PROTOTYPE}).
  */
 public final class CounterstrainPrototypes {
     /** Lifetime of the cloud a backfire releases, in ticks. */
@@ -37,7 +40,8 @@ public final class CounterstrainPrototypes {
     }
 
     /**
-     * A prototype landing at {@code at}: backfires with {@code backfireChance}, else cleanses the box of
+     * A prototype landing at {@code at}: backfires with {@code backfireChance} (a cloud, and {@code backfireViralLoad} to
+     * every exposed player within {@code radius} blocks), else cleanses the box of
      * {@code radius} around the block it landed in and lowers that block's chunk by {@code step}, crediting
      * {@code thrower} if that brings the chunk into remission. Plays the sound and particles either way.
      */
@@ -48,6 +52,13 @@ public final class CounterstrainPrototypes {
             MiasmaCloud cloud = MiasmaCloud.create(level, at.x, at.y, at.z, random.nextFloat() * 360.0F,
                     MiasmaCloud.DEFAULT_RADIUS, BACKFIRE_CLOUD_TICKS);
             level.addFreshEntity(cloud);
+            // The cloud soon drifts up out of reach, so the backfire also doses everyone close by at once.
+            double reach = settings.radius() * (double) settings.radius();
+            for (ServerPlayer player : level.players()) {
+                if (player.position().distanceToSqr(at) <= reach) {
+                    ViralLoad.addDose(player, settings.backfireViralLoad(), ViralLoadChangedEvent.Cause.PROTOTYPE);
+                }
+            }
             level.playSound(null, pos, SoundEvents.GENERIC_EXTINGUISH_FIRE, SoundSource.NEUTRAL, 1.0F, 0.6F);
             return Outcome.BACKFIRED;
         }

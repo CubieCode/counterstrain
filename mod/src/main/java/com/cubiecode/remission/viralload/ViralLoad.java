@@ -114,10 +114,11 @@ public final class ViralLoad {
             return;
         }
         boolean exposed = isExposed(player);
-        // An inoculated player (a serum, P7.3) takes a fraction of the gain.
-        double gain = exposed ? gainPerMinute(player, settings) * Serums.gainFactor(player, SerumSettings.fromConfig()) : 0.0;
+        double gain = exposed ? gainPerMinute(player, settings) : 0.0;
         float load = get(player);
         if (gain > 0) {
+            // An inoculated player (a serum, P7.3) takes a fraction of the gain, never none: exposure still rises.
+            gain *= Serums.gainFactor(player, SerumSettings.fromConfig());
             set(player, (float) (load + gain * ticks / TICKS_PER_MINUTE), ViralLoadState.Trend.RISING,
                     ViralLoadChangedEvent.Cause.EXPOSURE);
         } else if (load > 0 && settings.decay() > 0) {
@@ -209,8 +210,20 @@ public final class ViralLoad {
     }
 
     /** Whether the player can gain viral load and take its debuffs: alive, and in survival or adventure. */
-    static boolean isExposed(ServerPlayer player) {
+    public static boolean isExposed(ServerPlayer player) {
         return player.isAlive() && !player.isCreative() && !player.isSpectator();
+    }
+
+    /**
+     * Adds a dose of viral load at once (a water bottle, a backfiring prototype) to a player who can gain it (enabled,
+     * {@link #isExposed}, not a fake player). Returns whether it was added.
+     */
+    public static boolean addDose(ServerPlayer player, double amount, ViralLoadChangedEvent.Cause cause) {
+        if (amount <= 0 || player instanceof FakePlayer || !isExposed(player) || !ViralLoadSettings.fromConfig().enabled()) {
+            return false;
+        }
+        set(player, (float) (get(player) + amount), ViralLoadState.Trend.RISING, cause);
+        return true;
     }
 
     /** Whether {@code stack} is a water bottle (a potion item holding plain water). */

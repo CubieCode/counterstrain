@@ -48,6 +48,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -68,8 +69,8 @@ import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * Serums, purifier fuel and unstable Counterstrain prototypes (P7.3): a serum lowers viral load and inoculates, and
- * inoculation scales viral load gain and is cleared by milk; purifier fuel repairs the handheld purifier; a prototype
- * cleanses or backfires where it lands, thrown or not; the synthesizer makes each product from its default recipe; and
+ * inoculation scales viral load gain (never to none) and is cleared by milk; purifier fuel repairs the handheld purifier; a prototype
+ * cleanses, or backfires with a cloud and a viral load dose nearby, where it lands, thrown or not; the synthesizer makes each product from its default recipe; and
  * the KubeJS recipe schemas match the machine recipe format. Tests that change land run alone in their own batch in
  * their own chunks (far from the test grid where no entities are involved), and put the land back afterwards.
  */
@@ -145,6 +146,15 @@ public final class SerumTests {
             ViralLoad.update(player, ViralLoadSettings.INTERVAL_TICKS, settings);
             assertLoad(helper, player, full * 0.5F, "gain while inoculated");
 
+            // Inoculation never grants immunity: the factor has a floor, and exposure keeps rising (never the decay branch).
+            helper.assertValueEqual(new SerumSettings(40.0, 3600, 0.0).inoculationFactor(), SerumSettings.MIN_INOCULATION_FACTOR,
+                    "inoculation factor floor");
+            chunk.setData(RemissionAttachments.CHUNK_CORRUPTION, new ChunkCorruption(1, 0L));
+            ViralLoad.set(player, 50.0F, ViralLoadState.Trend.STEADY, ViralLoadChangedEvent.Cause.OTHER);
+            ViralLoad.update(player, ViralLoadSettings.INTERVAL_TICKS, settings);
+            helper.assertTrue(ViralLoad.get(player) > 50.0F, "inoculated viral load fell in stage 1 land: " + ViralLoad.get(player));
+            helper.assertValueEqual(ViralLoad.state(player).trend(), ViralLoadState.Trend.RISING, "inoculated trend in festering land");
+
             player.removeEffectsCuredBy(EffectCures.MILK);
             helper.assertTrue(!Serums.isInoculated(player), "milk clears inoculated");
         } finally {
@@ -178,7 +188,7 @@ public final class SerumTests {
             area.set(centre.east(4), RemissionBlocks.FESTERED_STONE.get().defaultBlockState());
             area.set(centre.east(5), RemissionBlocks.FESTERED_STONE.get().defaultBlockState());
             ServerPlayer player = SurgeTests.player(helper, centre.above());
-            PrototypeSettings settings = new PrototypeSettings(4, 40, 0.0);
+            PrototypeSettings settings = new PrototypeSettings(4, 40, 0.0, 20.0);
 
             List<BlockPurifiedEvent> purified = capture(BlockPurifiedEvent.class, () -> helper.assertValueEqual(
                     CounterstrainPrototypes.land(level, Vec3.atCenterOf(centre.above()), player, settings, RandomSource.create()),
@@ -208,17 +218,32 @@ public final class SerumTests {
         LevelChunk chunk = level.getChunkAt(floor);
         ChunkCorruption before = chunk.getExistingDataOrNull(RemissionAttachments.CHUNK_CORRUPTION);
         List<MiasmaCloud> clouds = new ArrayList<>();
+        List<ServerPlayer> players = new ArrayList<>();
         try {
             setLevel(chunk, 60);
             helper.setBlock(new BlockPos(1, 1, 1), RemissionBlocks.FESTERING_GRASS.get());
-            helper.assertValueEqual(CounterstrainPrototypes.land(level, Vec3.atCenterOf(floor.above()), null,
-                    new PrototypeSettings(4, 40, 1.0), RandomSource.create()), CounterstrainPrototypes.Outcome.BACKFIRED, "outcome");
+            // A survival player 2 blocks from the impact gets the backfire dose; one 6 blocks away and a creative one do not.
+            ServerPlayer near = SurgeTests.player(helper, floor.above().east(2));
+            ServerPlayer far = SurgeTests.player(helper, floor.above().east(6));
+            ServerPlayer creative = SurgeTests.player(helper, floor.above().west(2));
+            creative.setGameMode(GameType.CREATIVE);
+            players.addAll(List.of(near, far, creative));
+            level.players().addAll(players);
+            List<ViralLoadChangedEvent> events = capture(ViralLoadChangedEvent.class, () -> helper.assertValueEqual(
+                    CounterstrainPrototypes.land(level, Vec3.atCenterOf(floor.above()), null, new PrototypeSettings(4, 40, 1.0, 20.0),
+                            RandomSource.create()), CounterstrainPrototypes.Outcome.BACKFIRED, "outcome"));
+            assertLoad(helper, near, 20.0F, "viral load of a player 2 blocks from a backfire");
+            assertLoad(helper, far, 0.0F, "viral load of a player 6 blocks from a backfire");
+            assertLoad(helper, creative, 0.0F, "viral load of a creative player beside a backfire");
+            helper.assertValueEqual(events.size(), 1, "viral load events from a backfire");
+            helper.assertValueEqual(events.getFirst().getCause(), ViralLoadChangedEvent.Cause.PROTOTYPE, "backfire event cause");
             clouds.addAll(clouds(level, floor));
             helper.assertValueEqual(clouds.size(), 1, "miasma clouds released");
             helper.assertValueEqual(clouds.getFirst().getLifetime(), CounterstrainPrototypes.BACKFIRE_CLOUD_TICKS, "cloud lifetime");
             helper.assertValueEqual(levelOf(chunk), 60, "chunk level after a backfire");
             helper.assertTrue(level.getBlockState(floor).is(RemissionBlocks.FESTERING_GRASS.get()), "backfire cleansed a block");
         } finally {
+            level.players().removeAll(players);
             clouds.forEach(MiasmaCloud::discard);
             restore(chunk, before);
         }

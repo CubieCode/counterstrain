@@ -6,8 +6,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 /**
  * A player's viral load changed (P5.1). Posted on the server after the new value is stored, so
  * {@link CorruptionQueries#viralLoad} already returns it, at most once per player per update (once a second) plus once per
- * drink or serum dose. Viral load is 0 to {@link CorruptionQueries#MAX_VIRAL_LOAD}. Not posted when only the trend changes,
- * nor for the reset to 0 on death (the respawned player starts clean). Not cancellable.
+ * drink, serum dose or prototype backfire. Viral load is 0 to {@link CorruptionQueries#MAX_VIRAL_LOAD}. Not posted when
+ * only the trend changes, nor for the reset to 0 on death (the respawned player starts clean). Not cancellable.
  */
 public class ViralLoadChangedEvent extends PlayerEvent {
     /** What changed the viral load. */
@@ -22,6 +22,8 @@ public class ViralLoadChangedEvent extends PlayerEvent {
         NIDUS,
         /** A serum was drunk or given (P7.3). */
         SERUM,
+        /** A Counterstrain prototype backfired nearby (P7.3). */
+        PROTOTYPE,
         /** Anything else: commands, the harness, other mods through Remission's internals. */
         OTHER
     }

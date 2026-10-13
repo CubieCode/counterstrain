@@ -366,9 +366,9 @@ Items (`RemissionItems`), each made by a default `remission:synthesizing` recipe
 | --- | --- | --- |
 | `remission:serum` (stacks to 16) | `synthesizing/serum`: `remission:strain_sequence`, 2 `minecraft:glass_bottle`, 250 mB miasma; 2 serums; 4000 FE, 200 ticks | Drunk like a potion (32 ticks; a glass bottle back). One dose (`Serums.apply`): a player loses `[serums] viralLoadDrop` viral load at once (`ViralLoadChangedEvent.Cause.SERUM`; no event at 0) and any living target gets the effect `remission:inoculated` for `inoculationTicks`. |
 | `remission:purifier_fuel` | `synthesizing/purifier_fuel`: `remission:strain_sequence`, 4 `#minecraft:coals`, 250 mB miasma; 4 fuel; 4000 FE, 200 ticks | In item tag `#remission:purifier_fuel`, which repairs a handheld purifier in an anvil. The tag is the reclaimer's fuel (P7.4); packs add their own fuels to it. |
-| `remission:counterstrain_prototype` (stacks to 16) | `synthesizing/counterstrain_prototype`: `remission:strain_sequence`, `remission:nidus_core`, `minecraft:glass_bottle`, 1000 mB miasma; 1 prototype; 12000 FE, 400 ticks | Thrown like a splash potion (entity `remission:counterstrain_prototype`; no dispenser behaviour). Where it hits a block or entity it backfires with chance `[prototypes] backfireChance`, releasing one miasma cloud (`remission:miasma_cloud`, default radius, 1200 ticks; it drifts like a surge's) and cleansing nothing; otherwise it cleanses every festered block and vein in the cube `radius` around the block it landed in and lowers that block's chunk by `step`, both with `PurificationCause.PROTOTYPE`; `ChunkEnteredRemissionEvent.getPlayer()` names the thrower when that finishes the chunk. |
+| `remission:counterstrain_prototype` (stacks to 16) | `synthesizing/counterstrain_prototype`: `remission:strain_sequence`, `remission:nidus_core`, `minecraft:glass_bottle`, 1000 mB miasma; 1 prototype; 12000 FE, 400 ticks | Thrown like a splash potion (entity `remission:counterstrain_prototype`; no dispenser behaviour). Where it hits a block or entity it backfires with chance `[prototypes] backfireChance`, releasing one miasma cloud (`remission:miasma_cloud`, default radius, 1200 ticks; it climbs and drifts like a surge's, so it is soon out of reach) and giving every exposed player (survival or adventure) within `radius` blocks of the impact `[prototypes] backfireViralLoad` viral load at once (`ViralLoadChangedEvent.Cause.PROTOTYPE`), cleansing nothing; otherwise it cleanses every festered block and vein in the cube `radius` around the block it landed in and lowers that block's chunk by `step`, both with `PurificationCause.PROTOTYPE`; `ChunkEnteredRemissionEvent.getPlayer()` names the thrower when that finishes the chunk. |
 
-The P7.2 default `synthesizing/host_tissue` is unchanged. Mob effect `remission:inoculated` (beneficial; `RemissionMobEffects.INOCULATED`): while a player has it, every viral load gain (land, water, miasma clouds, contact) is multiplied by `[serums] inoculationFactor`; decay and the drink dose are not. Milk and other effect cures remove it. Packs can give it with `/effect` or any effect source.
+The P7.2 default `synthesizing/host_tissue` is unchanged. Mob effect `remission:inoculated` (beneficial; `RemissionMobEffects.INOCULATED`): while a player has it, every viral load gain (land, water, miasma clouds, contact) is multiplied by `[serums] inoculationFactor`, which is at least 0.1, so inoculation slows viral load and never stops it: an inoculated player in festering land still gains, never decays. Decay and the one-off doses (a water bottle drunk in festering land, a prototype backfire) are not scaled. Milk and other effect cures remove it. Packs can give it with `/effect` or any effect source.
 
 Config (`remission-common.toml`):
 
@@ -376,10 +376,11 @@ Config (`remission-common.toml`):
 | --- | --- | --- | --- |
 | `[serums] viralLoadDrop` | 40.0 | 0–100 | Viral load a dose takes off at once. |
 | `[serums] inoculationTicks` | 3600 | 0–72000 | Ticks of `remission:inoculated` a dose gives (0 gives none). |
-| `[serums] inoculationFactor` | 0.5 | 0–1 | Fraction of viral load gain an inoculated player still takes. |
+| `[serums] inoculationFactor` | 0.5 | 0.1–1 | Fraction of viral load gain an inoculated player still takes (values below 0.1 are raised to it). |
 | `[prototypes] radius` | 4 | 0–8 | Cube radius of blocks a prototype cleanses. |
 | `[prototypes] step` | 40 | 0–100 | Strain level the landing chunk loses. |
 | `[prototypes] backfireChance` | 0.25 | 0–1 | Chance a prototype backfires instead. |
+| `[prototypes] backfireViralLoad` | 20.0 | 0–100 | Viral load a backfire gives each exposed player within `radius` blocks. |
 
 Java for later items: `Serums.apply(LivingEntity, SerumSettings)` is the one dose (P7.6's injector); `CounterstrainPrototypes.land(ServerLevel, Vec3, ServerPlayer, PrototypeSettings, RandomSource)` is one landing. Neither is public API in `api/`.
 

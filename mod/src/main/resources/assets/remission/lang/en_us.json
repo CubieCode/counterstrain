@@ -134,7 +134,7 @@
   "item.remission.serum.desc": "Drink to lower viral load and resist the Strain for a while",
   "effect.remission.inoculated": "Inoculated",
   "item.remission.purifier_fuel": "Purifier Fuel",
-  "item.remission.counterstrain_prototype": "Counterstrain Prototype",
+  "item.remission.counterstrain_prototype": "Unstable Counterstrain Prototype",
   "item.remission.counterstrain_prototype.desc": "Throw to cleanse festering land. Unstable: it may release miasma instead",
-  "entity.remission.counterstrain_prototype": "Counterstrain Prototype"
+  "entity.remission.counterstrain_prototype": "Unstable Counterstrain Prototype"
 }

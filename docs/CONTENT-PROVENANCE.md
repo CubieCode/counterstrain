@@ -229,8 +229,8 @@ Sounds carry no audible placeholder marker; these rows are the record (content-p
 | `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.serum*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Serum name and tooltip hint (P7.3): lowers viral load, resist the Strain for a while; glossary term. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:effect.remission.inoculated` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Inoculated effect name (P7.3); glossary term. |
 | `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.purifier_fuel` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Purifier fuel name (P7.3); glossary term. |
-| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.counterstrain_prototype*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Counterstrain prototype name and tooltip hint (P7.3): throw to cleanse, may release miasma; glossary term. |
-| `mod/src/main/resources/assets/remission/lang/en_us.json:entity.remission.counterstrain_prototype` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Thrown Counterstrain prototype entity name (P7.3). |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.counterstrain_prototype*` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Counterstrain prototype name "Unstable Counterstrain Prototype" (the full glossary term) and tooltip hint (P7.3): throw to cleanse, may release miasma; glossary term. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:entity.remission.counterstrain_prototype` | lang | ai (Claude Opus 5.5, 2026-10-13) | draft | Thrown Counterstrain prototype entity name "Unstable Counterstrain Prototype" (P7.3). |
 
 ## Mod and pack metadata
 

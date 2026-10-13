@@ -1,6 +1,7 @@
 package com.cubiecode.remission.config;
 
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.serum.SerumSettings;
 import com.cubiecode.remission.countermeasure.BlockHazardMode;
 import com.cubiecode.remission.viralload.ViralLoadSettings;
 import com.cubiecode.remission.viralload.ViralLoadState;
@@ -91,6 +92,7 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.IntValue PROTOTYPE_RADIUS;
     public static final ModConfigSpec.IntValue PROTOTYPE_STEP;
     public static final ModConfigSpec.DoubleValue PROTOTYPE_BACKFIRE_CHANCE;
+    public static final ModConfigSpec.DoubleValue PROTOTYPE_BACKFIRE_VIRAL_LOAD;
 
     static {
         BUILDER.push("hosts");
@@ -396,8 +398,9 @@ public final class RemissionCommonConfig {
                 .comment("Game ticks of the inoculated effect a serum gives (0 gives none).")
                 .defineInRange("inoculationTicks", 3600, 0, 72000);
         SERUM_INOCULATION_FACTOR = BUILDER
-                .comment("Fraction of viral load gain an inoculated player still takes (0 = none, 1 = no protection).")
-                .defineInRange("inoculationFactor", 0.5, 0.0, 1.0);
+                .comment("Fraction of viral load gain an inoculated player still takes (1 = no protection). At least 0.1:",
+                        "inoculation slows viral load, it never stops it.")
+                .defineInRange("inoculationFactor", 0.5, SerumSettings.MIN_INOCULATION_FACTOR, 1.0);
         BUILDER.pop();
 
         BUILDER.push("prototypes");
@@ -411,6 +414,9 @@ public final class RemissionCommonConfig {
                 .comment("Chance that a Counterstrain prototype is unstable and backfires: it cleanses nothing and releases a",
                         "miasma cloud where it lands.")
                 .defineInRange("backfireChance", 0.25, 0.0, 1.0);
+        PROTOTYPE_BACKFIRE_VIRAL_LOAD = BUILDER
+                .comment("Viral load a backfiring prototype gives at once to every player within radius blocks of where it lands.")
+                .defineInRange("backfireViralLoad", 20.0, 0.0, 100.0);
         BUILDER.pop();
     }
 
