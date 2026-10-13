@@ -56,6 +56,23 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(self.get("/?t=%C3%A9")[0], 403)
         self.assertEqual(self.get("/api/state", headers={"X-Editor-Token": "caf\xe9"})[0], 403)
 
+    def test_files_download_as_attachments_on_request(self):
+        conn = http.client.HTTPConnection("127.0.0.1", self.httpd.server_port, timeout=5)
+        conn.request("GET", f"/api/file?path={TEX}block/stone.png&download=1", headers={"X-Editor-Token": "tok"})
+        res = conn.getresponse()
+        body = res.read()
+        conn.close()
+        self.assertEqual(res.status, 200)
+        self.assertEqual(res.getheader("Content-Type"), "image/png")
+        self.assertEqual(res.getheader("Content-Disposition"), f'attachment; filename="stone.png"')
+        self.assertTrue(body.startswith(b"\x89PNG"))
+        conn = http.client.HTTPConnection("127.0.0.1", self.httpd.server_port, timeout=5)
+        conn.request("GET", f"/api/file?path={TEX}block/stone.png", headers={"X-Editor-Token": "tok"})
+        res = conn.getresponse()
+        res.read()
+        conn.close()
+        self.assertIsNone(res.getheader("Content-Disposition"))  # previews stay inline
+
     def test_reads_do_not_wait_for_a_running_write(self):
         with self.app.lock:  # as if Run checks or a push were holding the write lock
             start = time.monotonic()
