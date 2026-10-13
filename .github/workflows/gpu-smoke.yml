@@ -8,8 +8,8 @@ name: GPU client smoke test
 # Triggers: manual dispatch, or a same-repo PR carrying the `gpu-smoke` label
 # (runs when the label is added and on each push while it stays).
 # The runner is `lab` on foundry: no sudo, Xvfb and /opt/VirtualGL provided by
-# the host. It shares the GPU lock with local Orca lanes, so a job may wait for
-# their client runs. See the headless-client skill.
+# the host. It shares the GPU lock with local Orca lanes and other PRs' runs,
+# so a job may wait for their client runs. See the headless-client skill.
 on:
   workflow_dispatch:
     inputs:
@@ -26,9 +26,17 @@ on:
     types: [labeled, synchronize, reopened]
 permissions:
   contents: read
+# One group per PR: a push cancels that PR's older run (run-scenes.sh stops
+# its client on the runner's SIGINT). Runs for other labels, and manual
+# dispatches, get a group of their own so they never cancel a real run. Runs of
+# different PRs wait for each other on the GPU lock, not here: a shared group
+# keeps only one pending run and silently cancels the rest.
 concurrency:
-  group: gpu-smoke
-  cancel-in-progress: false
+  group: >-
+    gpu-smoke-${{ (github.event_name == 'pull_request' &&
+    (github.event.action != 'labeled' || github.event.label.name == 'gpu-smoke'))
+    && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   scenes:
     # Fork PRs never reach the self-hosted runner.
@@ -54,8 +62,9 @@ jobs:
           command -v xvfb-run
           test -x /opt/VirtualGL/bin/vglrun
       - name: Run harness scenes
+        # exec, so a cancellation's SIGINT reaches run-scenes.sh itself.
         run: >-
-          tools/run-scenes.sh
+          exec tools/run-scenes.sh
           --scenes "$SCENES"
           --resolution "$RESOLUTION"
           --timeout "$SCENE_TIMEOUT"
