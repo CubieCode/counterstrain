@@ -42,6 +42,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P4.12 (team query) runs before P5.3 and P6.4, alone or in any wave without another build-file owner; it owns `integration/ftbteams/` and the team query in `api/`.
 - P4.13 → P4.14 serially after P4.10 (done; both append to the nidus and surge code and the `[nidi]` config).
 - P4.15 (animated nidus model, after P4.10) runs alone or before P4.13; it owns the nidus renderer and assets and adds GeckoLib to the build files.
+- P4.16 (festering keeps what it covers, after P4.8 and P5.2) runs alone or alongside items that touch neither `world/` festering, `purification/` nor remission-data-formats; it removes two blocks from the registry, so it is that wave's registry owner, and must merge before P4.9.
 - P5.7 (countermeasures) is done, ahead of P5.6, P7.7, P7.8, P10.2 and P10.6, which add hazards to its contracts (the countermeasure attachment, the hazard event and query, the protocol item); it retrofitted P5.2's contact viral load as hazard `remission:contact`.
 - P5.8 (after P5.7 and P6.2, both done) runs before P7.7 and P7.8; it owns the hazard notice API, the bestiary screen's hazards tab and its payload, and appends to `integration/journeymap/` (never in the same wave as P5.4 or P8.2).
 - P5.6 (follow-up to P5.1 and P5.7) can join any wave or run alone; it owns the viral load system and its HUD while it runs.
@@ -402,16 +403,28 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.15: Animated nidus model
 
-- Status: `review`
+- Status: `done`
 - Owner: feat/p4.15-animated-nidus
 - PR: https://github.com/CubieCode/counterstrain/pull/98
+- Validation: PR #98; 228/228 gametests incl. `NidusEncounterTests.appearanceFollowsFightAndSurges` (stages, hit event, enraged on a threshold surge and calmed on stop, update tag without save); GPU run (RTX 4070) with `world/nidus_stages`, `world/nidus_fight` and `world/surge` matching their references and `world/nidus_motion` recorded; sounds unheard (no audio device), `runServer` and multiplayer sync not checked. Textures are `draft`; the item icon is still the cube.
 - Depends on: P4.10
 - Scope: The nidus looks like the living organism the fight is against instead of a cube. A GeckoLib (required dependency, the 4.9 line the pack already ships) block entity renderer draws a detailed model about two blocks across with three-block tentacles in place of the block model, never both. Four health stages (healthy, lightly wounded, badly wounded, near death) follow P4.10's `damage` state, each with its own geometry and texture chosen together. Animations: an idle loop, an enraged loop while a surge from that nidus runs, and a hit reaction on each damage that returns to the loop; near death has damped loops. The core, wounds and stumps glow (emissive, with a heartbeat and a near-death flicker) while the flesh stays normally lit; client-side spores, drips and ambient sound. Stage and enraged state reach clients on chunk load and on change (block state, block entity update tag and a block event; no new payload); enraged is not saved. Render bounds cover the whole model; collision, outline and strikes stay on the one block. Supplied assets are AI-generated (ledger). Documented in docs/ARCHITECTURE.md and remission-data-formats.
 - Acceptance: Gametests: stages follow vitality at 75, 50 and 25%; damage queues the hit event; a threshold surge enrages the nidus and its end calms it; the update tag carries enraged and the save does not. Builds and gametests pass on the dedicated-server dist. Harness scenes `world/nidus_stages` (all four stages, a side view, culling and night) and `world/nidus_motion` (idle, hit, enraged and calmed, recorded), reviewed from a GPU run; `world/nidus_fight` and `world/surge` references updated. Ledger updated; placeholders marked.
 - Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
 - Parallel: Owns the nidus renderer and assets in `client/` and `assets/remission/{geo,animations}/block/`; appends to `NidusBlock`, its block entity and `NidusEncounters`; adds GeckoLib to the build files (one build-file owner per wave); never in the same wave as P4.13 or P4.14.
 
-Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5 to P4.15, follow-ups added after P4.4, are not part of these exit criteria.
+### P4.16: Festering keeps what it covers
+
+- Status: `todo`
+- Owner:
+- PR:
+- Depends on: P4.2, P4.6, P4.8, P5.2
+- Scope: Festering stops flattening blocks that come in many kinds, so cleansing gives back the land that was there. Logs and leaves no longer turn: the `#minecraft:logs` and `#minecraft:leaves` entries leave the default `remission:festers_into`, and `remission:festering_log` and `remission:festering_leaves` are removed with their items, models, textures, loot tables, tags, lang, `cleanses_into` entries and ledger rows (Remission is unreleased, so there is no world migration). Today every log festers into one `festering_log` that cleanses into oak, so a cleansed birch, spruce or modded forest comes back as oak. Trees in festering land show it through festering veins on trunks and canopies and, at the last stage, the fester biome's foliage colour. Festering grass, festered stone and festered deepslate stay. The stages are reordered so veins come first and the ground follows: `[festering] veinMinStage` defaults to 1 and festering grass to stage 3 (festered stone and deepslate already turn at 3), so stages 1 and 2 are veins creeping over unchanged land, stage 3 the ground itself festering and stage 4 the biome flip. The glossary, docs/ARCHITECTURE.md, remission-data-formats and the changelog follow.
+- Acceptance: Gametests: logs and leaves never turn at any stage; veins grow on logs and leaves; grass turns at stage 3 and not before; veins grow from stage 1 with the default config; existing festering, vein, contact and purification tests updated for the new defaults. Per-tick vein cost at the new default stage measured on foundry and recorded next to P4.8's. Harness scenes `world/stages`, `world/biome_flip`, `world/veins`, `world/caves` and `purification/pylon_radius` rerun from a GPU run, reviewed (stage 1 and 2 chunks show veins over unchanged blocks, trees keep their wood type), and references updated where the change shows. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns `world/FesteringStages`, `world/FesteringVeins`, the festering defaults in `RemissionDataMapProvider` and the festering section of remission-data-formats while it runs; removes entries from `RemissionBlocks`, `RemissionItems` and `en_us.json` (one registry owner per wave). Do not run alongside P4.9, P5.5 or other items that change festering or purification.
+
+Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5 to P4.16, follow-ups added after P4.4, are not part of these exit criteria.
 
 ## Phase 5: Viral load and early purification
 
