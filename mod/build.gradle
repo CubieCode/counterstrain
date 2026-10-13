@@ -175,6 +175,10 @@ dependencies {
     compileOnly "maven.modrinth:curios:${curios_version}"
     // Map overlay (integration/journeymap/, P8.2): a client plugin found by JourneyMap's annotation scan.
     compileOnly "info.journeymap:journeymap-api-neoforge:${journeymap_api_version}"
+    // KubeJS bindings (integration/kubejs/, P8.3): a KubeJS plugin listed in kubejs.plugins.txt, which only KubeJS
+    // reads. Same versions as the dev runtime entries below.
+    compileOnly "maven.modrinth:kubejs:${kubejs_version}"
+    compileOnly "maven.modrinth:rhino:${rhino_version}"
     // The harness opens recipe categories in EMI's own screen (tech/recipe_viewer scenes).
     harnessCompileOnly "maven.modrinth:emi:${emi_version}"
 
@@ -198,6 +202,19 @@ dependencies {
         localRuntime "maven.modrinth:ae2:${ae2_version}"
         localRuntime "maven.modrinth:journeymap:${journeymap_version}"
         localRuntime "maven.modrinth:curios:${curios_version}"
+    }
+}
+
+// The KubeJS binding gametests (KubeJSBindingTests, P8.3) run the pack's sample script and a probe script; KubeJS
+// reads server scripts from the gametest run's kubejs/ folder, so they are synced there before each run.
+def syncGameTestScripts = tasks.register('syncGameTestScripts', Sync) {
+    from(rootProject.file('../pack/kubejs/server_scripts/remission'))
+    from('src/gametest/kubejs/server_scripts')
+    into('run/gametest/kubejs/server_scripts')
+}
+if (project.dev_runtime_mods.toBoolean()) {
+    tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+        dependsOn syncGameTestScripts
     }
 }
 

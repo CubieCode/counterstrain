@@ -4,6 +4,7 @@ import com.cubiecode.remission.api.TeamQueries;
 import com.cubiecode.remission.commands.RemissionCommands;
 import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.integration.ftbteams.FtbTeamsIntegration;
+import com.cubiecode.remission.integration.kubejs.KubeJSIntegration;
 import com.cubiecode.remission.integration.mekanism.MekanismIntegration;
 import com.cubiecode.remission.registry.RemissionRegistries;
 import com.mojang.logging.LogUtils;
@@ -31,6 +32,9 @@ public final class Remission {
         }
         if (ModList.get().isLoaded(FtbTeamsIntegration.MOD_ID)) {
             FtbTeamsIntegration.register(modBus);
+        }
+        if (ModList.get().isLoaded(KubeJSIntegration.MOD_ID)) {
+            KubeJSIntegration.register(modBus);
         }
         container.registerConfig(ModConfig.Type.COMMON, RemissionCommonConfig.SPEC);
         NeoForge.EVENT_BUS.addListener(RemissionCommands::register);

@@ -943,7 +943,7 @@ Team query, `TeamQueries` (static, P4.12): the one answer to "are these two play
 - The last `setTeammates` wins. A source that fills gaps checks `hasAnswer()`; one that overrides another listens at a lower priority (FTB Teams answers at `NORMAL`).
 - Answers are cached per pair for `CACHE_TICKS` server ticks. A source whose teams change calls `TeamQueries.invalidate(player)` or `invalidateAll()` so the change shows at once; otherwise it shows within `CACHE_TICKS`. The cache is cleared when the server stops.
 
-FTB Teams source (`integration/ftbteams/`, optional, FTB Teams 2101.1+): when FTB Teams is loaded, players it knows (anyone who has joined the world, online or not) are teammates exactly when FTB Teams puts them in the same team (`TeamManager.getTeamForPlayerID`: the same party, or each alone in their own personal team, which makes two solo players not teammates). Allies are not teammates. Players FTB Teams does not know are left unanswered. It invalidates a player's answers on FTB Teams' `PLAYER_CHANGED` event (every join, leave, party creation and disband) and all answers on team deletion and team manager load or unload. Packs without FTB Teams answer the event from KubeJS once P8.3's bindings exist.
+FTB Teams source (`integration/ftbteams/`, optional, FTB Teams 2101.1+): when FTB Teams is loaded, players it knows (anyone who has joined the world, online or not) are teammates exactly when FTB Teams puts them in the same team (`TeamManager.getTeamForPlayerID`: the same party, or each alone in their own personal team, which makes two solo players not teammates). Allies are not teammates. Players FTB Teams does not know are left unanswered. It invalidates a player's answers on FTB Teams' `PLAYER_CHANGED` event (every join, leave, party creation and disband) and all answers on team deletion and team manager load or unload. Packs without FTB Teams answer the event from KubeJS (`RemissionEvents.teamLookup`, "KubeJS event bindings", below).
 
 Hazard queries, `StrainHazards` (P5.7): see Strain hazards and countermeasures, above.
 
@@ -959,6 +959,36 @@ Bestiary queries, `BestiaryQueries` (static, P6.4): the team's bestiary progress
 
 Later items append their events and queries here when built.
 
-## KubeJS event bindings (planned, P8.3)
+## KubeJS event bindings (built, P8.3)
 
-The API events above exposed to KubeJS server scripts through an optional `integration/kubejs/` plugin (no hard KubeJS dependency), with cancellation and the spread multiplier writable from script. Event group and method names are fixed in P8.3 and mirrored in kubejs-scripting.
+The public API events above, exposed to KubeJS 2101.7+ server scripts as the event group `RemissionEvents`, and the queries as bindings. Optional: `integration/kubejs/` is `compileOnly` against KubeJS and Rhino and declared `type="optional"` (`[2101.7,)`). KubeJS alone reads `kubejs.plugins.txt`, which names `RemissionKubeJSPlugin` (registers the group and the bindings); `Remission`'s constructor calls `KubeJSIntegration.register` only when `ModList` reports `kubejs`, which adds one NeoForge listener per API event (normal priority, cancelled events skipped) that wraps the event and posts it to its handler, only when a script listens. Without KubeJS no class of the package is loaded.
+
+Handlers (server scripts only; `RemissionEvents.<handler>(event => ...)`). Each script event object (`RemissionKubeEvents$<Name>`) forwards the API event's getters, and its setters where it has them, so `event.setRateMultiplier(...)` and `event.setAmount(...)` (or plain assignment, which ProbeJS does not type) land on the API event; `Optional` getters become nullable. Land events have `event.level` (a `ServerLevel`) and `event.server`; host and revenant events `event.entity` (the host or revenant), `event.level` and `event.server`; player events `event.player`/`event.entity`, `event.level` and `event.server`; `strainHazard` and `teamLookup` have `event.server`.
+
+| Handler | API event | Script fields | Cancel / target |
+| --- | --- | --- | --- |
+| `hostCorrupted` | `HostCorruptedEvent` | `entity`, `oldLevel`, `oldStage`, `newLevel`, `newStage`, `cause`, `wasHost()`, `isHost()`, `becameHost()` | no |
+| `hostCleansed` | `HostCleansedEvent` | as `hostCorrupted`, with `isFullyCleansed()` instead of `becameHost()` | no |
+| `blockFestered` | `BlockFesteredEvent` | `pos`, `oldState`, `newState` | no |
+| `blockPurified` | `BlockPurifiedEvent` | `pos`, `oldState`, `newState`, `cause` (`PurificationCause`) | no |
+| `chunkStageChanged` | `ChunkStageChangedEvent` | `chunk`, `oldLevel`, `newLevel`, `oldStage`, `newStage` | no |
+| `chunkEnteredRemission` | `ChunkEnteredRemissionEvent` | `chunk`, `cause`, `player` (nullable) | no |
+| `strainSpreadAttempt` | `StrainSpreadAttemptEvent` | `from`, `to`, `amount`, `catchUp`, `rateMultiplier` (writable; compose by multiplying) | `event.cancel()` stops the step |
+| `nidusDamaged` | `NidusDamagedEvent` | `pos`, `kind`, `player` (nullable), `directEntity` (nullable), `amount` (writable) | `event.cancel()`: no damage, no credit |
+| `nidusDestroyed` | `NidusDestroyedEvent` | `pos`, `player` (final blow, nullable), `contributors` (UUIDs) | no |
+| `surgeStarted` | `SurgeStartedEvent` | `origin`, `intensity`, `endTime` | no |
+| `surgeEnded` | `SurgeEndedEvent` | `origin`, `intensity`, `reason`, `survivors` | no |
+| `revenantRisen` | `RevenantRisenEvent` | `entity` (revenant), `owner`, `player` (who died), `source`, `deathPos`, `items`, `experience` | no |
+| `revenantSlain` | `RevenantSlainEvent` | `entity` (revenant), `owner`, `source`, `killer` (nullable), `reclaimed` | no |
+| `viralLoadChanged` | `ViralLoadChangedEvent` | `player`, `oldLoad`, `newLoad`, `cause`, `rising` | no |
+| `strainHazard` | `StrainHazardEvent` | `hazard`, `player`, `level`, `pos`, `placer` (all nullable), `blockHazard` | `event.cancel()` holds the hazard back; optional target: hazard ID |
+| `countermeasureGranted` | `CountermeasureGrantedEvent` | `player`, `hazard`, `cause` | no; optional target: hazard ID |
+| `teamLookup` | `TeamLookupEvent` | `first`, `second` (UUIDs), `hasAnswer()`, `areTeammates()`, `setTeammates(boolean)` | no |
+
+Targets: `RemissionEvents.strainHazard('remission:contact', event => ...)` runs only for that hazard (the hazard is asked often, so target it); without a target the handler sees every hazard. `teamLookup` scripts run after the FTB Teams source (both normal priority, KubeJS registered later), so `setTeammates` replaces FTB Teams' answer; check `event.hasAnswer()` to fill gaps only. Answers must be symmetric and work for offline players (TeamLookupEvent, above).
+
+Bindings (server scripts): `CorruptionQueries`, `TeamQueries`, `StrainHazards` and `BestiaryQueries` (P6.4), the API classes themselves (static methods and constants as in Java, for example `CorruptionQueries.isHost(entity)`, `TeamQueries.areTeammates(player, uuid)`, `StrainHazards.holds(player, 'remission:contact')`, `BestiaryQueries.teamHostTypesScanned(player)`).
+
+Sample: the pack's `pack/kubejs/server_scripts/remission/nidus_firebreak.js` (a nidus fought down by players stops spread into its chunk for 10 minutes and halves it into the eight around it; firebreaks are one compound, `counterstrain:nidus_firebreaks`, in the server's persistent data, swept of expired entries on each new firebreak and every 5 minutes and removed when empty, so a spread attempt with no active firebreak costs one lookup; kubejs-scripting). Gametests: `KubeJSBindingTests`, registered only when KubeJS is loaded; `build.gradle`'s `syncGameTestScripts` copies the sample and a probe script (`mod/src/gametest/kubejs/server_scripts/`) into `run/gametest/kubejs/server_scripts/` before `runGameTestServer`. They post each API event and check a script ran once (the probe counts calls in the server's persistent data), that `event.cancel()`, `rateMultiplier`, `amount`, targets and `setTeammates` reach the API event, that a bound query answers, and the sample's firebreak and its expiry. In the gametest server only, a lowest-priority listener drops the sample's firebreaks outside the tests' own chunk row, so nidus fights in other tests do not change their spread. `-Pdev_runtime_mods=false` runs the suite without KubeJS.
+
+Later API events get a handler here when built; not yet bound: P5.8's hazard notice API (follow-up).
