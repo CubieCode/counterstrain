@@ -8,13 +8,17 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.sun.jna.NativeLibrary;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +31,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -70,9 +75,10 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 /**
- * Drives one scene: fixed superflat world, setup commands with the tick frozen, then for each
- * shot a camera move, a wait for chunks and section compiles to settle, and a screenshot.
- * Quits the game when done (exit 0) and exits non-zero on any failure or timeout.
+ * Drives a list of scenes in one game session. Each gets a fresh fixed superflat world, setup commands with the tick
+ * frozen, then for each shot a camera move, a wait for chunks and section compiles to settle, and a screenshot. Between
+ * scenes it leaves the world for the title screen; a scene that fails is recorded and the next one runs. Quits the game
+ * after the last scene: exit 0 if every scene succeeded, 1 otherwise, 3 when a scene times out (the rest do not run).
  */
 final class SceneRunner {
     static final String WORLD_NAME = "remission_harness";
@@ -83,12 +89,30 @@ final class SceneRunner {
     static final String RESULT_FILE = "harness-result.txt";
     /** JourneyMap full-screen zoom for {@code map} shots: four times its default (512), so the land near the camera fills the screen. */
     static final int MAP_ZOOM = 2048;
+    /** JourneyMap's map data for the harness world, which it saves when a scene leaves the world. */
+    static final String JOURNEYMAP_DATA = "journeymap/data/sp/" + WORLD_NAME;
+    /**
+     * JourneyMap settings the harness changed in memory for map shots (full-map zoom, splash), with their values before,
+     * and the properties objects that own them. JourneyMap saves its settings when a world is left or its map closes,
+     * so they are put back (and saved again) before each scene leaves its world and before the next scene starts. The
+     * full-screen map still writes its own zoom back as the next world loads, so map shots set both themselves and
+     * tools/run-client-headless.sh puts JourneyMap's config files back after a launch. The minimap is pinned by every
+     * shot instead ({@link #pinJourneyMapMinimap}).
+     */
+    private static final Map<Object, Object> JOURNEYMAP_ORIGINALS = new IdentityHashMap<>();
+    private static final Set<Object> JOURNEYMAP_PROPERTIES = Collections.newSetFromMap(new IdentityHashMap<>());
 
-    private enum Phase { WAIT_TITLE, LOADING, SETUP, SHOOTING, DONE }
+    private enum Phase { WAIT_TITLE, LOADING, SETUP, SHOOTING, LEAVING, DONE }
 
-    private final String sceneId;
-    private final Path outputDir;
+    private final List<String> sceneIds;
+    private final Path outputRoot;
+    private final long timeoutNanos;
     private final List<String> taken = new ArrayList<>();
+    private int sceneIndex;
+    private int failures;
+    private volatile String sceneId;
+    private volatile Path outputDir;
+    private volatile long deadline;
     private Scene scene;
     private volatile Phase phase = Phase.WAIT_TITLE;
     private CompletableFuture<Void> pending;
@@ -100,23 +124,76 @@ final class SceneRunner {
     private boolean mapOpened;
     private boolean inventoryOpened;
 
-    SceneRunner(String sceneId, Path outputDir, long timeoutSeconds) {
-        this.sceneId = sceneId;
-        this.outputDir = outputDir;
+    /**
+     * {@code outputRoot} holds the screenshots and result of a single scene, or one {@code <scene id>/} directory per
+     * scene when there are several. Each scene gets {@code timeoutSeconds}, the first one counted from game start.
+     */
+    SceneRunner(List<String> sceneIds, Path outputRoot, long timeoutSeconds) {
+        this.sceneIds = List.copyOf(sceneIds);
+        this.outputRoot = outputRoot;
+        this.timeoutNanos = TimeUnit.SECONDS.toNanos(timeoutSeconds);
+        beginScene(0);
         Thread watchdog = new Thread(() -> {
-            try {
-                TimeUnit.SECONDS.sleep(timeoutSeconds);
-            } catch (InterruptedException e) {
-                return;
-            }
-            if (phase != Phase.DONE) {
-                RemissionHarness.LOGGER.error("Scene {} timed out after {}s in phase {}", sceneId, timeoutSeconds, phase);
-                writeResult("failed", "timed out after " + timeoutSeconds + "s in phase " + phase);
-                exit(3);
+            while (phase != Phase.DONE) {
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    return;
+                }
+                if (phase != Phase.DONE && System.nanoTime() - deadline > 0) {
+                    RemissionHarness.LOGGER.error("Scene {} timed out after {}s in phase {}", sceneId, timeoutSeconds, phase);
+                    writeResult("failed", "timed out after " + timeoutSeconds + "s in phase " + phase);
+                    exit(3);
+                }
             }
         }, "remission-harness-watchdog");
         watchdog.setDaemon(true);
         watchdog.start();
+    }
+
+    private void beginScene(int index) {
+        sceneIndex = index;
+        sceneId = sceneIds.get(index);
+        outputDir = sceneIds.size() == 1 ? outputRoot : outputRoot.resolve(sceneId);
+        taken.clear();
+        scene = null;
+        captureRequested = false;
+        deadline = System.nanoTime() + timeoutNanos;
+    }
+
+    /** Records the scene's result, then quits after the last scene or leaves the world for the next one. */
+    private void finishScene(String status, String message) {
+        if (!"ok".equals(status)) {
+            failures++;
+        }
+        writeResult(status, message);
+        if (sceneIndex + 1 >= sceneIds.size()) {
+            phase = Phase.DONE;
+            RemissionHarness.LOGGER.info("Scene {}: {}, quitting", sceneId, "ok".equals(status) ? "done" : "failed");
+            exit(failures == 0 ? 0 : 1);
+        }
+        RemissionHarness.LOGGER.info("Scene {}: {}, next scene {}", sceneId, "ok".equals(status) ? "done" : "failed",
+                sceneIds.get(sceneIndex + 1));
+        // Left on the next client tick: this may run inside a frame.
+        phase = Phase.LEAVING;
+    }
+
+    /** Leaves the world as the pause menu's quit button does, then starts the next scene from the title screen. */
+    private void leaveWorld(Minecraft mc) {
+        // Close a shot's screen first: JourneyMap's full-screen map saves its zoom as it closes.
+        if (mc.screen != null) {
+            mc.setScreen(null);
+        }
+        restoreJourneyMap();
+        if (mc.level != null) {
+            mc.level.disconnect();
+        }
+        if (mc.level != null || mc.getSingleplayerServer() != null) {
+            mc.disconnect(new GenericMessageScreen(Component.literal("Next scene")));
+        }
+        beginScene(sceneIndex + 1);
+        mc.setScreen(new TitleScreen());
+        phase = Phase.WAIT_TITLE;
     }
 
     @SubscribeEvent
@@ -134,6 +211,9 @@ final class SceneRunner {
                 if (mc.getOverlay() == null && mc.screen instanceof TitleScreen) {
                     scene = Scene.load(sceneId, Scene.parseArgs(System.getProperty(RemissionHarness.ARGS_PROPERTY, "")));
                     applyOptions(mc.options);
+                    // A previous scene's shot may have changed the GUI scale or JourneyMap's settings.
+                    mc.resizeDisplay();
+                    restoreJourneyMap();
                     FesterFog.setSuppressed(!scene.festerFog());
                     createWorld(mc);
                     phase = Phase.LOADING;
@@ -174,6 +254,7 @@ final class SceneRunner {
                     captureRequested = true;
                 }
             }
+            case LEAVING -> leaveWorld(mc);
             case DONE -> {
             }
         }
@@ -214,10 +295,7 @@ final class SceneRunner {
         if (shotIndex + 1 < scene.shots().size()) {
             startShot(mc, shotIndex + 1);
         } else {
-            phase = Phase.DONE;
-            writeResult("ok", "");
-            RemissionHarness.LOGGER.info("Scene {}: done, quitting", sceneId);
-            exit(0);
+            finishScene("ok", "");
         }
     }
 
@@ -268,16 +346,27 @@ final class SceneRunner {
         return minimap.getClass().getMethod("getCurrentMinimapProperties").invoke(minimap);
     }
 
-    /** Recreates the fixed world every run so no state carries over between runs. */
-    private void createWorld(Minecraft mc) throws IOException {
-        Path worldDir = mc.getLevelSource().getBaseDir().resolve(WORLD_NAME);
-        if (Files.exists(worldDir)) {
-            try (Stream<Path> paths = Files.walk(worldDir)) {
-                for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
-                    Files.delete(path);
-                }
+    /** Puts back and saves every JourneyMap setting the harness changed, so the next scene or launch starts as fresh. */
+    private static void restoreJourneyMap() {
+        try {
+            for (Map.Entry<Object, Object> entry : JOURNEYMAP_ORIGINALS.entrySet()) {
+                invokeSet(entry.getKey(), entry.getValue());
             }
+            for (Object properties : JOURNEYMAP_PROPERTIES) {
+                properties.getClass().getMethod("save").invoke(properties);
+            }
+        } catch (ReflectiveOperationException | LinkageError e) {
+            throw new IllegalStateException("cannot restore the JourneyMap settings", e);
         }
+    }
+
+    /**
+     * Recreates the fixed world every scene so no state carries over between scenes or runs, with JourneyMap's map of
+     * the previous one (a fresh launch never has one: the harness quits without the save that writes it).
+     */
+    private void createWorld(Minecraft mc) throws IOException {
+        deleteTree(mc.getLevelSource().getBaseDir().resolve(WORLD_NAME));
+        deleteTree(mc.gameDirectory.toPath().resolve(JOURNEYMAP_DATA));
         GameRules rules = new GameRules();
         rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
         rules.getRule(GameRules.RULE_WEATHER_CYCLE).set(false, null);
@@ -292,6 +381,16 @@ final class SceneRunner {
                 registries -> registries.registryOrThrow(Registries.WORLD_PRESET)
                         .getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions(),
                 mc.screen);
+    }
+
+    private static void deleteTree(Path dir) throws IOException {
+        if (Files.exists(dir)) {
+            try (Stream<Path> paths = Files.walk(dir)) {
+                for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+                    Files.delete(path);
+                }
+            }
+        }
     }
 
     /** Server thread: time, weather, freeze, then the scene's own commands. */
@@ -586,17 +685,39 @@ final class SceneRunner {
         graphics.renderTooltip(mc.font, stack, x + 8, y + 8);
     }
 
-    /** Sets a JourneyMap properties field ({@code ConfigField#set}) in memory. */
+    /**
+     * Sets a JourneyMap properties field ({@code ConfigField#set}) in memory, remembering its first value for
+     * {@link #restoreJourneyMap}.
+     */
     private static void setField(Object properties, String name, Object value) throws ReflectiveOperationException {
         Object field = properties.getClass().getField(name).get(properties);
-        field.getClass().getMethod("set", Object.class).invoke(field, value);
+        if (!JOURNEYMAP_ORIGINALS.containsKey(field)) {
+            JOURNEYMAP_ORIGINALS.put(field, field.getClass().getMethod("get").invoke(field));
+            JOURNEYMAP_PROPERTIES.add(properties);
+        }
+        invokeSet(field, value);
+    }
+
+    /** Calls the field's one-argument {@code set} that takes the value (typed, e.g. {@code set(Boolean)}, or Object). */
+    private static void invokeSet(Object field, Object value) throws ReflectiveOperationException {
+        for (Method method : field.getClass().getMethods()) {
+            if (method.getName().equals("set") && method.getParameterCount() == 1
+                    && (value == null || method.getParameterTypes()[0].isInstance(value))) {
+                method.invoke(field, value);
+                return;
+            }
+        }
+        throw new NoSuchMethodException(field.getClass().getName() + ".set(" + value + ")");
     }
 
     private void fail(String message, Throwable cause) {
-        phase = Phase.DONE;
         RemissionHarness.LOGGER.error("Scene {} failed: {}", sceneId, message, cause);
-        writeResult("failed", message + ": " + cause);
-        exit(1);
+        if (phase == Phase.LEAVING) {
+            // Leaving the failed scene's world failed too; the next scene cannot start cleanly.
+            phase = Phase.DONE;
+            exit(1);
+        }
+        finishScene("failed", message + ": " + cause);
     }
 
     /**

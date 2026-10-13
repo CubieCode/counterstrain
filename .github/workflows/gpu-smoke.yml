@@ -1,6 +1,6 @@
 name: GPU client smoke test
-# Runs every harness scene (tools/run-scenes.sh, each through
-# tools/run-client-headless.sh --scene) on foundry's RTX 4070 through Xvfb +
+# Runs every harness scene (tools/run-scenes.sh: all in one game session of
+# tools/run-client-headless.sh --scene …) on foundry's RTX 4070 through Xvfb +
 # VirtualGL. A scene fails if the log does not name the GPU renderer, the game
 # crashes or times out, the harness does not report status=ok, or its
 # screenshots differ from the reviewed references (tools/compare-screenshots.sh).

@@ -107,6 +107,10 @@ neoForge {
                 if (harnessArgs) {
                     systemProperty 'remission.harness.args', harnessArgs
                 }
+                def harnessTimeout = project.findProperty('harness_timeout')
+                if (harnessTimeout) {
+                    systemProperty 'remission.harness.timeout', harnessTimeout
+                }
             }
             // Window size; tools/run-client-headless.sh matches it to the virtual display.
             programArguments.addAll '--width', project.findProperty('client_width') ?: '1280',

@@ -2,6 +2,8 @@ package com.cubiecode.remission.harness;
 
 import com.mojang.logging.LogUtils;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLPaths;
@@ -16,10 +18,13 @@ import org.slf4j.Logger;
  * <p>System properties (set by {@code tools/run-client-headless.sh --scene}):
  * <ul>
  *   <li>{@value #SCENE_PROPERTY}: scene id, e.g. {@code smoke/mob_lineup}, read from
- *       {@code harness/scenes/<id>.json} in this source set's resources.</li>
- *   <li>{@value #OUTPUT_PROPERTY}: directory for screenshots and {@code harness-result.txt};
- *       defaults to {@code <game dir>/screenshots/harness/<id>}.</li>
- *   <li>{@value #TIMEOUT_PROPERTY}: seconds before the harness fails the run (default 300).</li>
+ *       {@code harness/scenes/<id>.json} in this source set's resources; or several, separated by commas, run one
+ *       after another in the same game session.</li>
+ *   <li>{@value #OUTPUT_PROPERTY}: directory for screenshots and {@code harness-result.txt}, or with several scenes
+ *       for one {@code <id>/} directory each; defaults to {@code <game dir>/screenshots/harness/<id>} (or
+ *       {@code screenshots/harness} with several).</li>
+ *   <li>{@value #TIMEOUT_PROPERTY}: seconds each scene may take before the harness fails it and quits (default
+ *       300).</li>
  *   <li>{@value #ARGS_PROPERTY}: scene arguments, {@code name=value,name=value} (see {@link Scene}).</li>
  * </ul>
  */
@@ -33,18 +38,20 @@ public final class RemissionHarness {
     static final Logger LOGGER = LogUtils.getLogger();
 
     public RemissionHarness() {
-        String sceneId = System.getProperty(SCENE_PROPERTY, "").trim();
-        if (sceneId.isEmpty()) {
+        List<String> sceneIds = Arrays.stream(System.getProperty(SCENE_PROPERTY, "").split(","))
+                .map(String::trim).filter(id -> !id.isEmpty()).toList();
+        if (sceneIds.isEmpty()) {
             LOGGER.info("Scene harness idle: {} is not set", SCENE_PROPERTY);
             return;
         }
         String output = System.getProperty(OUTPUT_PROPERTY, "").trim();
-        Path outputDir = output.isEmpty()
-                ? FMLPaths.GAMEDIR.get().resolve("screenshots/harness").resolve(sceneId)
-                : Path.of(output);
+        Path defaultOutput = FMLPaths.GAMEDIR.get().resolve("screenshots/harness");
+        Path outputDir = !output.isEmpty() ? Path.of(output)
+                : sceneIds.size() == 1 ? defaultOutput.resolve(sceneIds.getFirst()) : defaultOutput;
         long timeoutSeconds = Long.getLong(TIMEOUT_PROPERTY, 300L);
-        LOGGER.info("Scene harness enabled: scene {}, output {}", sceneId, outputDir.toAbsolutePath());
-        NeoForge.EVENT_BUS.register(new SceneRunner(sceneId, outputDir, timeoutSeconds));
+        LOGGER.info("Scene harness enabled: {} {}, output {}", sceneIds.size() == 1 ? "scene" : "scenes",
+                String.join(", ", sceneIds), outputDir.toAbsolutePath());
+        NeoForge.EVENT_BUS.register(new SceneRunner(sceneIds, outputDir, timeoutSeconds));
         NeoForge.EVENT_BUS.addListener(HarnessCommands::register);
     }
 }
