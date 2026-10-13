@@ -1,6 +1,6 @@
 name: Playtest finding
 description: A finding from a Counterstrain playtest (balance, quests, integrations, unfinished content).
-labels: [pack]
+labels: [playtest, pack]
 body:
   - type: markdown
     attributes:
