@@ -1,6 +1,7 @@
 package com.cubiecode.remission.api;
 
 import com.cubiecode.remission.countermeasure.Countermeasures;
+import com.cubiecode.remission.research.Bestiary;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -70,20 +71,24 @@ public final class TeamQueries {
 
     /**
      * Drops every cached answer involving {@code player}; call it when that player's team changes. Also pools the
-     * player's countermeasures with their new online teammates on the next server tick (P5.7).
+     * player's countermeasures with their new online teammates on the next server tick (P5.7), and refreshes the team
+     * bestiary progress of online players on the next server tick (P6.4).
      */
     public static void invalidate(UUID player) {
         CACHE.keySet().removeIf(pair -> pair.low().equals(player) || pair.high().equals(player));
         Countermeasures.teamChanged(player);
+        Bestiary.teamChanged();
     }
 
     /**
      * Drops every cached answer; call it when teams change in bulk (a team deleted, teams reloaded). Also pools every
-     * online team's countermeasures on the next server tick (P5.7).
+     * online team's countermeasures on the next server tick (P5.7), and refreshes every online player's team bestiary
+     * progress (P6.4).
      */
     public static void invalidateAll() {
         CACHE.clear();
         Countermeasures.teamsChanged();
+        Bestiary.teamChanged();
     }
 
     private static boolean lookup(MinecraftServer server, UUID a, UUID b) {

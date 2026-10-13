@@ -61,7 +61,7 @@ Matching scans in pack recipes (1.21.1 ingredients): any scan of a kind with `{"
 
 Each host scan fires `remission:host_scanned` and counts `remission:hosts_scanned`, each block scan fires `remission:block_scanned` and counts `remission:blocks_scanned` (Advancement triggers and stats, below). Not part of this contract yet: scanning samples (unassigned). Per-player scan progress: Bestiary, below.
 
-## Bestiary (P6.2; hidden types P6.3)
+## Bestiary (P6.2; hidden types P6.3; team-shared P6.4)
 
 Host types are derived, not listed: every registered entity type that has default attributes (that is, is living), is not `minecraft:player`, and is in neither `#remission:immune` nor `#remission:bestiary_hidden` (`Bestiary.isHostType`, `Bestiary.hostTypes()`). Each installed mod's living mobs count without data; to drop a type from infection and the bestiary, tag it immune; to keep it infectable but out of the bestiary, tag it hidden. Players can still carry the Strain and be scanned as hosts, but are never a bestiary entry.
 
@@ -78,7 +78,16 @@ Player attachment `remission:bestiary` (`BestiaryProgress`): the highest host st
 
 Entity tag `#remission:bestiary_hidden` (`Bestiary.HIDDEN`), `data/<ns>/tags/entity_type/bestiary_hidden.json`, standard tag JSON: living types that can still become hosts but that survival players cannot normally meet as hosts. Tagged types are left out of the bestiary list and its total, and their scans record no progress (the scan item is still given). Remission ships `minecraft:giant`, `minecraft:illusioner` and `minecraft:armor_stand`; a pack adds types with `"replace": false` or re-shows a default with `"replace": true` and its own list. There is no spawn-egg or other heuristic, so modded mobs without eggs (the Mekanism robit) stay listed. Tags are read on every check, so `/reload` applies at once on the server and, after the tag sync, on clients; progress already recorded for a newly hidden type is kept but not listed or counted.
 
-Wire format (`BestiaryProgress.STREAM_CODEC`): var-int entry count, then per entry a resource location and a var-int stage. The client opens the bestiary with the key mapping `key.remission.bestiary` (category `key.categories.remission`, default M). The `host_scanned` trigger's `bestiary_types` condition counts this map's entries.
+Wire format (`BestiaryProgress.STREAM_CODEC`): var-int entry count, then per entry a resource location and a var-int stage. The client opens the bestiary with the key mapping `key.remission.bestiary` (category `key.categories.remission`, default M). The same codec carries the team copy below.
+
+**Team-shared research (P6.4).** Research belongs to the team (DESIGN, Teams and multiplayer): the bestiary lists and counts the player's **team progress**, for each type the highest stage the player or any teammate (the team query, `TeamQueries`) has scanned. `remission:bestiary` stays each player's own record: a teammate's scan never writes it, so a player who leaves a team keeps exactly what they scanned and loses the rest. With nothing answering the team query the team progress is the player's own record, as in P6.2.
+
+- **Offline teammates count.** `Bestiary` mirrors every player's own record into saved data `data/remission_bestiary.dat` in the overworld folder (`BestiaryRecords`: `{"players": {"<uuid>": <progress, shape above>}}`, empty records omitted) on each recorded scan and on login (which also adds players from before P6.4). Fake players are not mirrored. Internal, not a pack contract.
+- **Synced copy.** Player attachment `remission:team_bestiary` (`BestiaryProgress`, same shape and wire format) holds the team progress and is present only while it differs from the player's own record, so a solo player has none. Not saved and not copied on death: the server recomputes it on login and respawn, for every online teammate when a member's record changes, and for every online player on the server tick after `TeamQueries.invalidate` or `invalidateAll` (a team source's join or leave). A team source that does not invalidate shows a change on the next of those refreshes. Synced to its owner only, as `remission:bestiary` (the initial tracking sync also reaches tracking clients). The client reads it through `Bestiary.team(player)`, falling back to the own record.
+- **Totals** count only listed host types (`Bestiary.isHostType` now), so progress recorded for a since-hidden or removed type is kept but not counted.
+- `remission:host_scanned` fires for the scanning player only; its `bestiary_types` condition is the team total after the scan (the number the player's bestiary header shows). Stat `remission:hosts_scanned` counts the scanner's own scans. Team queries for quests and scripts: `BestiaryQueries` (Public API, below).
+
+Gametests: `BestiaryTests` (a teammate's scan in the other's bestiary and total, an offline teammate's total and login, separate teams, leaving a team, no team source).
 
 ## Infection (built, P3.3)
 
@@ -404,7 +413,7 @@ Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired f
 | Trigger | Fires when | Conditions |
 | --- | --- | --- |
 | `remission:nidus_destroyed` | A player destroys a `remission:nidus`: the final blow of a fight (P4.10), a creative break, or a break while `[nidi] vitality` is 0. It fires for every contributor (each player who damaged it within `[nidi] contributorWindowTicks`, the destroyer included) who is online, in whatever dimension (Nidus encounters, below). Other removals (`/setblock`, edits, structure replacement) post `NidusDestroyedEvent` but fire no trigger. | `location`: vanilla location predicate, tested at the centre of the nidus's block after removal (a `block` or `fluid` predicate sees what replaced it). |
-| `remission:host_scanned` | A player takes a host scan with the scanner (a host; a non-host gives no scan and no trigger). | `entity`: entity predicate (or loot conditions) on the scanned host; `stage`: int range, the host stage scanned; `bestiary_types`: int range, the number of host types in the player's bestiary after this scan (`Bestiary`; types it does not list are not counted). |
+| `remission:host_scanned` | A player takes a host scan with the scanner (a host; a non-host gives no scan and no trigger). Fires for the scanner only. | `entity`: entity predicate (or loot conditions) on the scanned host; `stage`: int range, the host stage scanned; `bestiary_types`: int range, the number of host types in the player's bestiary after this scan: the team total since P6.4, equal to the player's own count without a team source (`Bestiary`; types it does not list are not counted). |
 | `remission:block_scanned` | A player takes a block scan with the scanner. | `location`: vanilla location predicate at the centre of the scanned block (its `block` predicate sees the scanned block). |
 | `remission:viral_load_changed` (P5.1) | The player's viral load changed (Viral load, above): at most once per update (once a second) plus once per drink, never when only the trend changed, nor for the reset on death. | `viral_load`: float range, the new viral load (0–100): `{"min": 50}` for a player who reached 50, `{"max": 0}` for one whose viral load fell back to 0. |
 | `remission:region_cleansed` (P5.2) | A chunk entered remission (Purification and remission zones, below) while the player was alive, not a spectator, in the same level and within 8 chunks (Chebyshev) of it. Fires once per chunk entering remission. | `radius`: int 0–16, default 4: the square of chunks around the player's own chunk the region covers; `share`: float range, the share (0–1) of the region's affected loaded chunks (in remission or festering) that are in remission (0 when none are affected); `chunks`: int range, how many of its loaded chunks are in remission. |
@@ -862,6 +871,16 @@ Team query, `TeamQueries` (static, P4.12): the one answer to "are these two play
 FTB Teams source (`integration/ftbteams/`, optional, FTB Teams 2101.1+): when FTB Teams is loaded, players it knows (anyone who has joined the world, online or not) are teammates exactly when FTB Teams puts them in the same team (`TeamManager.getTeamForPlayerID`: the same party, or each alone in their own personal team, which makes two solo players not teammates). Allies are not teammates. Players FTB Teams does not know are left unanswered. It invalidates a player's answers on FTB Teams' `PLAYER_CHANGED` event (every join, leave, party creation and disband) and all answers on team deletion and team manager load or unload. Packs without FTB Teams answer the event from KubeJS once P8.3's bindings exist.
 
 Hazard queries, `StrainHazards` (P5.7): see Strain hazards and countermeasures, above.
+
+Bestiary queries, `BestiaryQueries` (static, P6.4): the team's bestiary progress for quests and scripts (Bestiary, above). Player methods work on both sides (a client knows only its local player's team progress); UUID methods are server only and accept offline players.
+
+| Method | Returns | Side |
+| --- | --- | --- |
+| `hostTypeCount()` | the number of host types the bestiary lists (the "N" of "X of N host types scanned") | both |
+| `teamProgress(Player)` / `teamProgress(MinecraftServer, UUID)` | `Map<ResourceLocation, Integer>`: entity type id to the highest host stage any member of the player's team scanned | both / server |
+| `teamHighestStage(Player, ResourceLocation type)` | that stage for one type; 0 when no member scanned it | both |
+| `teamHostTypesScanned(Player)` / `teamHostTypesScanned(MinecraftServer, UUID)` | the team total: listed host types any member scanned (the "X") | both / server |
+| `ownHostTypesScanned(Player)` | listed host types the player scanned themselves | both (client: local player) |
 
 Later items append their events and queries here when built.
 

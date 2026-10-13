@@ -129,6 +129,16 @@ public final class RemissionAttachments {
                     .sync(Countermeasures::syncsTo, CountermeasureSet.STREAM_CODEC)
                     .build());
 
+    /**
+     * The bestiary progress a player's team shares (P6.4): the union of their own record and their teammates'. Present
+     * only while it differs from the player's own {@link #BESTIARY}; recomputed by {@code Bestiary} on login, respawn,
+     * teammate scans and team changes, so it is not saved. Synced to its owner only, like {@link #BESTIARY}.
+     */
+    public static final Supplier<AttachmentType<BestiaryProgress>> TEAM_BESTIARY = ATTACHMENT_TYPES.register("team_bestiary",
+            () -> AttachmentType.builder(() -> BestiaryProgress.EMPTY)
+                    .sync(Bestiary::syncsTo, BestiaryProgress.STREAM_CODEC)
+                    .build());
+
     private RemissionAttachments() {
     }
 }
