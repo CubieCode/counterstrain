@@ -56,3 +56,23 @@ prune_runs() {
   done < <(find "$dir" -mindepth 1 -maxdepth 1 -type d -name "$prefix*" -printf '%f\n' | LC_ALL=C sort -r)
   ((removed == 0)) || log "Pruned $removed run folder(s) older than $days days from $dir (the newest $keep are always kept)"
 }
+
+# Take the exclusive GPU lock (~/.cache/counterstrain/gpu.lock) on file
+# descriptor 9, waiting up to WAIT seconds, or die. Child scripts inherit the
+# held lock through fd 9 and COUNTERSTRAIN_GPU_LOCK, so tools/run-scenes.sh can
+# hold it for a whole scene list while each tools/run-client-headless.sh run
+# skips taking it again (reopening the file would wait on its own parent).
+gpu_lock() {
+  local wait=$1
+  local lock_file="${XDG_CACHE_HOME:-$HOME/.cache}/counterstrain/gpu.lock"
+  if [[ "${COUNTERSTRAIN_GPU_LOCK:-}" == "$lock_file" && "$(readlink /proc/$$/fd/9 2>/dev/null)" == "$lock_file" ]]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$lock_file")"
+  exec 9>"$lock_file"
+  if ! flock -n 9; then
+    log "GPU busy (another lane or CI job holds $lock_file); waiting up to ${wait}s"
+    flock -w "$wait" 9 || die "timed out waiting for the GPU lock"
+  fi
+  export COUNTERSTRAIN_GPU_LOCK="$lock_file"
+}
