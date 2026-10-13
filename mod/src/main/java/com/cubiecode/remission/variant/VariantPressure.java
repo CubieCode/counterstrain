@@ -20,10 +20,11 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Pressure and emergence (P7.5). Each use of a method against the Strain in a nidus's land (a chunk level purified by a
- * tool, a host killed with a player behind it) adds its amount to that nidus's total and to the pressure of every
- * variant that resists it, whoever used it, so one team's methods count together. A variant emerges when its pressure
- * reaches its threshold (times {@code thresholdScale}) and holds at least {@code minShare} of the total, so mixing
- * methods delays variants; the nidus's Strain then carries it, every pressure starts again from 0, the loaded hosts in its
+ * tool, a host killed with a player behind it) adds its amount to the pressure of every variant that resists it, and its
+ * share (amount over that variant's threshold) to the nidus's total, whoever used it, so one team's methods count
+ * together and tools and damage types compare in one unit. A variant emerges when its pressure reaches its threshold
+ * (times {@code thresholdScale}) and its own share holds at least {@code minShare} of the total, so mixing methods delays
+ * variants; the nidus's Strain then carries it, every pressure starts again from 0, the loaded hosts in its
  * land take it on, clients redraw its land and nearby players fire {@code remission:variant_emerged}.
  */
 public final class VariantPressure {
@@ -31,37 +32,53 @@ public final class VariantPressure {
     }
 
     /**
-     * Records {@code amount} of a method used in {@code chunk}: {@code matches} says which variants resist it. Does
-     * nothing with variants off, outside every nidus's land or for a non-positive amount; the variant the nidus already
-     * carries builds no pressure (it already resists the method), though the use still counts in the total.
+     * Records {@code amount} of a method used in {@code chunk} (a host kill): the nidus whose land it is and the current
+     * settings are looked up, then as {@link #record(ServerLevel, BlockPos, VariantSettings, double, Predicate)}.
      */
     public static void record(ServerLevel level, ChunkPos chunk, double amount, Predicate<ResistedMethod> matches) {
         VariantSettings settings = VariantSettings.current();
+        if (settings.enabled() && amount > 0.0) {
+            Variants.nidusFor(level, chunk).ifPresent(nidus -> record(level, nidus, settings, amount, matches));
+        }
+    }
+
+    /**
+     * Records {@code amount} of a method used in the land of the nidus at {@code nidus}: {@code matches} says which
+     * variants resist it. Each matching variant's pressure grows by {@code amount} (in its method's own unit: levels
+     * purified or kills), except the variant the nidus already carries (it already resists the method). The nidus's total
+     * grows by the use's <em>share</em>: {@code amount / threshold} of the matching variant with the lowest threshold
+     * (unscaled), counted once however many variants match, the carried one included. A variant's own share is
+     * {@code pressure / threshold}, so purification levels and host kills compare in one unit: fractions of a threshold.
+     * A use no variant resists counts nothing. Does nothing with variants off or for a non-positive amount.
+     */
+    public static void record(ServerLevel level, BlockPos nidus, VariantSettings settings, double amount,
+                              Predicate<ResistedMethod> matches) {
         if (!settings.enabled() || amount <= 0.0) {
             return;
         }
-        Optional<BlockPos> found = Variants.nidusFor(level, chunk);
-        if (found.isEmpty()) {
-            return;
-        }
-        BlockPos nidus = found.get();
         VariantRecords records = VariantRecords.get(level);
         Optional<ResourceLocation> current = records.variant(nidus);
         List<Map.Entry<ResourceLocation, Variant>> matched = new ArrayList<>();
+        double share = 0.0;
         for (Map.Entry<ResourceLocation, Variant> entry : Variants.all(level.registryAccess())) {
-            if (matches.test(entry.getValue().resists()) && !current.equals(Optional.of(entry.getKey()))) {
-                matched.add(entry);
+            if (matches.test(entry.getValue().resists())) {
+                share = Math.max(share, amount / entry.getValue().threshold());
+                if (!current.equals(Optional.of(entry.getKey()))) {
+                    matched.add(entry);
+                }
             }
         }
-        records.addPressure(nidus, matched.stream().map(Map.Entry::getKey).toList(), (float) amount);
+        if (share <= 0.0) {
+            return;
+        }
+        records.addPressure(nidus, matched.stream().map(Map.Entry::getKey).toList(), amount, share);
         VariantRecords.Entry record = records.get(nidus);
         ResourceLocation emerging = null;
         double best = 0.0;
         for (Map.Entry<ResourceLocation, Variant> entry : matched) {
-            double pressure = record.pressure(entry.getKey());
-            double threshold = entry.getValue().threshold() * settings.thresholdScale();
-            double ratio = pressure / threshold;
-            if (ratio >= 1.0 && pressure >= settings.minShare() * record.total() && ratio > best) {
+            double own = record.pressure(entry.getKey()) / entry.getValue().threshold();
+            double ratio = own / settings.thresholdScale();
+            if (ratio >= 1.0 && own >= settings.minShare() * record.total() && ratio > best) {
                 emerging = entry.getKey();
                 best = ratio;
             }

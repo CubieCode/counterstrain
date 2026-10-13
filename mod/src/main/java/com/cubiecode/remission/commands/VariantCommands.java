@@ -106,7 +106,8 @@ final class VariantCommands {
                 ? Component.translatable("commands.remission.variant.query.none")
                 : ComponentUtils.formatList(entry.pressure().entrySet(), each -> Component.translatable(
                         "commands.remission.variant.query.entry", Variants.name(each.getKey()), Math.round(each.getValue())));
-        int total = entry == null ? 0 : Math.round(entry.total());
+        // The total share in percent of one threshold (pressure itself is in each method's own unit).
+        long total = entry == null ? 0 : Math.round(entry.total() * 100.0);
         source.sendSuccess(() -> Component.translatable("commands.remission.variant.query.success",
                 pos.getX(), pos.getY(), pos.getZ(), variant, pressure, total), false);
         return entry != null && entry.variant().isPresent() ? 1 : 0;

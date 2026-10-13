@@ -133,7 +133,7 @@ public final class VariantTests {
                     Purification.lowerLevel(level, nearA, 1, PurificationCause.PURIFIER, null);
                 }
                 helper.assertTrue(VariantRecords.get(level).variant(a).isEmpty(), "variant before its threshold");
-                helper.assertValueEqual(pressure(level, a, PURIFIER), 11.0F, "purifier pressure");
+                helper.assertValueEqual(pressure(level, a, PURIFIER), 11.0, "purifier pressure");
                 Purification.lowerLevel(level, nearA, 1, PurificationCause.PURIFIER, null);
             });
             helper.assertValueEqual(VariantRecords.get(level).variant(a), Optional.of(PURIFIER), "variant at the overused nidus");
@@ -142,7 +142,7 @@ public final class VariantTests {
             VariantEmergedEvent event = events.getFirst();
             helper.assertTrue(event.getNidus().equals(a) && event.getVariant().equals(PURIFIER)
                     && event.getCause() == VariantEmergedEvent.Cause.PRESSURE && event.getPreviousVariant().isEmpty(), "event fields");
-            helper.assertValueEqual(VariantRecords.get(level).get(a).total(), 0.0F, "pressure after emergence");
+            helper.assertValueEqual(VariantRecords.get(level).get(a).total(), 0.0, "pressure after emergence");
             helper.assertValueEqual(Variants.variantAt(level, nearA.getPos()), Optional.of(PURIFIER), "land variant");
             helper.assertValueEqual(Variants.variantAt(level, nearB.getPos()), Optional.empty(), "other land's variant");
             helper.assertValueEqual(CorruptionQueries.variantAt(level, nearA.getPos().getWorldPosition()), Optional.of(PURIFIER),
@@ -166,7 +166,7 @@ public final class VariantTests {
             Pig unattributed = area.pig(1, 0);
             Corruption.set(unattributed, 50, CorruptionCause.COMMAND);
             unattributed.hurt(level.damageSources().generic(), 1000.0F);
-            helper.assertValueEqual(VariantRecords.get(level).get(a).total(), 0.0F, "pressure from a kill without a player");
+            helper.assertValueEqual(VariantRecords.get(level).get(a).total(), 0.0, "pressure from a kill without a player");
             helper.succeed();
         });
     }
@@ -176,36 +176,100 @@ public final class VariantTests {
         inArea(helper, 1, area -> {
             ServerLevel level = helper.getLevel();
             BlockPos nidus = area.nidus(0, 0);
-            List<LevelChunk> land = List.of(area.chunk(1, 0), area.chunk(0, 1), area.chunk(-1, 0));
-            land.forEach(chunk -> setLevel(chunk, 100));
-            // Three methods in turn: purifier pressure passes its threshold (12) but holds only a third of the total.
-            for (int i = 0; i < 20; i++) {
-                Purification.lowerLevel(level, land.get(0), 1, PurificationCause.PURIFIER, null);
-                Purification.lowerLevel(level, land.get(1), 1, PurificationCause.MENDROOT, null);
-                Purification.lowerLevel(level, land.get(2), 1, PurificationCause.PYLON, null);
+            LevelChunk purified = area.chunk(1, 0);
+            LevelChunk mended = area.chunk(0, 1);
+            List<LevelChunk> warded = List.of(area.chunk(-1, 0), area.chunk(0, -1), area.chunk(1, 1));
+            setLevel(purified, 100);
+            setLevel(mended, 100);
+            warded.forEach(chunk -> setLevel(chunk, 100));
+            // Three tools in turn, each round a thirtieth of each threshold (purifier 4 of 120 levels, mendroot 5 of 150,
+            // pylon 50 of 1500): every pressure passes its scaled threshold (a tenth) by round 3, but none holds half.
+            for (int round = 0; round < 6; round++) {
+                Purification.lowerLevel(level, purified, 4, PurificationCause.PURIFIER, null);
+                Purification.lowerLevel(level, mended, 5, PurificationCause.MENDROOT, null);
+                Purification.lowerLevel(level, warded.get(round / 2), 50, PurificationCause.PYLON, null);
             }
-            helper.assertTrue(VariantRecords.get(level).variant(nidus).isEmpty(), "a variant emerged from mixed methods");
-            helper.assertValueEqual(VariantRecords.get(level).get(nidus).total(), 60.0F, "total pressure");
-            // The purifier alone until it holds half of the total: 20 more uses (40 of 80), not 19 (39 of 79).
-            for (int i = 0; i < 19; i++) {
-                Purification.lowerLevel(level, land.get(0), 1, PurificationCause.PURIFIER, null);
+            helper.assertTrue(VariantRecords.get(level).variant(nidus).isEmpty(), "a variant emerged from mixed tools");
+            helper.assertTrue(Math.abs(VariantRecords.get(level).get(nidus).total() - 0.6) < 1e-9, "total share");
+            // The purifier alone until its share holds half the total: not after 5 more uses (0.37 of 0.77).
+            for (int i = 0; i < 5; i++) {
+                Purification.lowerLevel(level, purified, 4, PurificationCause.PURIFIER, null);
             }
             helper.assertTrue(VariantRecords.get(level).variant(nidus).isEmpty(), "variant below half the total");
-            Purification.lowerLevel(level, land.get(0), 1, PurificationCause.PURIFIER, null);
-            helper.assertValueEqual(VariantRecords.get(level).variant(nidus), Optional.of(PURIFIER), "variant at half the total");
+            Purification.lowerLevel(level, purified, 4, PurificationCause.PURIFIER, null);
+            Purification.lowerLevel(level, purified, 4, PurificationCause.PURIFIER, null);
+            helper.assertValueEqual(VariantRecords.get(level).variant(nidus), Optional.of(PURIFIER), "variant past half the total");
 
-            // With the rule off, the threshold alone decides.
+            // With the rule off, the threshold alone decides: mendroot's tenth (15 levels) after 3 or 4 uses of 5.
             VariantSettings.override(new VariantSettings(true, 0.1, 0.0, 200));
-            for (int i = 0; i < 14; i++) {
-                Purification.lowerLevel(level, land.get(0), 1, PurificationCause.PURIFIER, null);
-                Purification.lowerLevel(level, land.get(1), 1, PurificationCause.MENDROOT, null);
-            }
+            Purification.lowerLevel(level, mended, 5, PurificationCause.MENDROOT, null);
+            Purification.lowerLevel(level, mended, 5, PurificationCause.MENDROOT, null);
             helper.assertValueEqual(VariantRecords.get(level).variant(nidus), Optional.of(PURIFIER), "variant before 15 mendroot");
-            Purification.lowerLevel(level, land.get(1), 1, PurificationCause.MENDROOT, null);
+            Purification.lowerLevel(level, mended, 5, PurificationCause.MENDROOT, null);
+            Purification.lowerLevel(level, mended, 5, PurificationCause.MENDROOT, null);
             helper.assertValueEqual(VariantRecords.get(level).variant(nidus), Optional.of(Remission.id("mendroot_resistant")),
-                    "variant after 15 mendroot with minShare 0");
+                    "variant after 20 mendroot with minShare 0");
             helper.succeed();
         });
+    }
+
+    @GameTest(template = "empty", batch = BATCH + "_mixed_units")
+    public static void toolsAndKillsShareOneUnit(GameTestHelper helper) {
+        inArea(helper, 7, area -> {
+            ServerLevel level = helper.getLevel();
+            BlockPos mixed = area.nidus(0, 0);
+            BlockPos single = area.nidus(APART, 0);
+            ServerPlayer player = area.player(2, 0);
+            List<LevelChunk> land = List.of(area.chunk(-1, 0), area.chunk(0, -1), area.chunk(0, 1), area.chunk(1, 1),
+                    area.chunk(-1, -1), area.chunk(-1, 1));
+            land.forEach(chunk -> setLevel(chunk, 100));
+            // A pylon (50 of 1500 levels), a purifier (4 of 120) and melee kills (1 of 40) together: a pylon pass's
+            // hundreds of levels do not drown the kills, and every method passes its tenth while none holds half.
+            for (int round = 0; round < 6; round++) {
+                Purification.lowerLevel(level, land.get(round), 50, PurificationCause.PYLON, null);
+                Purification.lowerLevel(level, land.get(round), 4, PurificationCause.PURIFIER, null);
+                kill(area, level, player, 1, 0);
+            }
+            helper.assertTrue(VariantRecords.get(level).variant(mixed).isEmpty(), "a variant emerged from mixed tools and kills");
+            helper.assertValueEqual(pressure(level, mixed, PYLON), 300.0, "pylon pressure (levels)");
+            helper.assertValueEqual(pressure(level, mixed, MELEE), 6.0, "melee pressure (kills)");
+            // Kills alone from here: 8 more leave melee short of half (0.35 of 0.75); by 12 it holds half and emerges.
+            for (int i = 0; i < 8; i++) {
+                kill(area, level, player, 1, 0);
+            }
+            helper.assertTrue(VariantRecords.get(level).variant(mixed).isEmpty(), "melee variant before it held half");
+            for (int i = 0; i < 4; i++) {
+                kill(area, level, player, 1, 0);
+            }
+            helper.assertValueEqual(VariantRecords.get(level).variant(mixed), Optional.of(MELEE), "melee variant once it held half");
+
+            // One method alone: kills make the melee variant at its threshold (4 kills at a tenth), then a pylon alone
+            // makes the pylon variant at its own (150 levels).
+            ServerPlayer near = area.player(APART + 2, 0);
+            for (int i = 0; i < 3; i++) {
+                kill(area, level, near, APART + 1, 0);
+            }
+            helper.assertTrue(VariantRecords.get(level).variant(single).isEmpty(), "melee variant after 3 kills");
+            kill(area, level, near, APART + 1, 0);
+            helper.assertValueEqual(VariantRecords.get(level).variant(single), Optional.of(MELEE), "melee variant after 4 kills");
+            LevelChunk warded = area.chunk(APART + 1, 0);
+            LevelChunk ward2 = area.chunk(APART, 1);
+            setLevel(warded, 100);
+            setLevel(ward2, 100);
+            Purification.lowerLevel(level, warded, 50, PurificationCause.PYLON, null);
+            Purification.lowerLevel(level, warded, 49, PurificationCause.PYLON, null);
+            helper.assertValueEqual(VariantRecords.get(level).variant(single), Optional.of(MELEE), "pylon variant before 150 levels");
+            Purification.lowerLevel(level, ward2, 51, PurificationCause.PYLON, null);
+            helper.assertValueEqual(VariantRecords.get(level).variant(single), Optional.of(PYLON), "pylon variant at 150 levels");
+            helper.succeed();
+        });
+    }
+
+    /** A host turned in the area chunk and killed by {@code player}'s attack there. */
+    private static void kill(Area area, ServerLevel level, ServerPlayer player, int dx, int dz) {
+        Pig host = area.pig(dx, dz);
+        Corruption.set(host, 50, CorruptionCause.COMMAND);
+        host.hurt(level.damageSources().playerAttack(player), 1000.0F);
     }
 
     @GameTest(template = "empty", batch = BATCH + "_resistance")
@@ -315,8 +379,9 @@ public final class VariantTests {
                     Purification.lowerLevel(level, land, 1, PurificationCause.PURIFIER, null);
                 }
                 helper.assertTrue(VariantRecords.get(level).variant(nidus).isEmpty(), "cancelled variant emerged");
-                helper.assertValueEqual(pressure(level, nidus, PURIFIER), 0.0F, "pressure of the cancelled variant");
-                helper.assertValueEqual(VariantRecords.get(level).get(nidus).total(), 12.0F, "total kept");
+                helper.assertValueEqual(pressure(level, nidus, PURIFIER), 0.0, "pressure of the cancelled variant");
+                // 12 levels against the purifier's threshold of 120: a tenth of a threshold.
+                helper.assertTrue(Math.abs(VariantRecords.get(level).get(nidus).total() - 0.1) < 1e-9, "total kept");
                 helper.assertFalse(VariantPressure.emerge(level, nidus, PURIFIER, VariantEmergedEvent.Cause.OTHER),
                         "emergence reported despite the cancel");
             });
@@ -326,33 +391,28 @@ public final class VariantTests {
         });
     }
 
-    @GameTest(template = "empty", batch = BATCH + "_command", timeoutTicks = 400)
+    @GameTest(template = "empty", batch = BATCH + "_command")
     public static void commandSetsClearsAndQueries(GameTestHelper helper) {
-        // The host's chunk is new; entity searches find a mob in it only once the chunk has finished loading (in play,
-        // hosts live in loaded chunks). So the area is set up now and checked once the host can be found.
-        ChunkPos own = new ChunkPos(helper.absolutePos(BlockPos.ZERO));
-        Area area = new Area(helper, new ChunkPos(own.x + FAR + 5 * SPACING, own.z), new ArrayList<>(), new ArrayList<>(),
-                new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        // In the test's own structure, whose chunks are loaded and ticking, so entity searches find the host at once (in
+        // freshly generated far chunks they may not for many ticks). The batch runs alone and removes its nidus.
         VariantSettings.override(SETTINGS);
-        BlockPos nidus = area.nidus(0, 0);
-        Pig host = area.pig(1, 0);
+        BlockPos nidus = helper.absolutePos(new BlockPos(1, 1, 1));
+        helper.getLevel().setBlock(nidus, RemissionBlocks.NIDUS.get().defaultBlockState(), Block.UPDATE_ALL);
+        Pig host = helper.spawnWithNoFreeWill(EntityType.PIG, 2, 1, 2);
         Corruption.set(host, 50, CorruptionCause.COMMAND);
-        ServerPlayer player = area.player(2, 0);
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(helper.getLevel().getEntitiesOfClass(Pig.class, host.getBoundingBox())
-                        .contains(host), "host not searchable yet"))
-                .thenExecute(() -> {
-                    try {
-                        commandChecks(helper, area, nidus, host, player);
-                    } finally {
-                        VariantSettings.override(null);
-                        area.release();
-                    }
-                })
-                .thenSucceed();
+        ServerPlayer player = SurgeTests.player(helper, helper.absolutePos(new BlockPos(0, 1, 0)));
+        helper.getLevel().players().add(player);
+        try {
+            commandChecks(helper, nidus, host, player);
+        } finally {
+            helper.getLevel().players().remove(player);
+            helper.getLevel().setBlock(nidus, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            VariantSettings.override(null);
+        }
+        helper.succeed();
     }
 
-    private static void commandChecks(GameTestHelper helper, Area area, BlockPos nidus, Pig host, ServerPlayer player) {
+    private static void commandChecks(GameTestHelper helper, BlockPos nidus, Pig host, ServerPlayer player) {
         ServerLevel level = helper.getLevel();
         AdvancementHolder fire = gate(helper, player, "{\"trigger\": \"remission:variant_emerged\", \"conditions\": {\"variant\": \""
                 + FIRE + "\"}}");
@@ -604,9 +664,9 @@ public final class VariantTests {
                 new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
     }
 
-    private static float pressure(ServerLevel level, BlockPos nidus, ResourceLocation variant) {
+    private static double pressure(ServerLevel level, BlockPos nidus, ResourceLocation variant) {
         VariantRecords.Entry entry = VariantRecords.get(level).get(nidus);
-        return entry == null ? 0.0F : entry.pressure(variant);
+        return entry == null ? 0.0 : entry.pressure(variant);
     }
 
     /** Runs {@code body} with {@code listener} on the event bus. */

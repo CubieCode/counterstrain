@@ -20,6 +20,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.registries.DataPackRegistryEvent;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Resistant variants (P7.5): the {@code remission:variant} datapack registry ({@code data/<ns>/remission/variant/<name>.json})
@@ -45,12 +46,28 @@ public final class Variants {
         return access.registry(KEY).flatMap(registry -> registry.getOptional(id));
     }
 
-    /** Every variant, sorted by id. */
+    /** The sorted entries of one registry instance; datapack registries are rebuilt, never changed, on a world (re)load. */
+    private record Sorted(Registry<Variant> registry, List<Map.Entry<ResourceLocation, Variant>> entries) {
+    }
+
+    @Nullable
+    private static volatile Sorted sorted;
+
+    /** Every variant, sorted by id. Cached per registry instance, since purification steps ask on every step. */
     public static List<Map.Entry<ResourceLocation, Variant>> all(RegistryAccess access) {
-        return access.registry(KEY).map(registry -> registry.entrySet().stream()
-                .map(entry -> Map.entry(entry.getKey().location(), entry.getValue()))
-                .sorted(Map.Entry.comparingByKey(Comparator.naturalOrder()))
-                .toList()).orElse(List.of());
+        Registry<Variant> registry = access.registry(KEY).orElse(null);
+        if (registry == null) {
+            return List.of();
+        }
+        Sorted cached = sorted;
+        if (cached == null || cached.registry() != registry) {
+            cached = new Sorted(registry, registry.entrySet().stream()
+                    .map(entry -> Map.entry(entry.getKey().location(), entry.getValue()))
+                    .sorted(Map.Entry.comparingByKey(Comparator.naturalOrder()))
+                    .toList());
+            sorted = cached;
+        }
+        return cached.entries();
     }
 
     /** A variant's name: lang key {@code variant.<namespace>.<path>}. */

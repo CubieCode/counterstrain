@@ -189,7 +189,6 @@
   "message.remission.scanner.host_variant": "message.remission.scanner.host_variant %1$s %2$s %3$s",
   "message.remission.scanner.block_variant": "message.remission.scanner.block_variant %1$s %2$s",
   "message.remission.variant.fuel_countered": "message.remission.variant.fuel_countered %1$s",
-  "message.remission.variant.fuel_no_match": "message.remission.variant.fuel_no_match %1$s",
   "commands.remission.inspect.variant": "commands.remission.inspect.variant %1$s %2$s %3$s %4$s",
   "commands.remission.variant.failed.not_nidus": "commands.remission.variant.failed.not_nidus",
   "commands.remission.variant.failed.unknown": "commands.remission.variant.failed.unknown %1$s",

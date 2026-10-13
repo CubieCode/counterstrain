@@ -9,10 +9,10 @@ import com.cubiecode.remission.network.VariantLandSync;
 import com.cubiecode.remission.purification.HandheldPurifierItem;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionDataComponents;
-import com.cubiecode.remission.world.Nidus;
-import com.cubiecode.remission.world.NidusIndex;
 import it.unimi.dsi.fastutil.HashCommon;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -41,7 +41,8 @@ import org.jetbrains.annotations.Nullable;
  *       is countered by that variant's serum. A host killed with a player behind it (the killer, or the player who hurt
  *       it in the last 100 ticks) records its killing blow's damage type as pressure.</li>
  *   <li>Counters: drinking a variant's serum counters it for the player ({@link #serumDrunk}); using a variant's fuel on
- *       a block in that variant's land, or a reclaimer burning it nearby, counters the nidus for every tool.</li>
+ *       a block in that variant's land, or a reclaimer burning it with that land in its square, counters the nidus for
+ *       every tool.</li>
  * </ul>
  */
 @EventBusSubscriber(modid = Remission.MOD_ID)
@@ -56,26 +57,27 @@ public final class VariantEffects {
      * the step's pressure (what it actually lowers). Server side; called by {@code Purification.lowerLevel}.
      */
     public static int purification(ServerLevel level, ChunkPos chunk, int amount, PurificationCause cause, int old) {
-        if (!VariantSettings.current().enabled()) {
+        VariantSettings settings = VariantSettings.current();
+        if (!settings.enabled()) {
+            return amount;
+        }
+        Optional<BlockPos> nidus = Variants.nidusFor(level, chunk);
+        if (nidus.isEmpty()) {
             return amount;
         }
         int lowered = amount;
-        VariantRecords records = VariantRecords.get(level);
-        if (records.anyVariant()) {
-            Optional<BlockPos> nidus = Variants.nidusFor(level, chunk);
-            VariantRecords.Entry entry = nidus.map(records::get).orElse(null);
-            Optional<Variant> variant = entry == null ? Optional.empty()
-                    : entry.variant().flatMap(id -> Variants.get(level.registryAccess(), id));
-            if (variant.isPresent() && variant.get().resists().matches(cause) && !entry.countered(level.getGameTime())) {
-                double scaled = variant.get().resisted(amount);
-                lowered = (int) Math.floor(scaled);
-                double fraction = scaled - lowered;
-                if (fraction > 0.0 && unitHash(chunk.toLong() ^ level.getGameTime() * 31 ^ cause.ordinal()) < fraction) {
-                    lowered++;
-                }
+        VariantRecords.Entry entry = VariantRecords.get(level).get(nidus.get());
+        Optional<Variant> variant = entry == null ? Optional.empty()
+                : entry.variant().flatMap(id -> Variants.get(level.registryAccess(), id));
+        if (variant.isPresent() && variant.get().resists().matches(cause) && !entry.countered(level.getGameTime())) {
+            double scaled = variant.get().resisted(amount);
+            lowered = (int) Math.floor(scaled);
+            double fraction = scaled - lowered;
+            if (fraction > 0.0 && unitHash(chunk.toLong() ^ level.getGameTime() * 31 ^ cause.ordinal()) < fraction) {
+                lowered++;
             }
         }
-        VariantPressure.record(level, chunk, Math.min(old, lowered), method -> method.matches(cause));
+        VariantPressure.record(level, nidus.get(), settings, Math.min(old, lowered), method -> method.matches(cause));
         return lowered;
     }
 
@@ -116,48 +118,47 @@ public final class VariantEffects {
 
     /**
      * A reclaimer at {@code pos} with {@code radius} burned {@code fuel}: a variant fuel counters every nidus with that
-     * variant whose land reaches the reclaimer's square. Returns how many it countered.
+     * variant whose land holds a chunk of the reclaimer's square. Returns how many it countered.
      */
     public static int reclaimerBurned(ServerLevel level, BlockPos pos, int radius, ItemStack fuel) {
         ResourceLocation variant = fuel.get(RemissionDataComponents.VARIANT);
-        if (variant == null || !VariantSettings.current().enabled()) {
+        if (variant == null || !VariantSettings.current().enabled() || !VariantRecords.get(level).anyVariant()) {
             return 0;
         }
-        int reach = Variants.reach();
         ChunkPos at = new ChunkPos(pos);
+        Set<BlockPos> owners = new HashSet<>();
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                Variants.nidusFor(level, new ChunkPos(at.x + dx, at.z + dz)).ifPresent(owners::add);
+            }
+        }
         int countered = 0;
-        for (Nidus nidus : NidusIndex.get(level).nidi()) {
-            ChunkPos chunk = new ChunkPos(nidus.pos());
-            if (Math.max(Math.abs(chunk.x - at.x), Math.abs(chunk.z - at.z)) <= radius + reach
-                    && counterNidus(level, nidus.pos(), variant)) {
+        for (BlockPos nidus : owners) {
+            if (counterNidus(level, nidus, variant)) {
                 countered++;
             }
         }
         return countered;
     }
 
-    // A variant fuel used on a block counters its variant's nidus there; not on machines or blocks with a screen (an
-    // anvil repairing a purifier), which take fuel their own way.
+    // A variant fuel used on a block in the land of a nidus carrying that variant counters it there. Any other use goes
+    // ahead as usual (placing, doors, machines, an anvil), so the event is cancelled only when the counter applies; the
+    // client cannot tell, so it is decided on the server.
     @SubscribeEvent
     static void onUseOnBlock(PlayerInteractEvent.RightClickBlock event) {
         ItemStack stack = event.getItemStack();
         ResourceLocation variant = stack.get(RemissionDataComponents.VARIANT);
-        if (variant == null || !stack.is(HandheldPurifierItem.FUEL) || event.getLevel().getBlockEntity(event.getPos()) != null
-                || event.getLevel().getBlockState(event.getPos()).getMenuProvider(event.getLevel(), event.getPos()) != null) {
+        if (variant == null || !stack.is(HandheldPurifierItem.FUEL) || !(event.getLevel() instanceof ServerLevel level)
+                || !(event.getEntity() instanceof ServerPlayer player) || !VariantSettings.current().enabled()
+                || !VariantRecords.get(level).anyVariant()) {
             return;
         }
-        event.setCanceled(true);
-        event.setCancellationResult(InteractionResult.SUCCESS);
-        if (!(event.getLevel() instanceof ServerLevel level) || !(event.getEntity() instanceof ServerPlayer player)) {
-            return;
-        }
-        Optional<BlockPos> nidus = VariantSettings.current().enabled()
-                ? Variants.nidusFor(level, new ChunkPos(event.getPos())) : Optional.empty();
+        Optional<BlockPos> nidus = Variants.nidusFor(level, new ChunkPos(event.getPos()));
         if (nidus.isPresent() && counterNidus(level, nidus.get(), variant)) {
             stack.consume(1, player);
             player.displayClientMessage(Component.translatable("message.remission.variant.fuel_countered", Variants.name(variant)), true);
-        } else {
-            player.displayClientMessage(Component.translatable("message.remission.variant.fuel_no_match", Variants.name(variant)), true);
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.SUCCESS);
         }
     }
 
