@@ -147,12 +147,13 @@ public final class FesteringVeinTests {
     }
 
     /**
-     * Asserts the face rule for every block of the build space that was air: it holds a face exactly where
-     * {@link FesteringVeins#selected} picks it, the neighbour holds a multiface block and is not {@code resistant}.
+     * Asserts the face rule for every block of the build space that was air: it holds a face exactly where {@code pick}
+     * picks it, the neighbour holds a multiface block and is not {@code resistant}.
      * Returns the faces grown, by the block each covers.
      */
     private static Map<Block, Set<Direction>> assertFaceRule(GameTestHelper helper, ServerLevel level, LevelChunk chunk,
-                                                             Map<BlockPos, BlockState> before, int coverage,
+                                                             Map<BlockPos, BlockState> before,
+                                                             FesteringVeins.FaceSelector pick,
                                                              Predicate<BlockState> resistant) {
         Map<Block, Set<Direction>> grown = new HashMap<>();
         for (Map.Entry<BlockPos, BlockState> entry : before.entrySet()) {
@@ -165,7 +166,7 @@ public final class FesteringVeinTests {
             for (Direction direction : Direction.values()) {
                 BlockPos side = pos.relative(direction);
                 BlockState neighbour = level.getBlockState(side);
-                boolean expected = FesteringVeins.selected(pos, direction, coverage) && !neighbour.isAir()
+                boolean expected = pick.test(pos, direction) && !neighbour.isAir()
                         && !neighbour.is(RemissionBlocks.FESTERING_VEIN.get()) && !resistant.test(neighbour)
                         && MultifaceBlock.canAttachTo(level, direction, side, neighbour);
                 boolean face = now.is(RemissionBlocks.FESTERING_VEIN.get()) && MultifaceBlock.hasFace(now, direction);
@@ -215,7 +216,8 @@ public final class FesteringVeinTests {
             int[] changed = {0};
             capture(events, chunk.getPos(), () -> changed[0] = FesteringVeins.growNow(level, chunk));
             int coverage = FesteringVeins.coverage(minStage, minStage);
-            assertFaceRule(helper, level, chunk, before, coverage, state -> state.is(FesteringVeins.VEIN_RESISTANT));
+            assertFaceRule(helper, level, chunk, before, (pos, side) -> FesteringVeins.selected(pos, side, coverage),
+                    state -> state.is(FesteringVeins.VEIN_RESISTANT));
             Map<BlockPos, BlockState> grown = veins(level, chunk);
             helper.assertTrue(!grown.isEmpty(), "no veins at the minimum stage");
             helper.assertValueEqual(changed[0], grown.size(), "blocks changed at the minimum stage");
@@ -228,7 +230,8 @@ public final class FesteringVeinTests {
             Map<BlockPos, BlockState> atMin = snapshot(level, chunk);
             setStage(chunk, minStage + 1);
             helper.assertTrue(FesteringVeins.growNow(level, chunk) > 0, "nothing more one stage up");
-            assertFaceRule(helper, level, chunk, before, FesteringVeins.coverage(minStage + 1, minStage),
+            int coverageUp = FesteringVeins.coverage(minStage + 1, minStage);
+            assertFaceRule(helper, level, chunk, before, (pos, side) -> FesteringVeins.selected(pos, side, coverageUp),
                     state -> state.is(FesteringVeins.VEIN_RESISTANT));
             for (Map.Entry<BlockPos, BlockState> entry : atMin.entrySet()) {
                 if (entry.getValue().is(RemissionBlocks.FESTERING_VEIN.get())) {
@@ -246,8 +249,10 @@ public final class FesteringVeinTests {
     }
 
     /**
-     * At full coverage veins cover every kind of solid face of the build (floor, plank walls on all six sides, glass and
-     * cobblestone placed in the air), never a resistant block, and the shipped resistant tag is empty.
+     * With every face picked, veins cover every kind of solid face of the build (floor, plank walls on all six sides,
+     * glass and cobblestone placed in the air), never a resistant block, and the shipped resistant tag is empty. Every
+     * face rather than a coverage: {@link FesteringVeins#selected} leaves a fifth of the patches bare at any coverage,
+     * and the test grid lands at a random position, so a coverage would leave a block bare in about 1% of runs.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void veinsCoverSolidFacesButNotResistant(GameTestHelper helper) {
@@ -257,9 +262,9 @@ public final class FesteringVeinTests {
             build(level, chunk);
             Map<BlockPos, BlockState> before = snapshot(level, chunk);
             Predicate<BlockState> resistant = state -> state.is(Blocks.OBSIDIAN);
-            // 200 percent: every face outside the bare patches.
-            FesteringVeins.growNow(level, chunk, 200, resistant);
-            Map<Block, Set<Direction>> grown = assertFaceRule(helper, level, chunk, before, 200, resistant);
+            FesteringVeins.FaceSelector everyFace = (pos, side) -> true;
+            FesteringVeins.growNow(level, chunk, everyFace, resistant);
+            Map<Block, Set<Direction>> grown = assertFaceRule(helper, level, chunk, before, everyFace, resistant);
             helper.assertTrue(grown.getOrDefault(Blocks.OAK_PLANKS, Set.of()).containsAll(EnumSet.allOf(Direction.class)),
                     "plank faces covered: " + grown.get(Blocks.OAK_PLANKS));
             helper.assertTrue(grown.containsKey(Blocks.STONE), "stone floor not covered");

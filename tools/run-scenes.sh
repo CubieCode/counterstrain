@@ -11,6 +11,10 @@
 # runs, in sorted order (--scenes takes IDs separated by spaces or commas).
 # --list prints the scene IDs and exits. --record is passed to every client run
 # (each clip lands in that run's capture.mp4).
+# The GPU lock is taken once and held for the whole list (--gpu-wait as in
+# tools/run-client-headless.sh), so another lane or CI job cannot slip in
+# between scenes. SIGINT or SIGTERM stops the running scene's client, skips
+# the rest and fails the run (an "interrupted" summary row).
 # Every scene runs even after a failure. A scene fails if the client run fails
 # (GPU renderer not found, crash, timeout, harness status other than ok) or its
 # comparison exits 1 (differs) or 2 (error); exit 3 (no reference) is reported,
@@ -29,12 +33,14 @@ source "$(dirname "$0")/lib.sh"
 scenes_root="$mod_dir/src/harness/resources/harness/scenes"
 scenes=()
 list=0
+gpu_wait=1800
 client_args=()
 while (($#)); do
   case "$1" in
     --scenes) read -r -a scenes <<<"${2//,/ }"; shift 2 ;;
     --list) list=1; shift ;;
-    --resolution|--timeout|--gpu-wait) client_args+=("$1" "${2:?}"); shift 2 ;;
+    --resolution|--timeout) client_args+=("$1" "${2:?}"); shift 2 ;;
+    --gpu-wait) gpu_wait="${2:?}"; shift 2 ;;
     --record)
       client_args+=(--record)
       if [[ "${2:-}" =~ ^[0-9]+$ ]]; then client_args+=("$2"); shift; fi
@@ -57,6 +63,17 @@ if ((list)); then
   exit 0
 fi
 
+[[ "$gpu_wait" =~ ^[0-9]+$ ]] || die "gpu-wait must be whole seconds"
+require flock
+gpu_lock "$gpu_wait"
+# SIGINT/SIGTERM (Ctrl+C, a cancelled CI job): pass SIGTERM to the running
+# client script, which stops the game, then skip the remaining scenes. The
+# client runs in the background so the trap fires at once; background jobs of
+# a script ignore SIGINT, hence SIGTERM.
+interrupted=0
+child=
+trap 'interrupted=1; [[ -n "$child" ]] && kill -TERM "$child" 2>/dev/null' INT TERM
+
 prune_runs "$local_dir/scene-runs" 2
 out="$local_dir/scene-runs/$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$out"
@@ -64,14 +81,25 @@ ln -sfn "$(basename "$out")" "$local_dir/scene-runs/latest"
 compare="$repo_root/tools/compare-screenshots.sh"
 
 printf 'scene\tverdict\trun\tcompare\n' >"$out/summary.tsv"
-failed=0
+passed=0
 index=0
 for scene in "${scenes[@]}"; do
+  ((interrupted)) && break
   index=$((index + 1))
   log "Scene $index/${#scenes[@]}: $scene"
   before="$(readlink "$local_dir/runs/latest" 2>/dev/null || true)"
   verdict=pass
-  "$repo_root/tools/run-client-headless.sh" --scene "$scene" "${client_args[@]}" || verdict=fail
+  "$repo_root/tools/run-client-headless.sh" --scene "$scene" "${client_args[@]}" &
+  child=$!
+  code=0
+  # wait returns early when a trapped signal arrives; keep waiting for the
+  # client script to finish stopping the game.
+  while :; do
+    wait "$child" && code=0 || code=$?
+    kill -0 "$child" 2>/dev/null || break
+  done
+  child=
+  ((code == 0)) || verdict=fail
   run="$(readlink "$local_dir/runs/latest" 2>/dev/null || true)"
   # The client script exits before creating a run directory on argument or
   # lock errors; don't attribute an older run to this scene.
@@ -90,13 +118,16 @@ for scene in "${scenes[@]}"; do
       *) comparison="error($code)"; verdict=fail ;;
     esac
   fi
-  [[ "$verdict" == pass ]] || failed=$((failed + 1))
+  [[ "$verdict" == pass ]] && passed=$((passed + 1))
   printf '%s\t%s\t%s\t%s\n' "$scene" "$verdict" "$run" "$comparison" >>"$out/summary.tsv"
   log "Scene $scene: $verdict (run $run, compare $comparison)"
 done
 
+if ((interrupted)); then
+  printf 'interrupted\tfail\t-\tskipped %s scene(s)\n' "$(( ${#scenes[@]} - index ))" >>"$out/summary.tsv"
+fi
 {
-  echo "### Harness scenes: $(( ${#scenes[@]} - failed ))/${#scenes[@]} passed"
+  echo "### Harness scenes: $passed/${#scenes[@]} passed"
   echo
   echo "| Scene | Verdict | Run | Compare |"
   echo "| --- | --- | --- | --- |"
@@ -106,5 +137,5 @@ done
 } >"$out/summary.md"
 [[ -n "${GITHUB_STEP_SUMMARY:-}" ]] && cat "$out/summary.md" >>"$GITHUB_STEP_SUMMARY"
 column -t -s $'\t' "$out/summary.tsv" >&2 || cat "$out/summary.tsv" >&2
-log "Done: $failed of ${#scenes[@]} scene(s) failed; summary in $out"
-((failed == 0))
+log "Done: $passed of ${#scenes[@]} scene(s) passed; summary in $out"
+((passed == ${#scenes[@]}))

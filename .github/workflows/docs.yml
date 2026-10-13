@@ -2,9 +2,10 @@ name: Docs
 # Checks that docs, ROADMAP, READMEs and skills still match the repository
 # (tools/check-docs.py), and that player-facing assets have content provenance
 # rows (tools/check-provenance.sh, plus its fixture self-test), and runs the content
-# editor's unit tests (tools/content-editor.sh --test) and the run-folder pruning test
-# (tools/tests/prune-runs.sh). Runs on every change, not only Markdown: code changes
-# are what make docs stale. Fork pull requests run on ubuntu-latest.
+# editor's unit tests (tools/content-editor.sh --test), the run-folder pruning test
+# (tools/tests/prune-runs.sh) and the GPU lock test (tools/tests/gpu-lock.sh).
+# Runs on every change, not only Markdown: code changes are what make docs stale.
+# Fork pull requests run on ubuntu-latest.
 on:
   push:
     branches: [main]
@@ -28,3 +29,5 @@ jobs:
         run: tools/content-editor.sh --test
       - name: Run-folder pruning test
         run: tools/tests/prune-runs.sh
+      - name: GPU lock test
+        run: tools/tests/gpu-lock.sh

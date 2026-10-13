@@ -19,7 +19,10 @@
 # --scene items/held --scene-arg item=remission:scanner.
 # Parallel Orca lanes and CI jobs share one RTX 4070, so runs take an
 # exclusive lock (~/.cache/counterstrain/gpu.lock) and wait up to --gpu-wait
-# seconds for it; the timeout starts once the lock is held.
+# seconds for it; the timeout starts once the lock is held. A lock inherited
+# from tools/run-scenes.sh is used as is (gpu_lock in tools/lib.sh).
+# SIGINT or SIGTERM stops the client (SIGTERM to its process group, SIGKILL
+# after 5 s) and fails the run with reason=interrupted.
 # --record captures the virtual display with ffmpeg (x11grab, H.264, at most
 # 1280 px wide, 30 fps) from the moment the game window exists until the
 # client exits, or for the given number of seconds. ffmpeg is stopped with
@@ -126,13 +129,7 @@ record_display() {
   return "$code"
 }
 
-lock_file="${XDG_CACHE_HOME:-$HOME/.cache}/counterstrain/gpu.lock"
-mkdir -p "$(dirname "$lock_file")"
-exec 9>"$lock_file"
-if ! flock -n 9; then
-  log "GPU busy (another lane or CI job holds $lock_file); waiting up to ${gpu_wait}s"
-  flock -w "$gpu_wait" 9 || die "timed out waiting for the GPU lock"
-fi
+gpu_lock "$gpu_wait"
 
 prune_runs "$local_dir/runs" client-
 run_dir="$local_dir/runs/client-$(date -u +%Y%m%dT%H%M%SZ)"
@@ -173,10 +170,18 @@ log "Launching client at $resolution${scene:+, scene $scene}$( ((record)) && ech
 ) >"$run_dir/console.log" 2>&1 &
 pid=$!
 pgid=$pid
+# SIGINT/SIGTERM (Ctrl+C, a cancelled CI job via tools/run-scenes.sh): stop the
+# client within seconds instead of leaving it running with the GPU lock.
+interrupted=0
+trap 'interrupted=1' INT TERM
 
 reason=exited
 start=$SECONDS
 while kill -0 "$pid" 2>/dev/null; do
+  if ((interrupted)); then
+    reason=interrupted
+    break
+  fi
   if ((timeout_s > 0 && SECONDS - start >= timeout_s)); then
     reason=timeout
     break
@@ -186,12 +191,20 @@ while kill -0 "$pid" 2>/dev/null; do
     reason=early-display-error
     break
   fi
-  sleep 2
+  # A trapped signal ends the wait at once, not after the sleep.
+  sleep 2 &
+  wait $! || true
 done
 
 if [[ "$reason" != exited ]]; then
+  # An interrupted run gets a short grace period: GitHub's runner sends SIGTERM
+  # 7.5 s after SIGINT and kills the step soon after.
+  grace=30
   if [[ "$reason" == timeout ]]; then
     log "Timeout reached; capturing and stopping the client"
+  elif [[ "$reason" == interrupted ]]; then
+    grace=5
+    log "Interrupted; stopping the client"
   else
     log "error: the early display failed and is waiting on an error prompt; stopping the client"
   fi
@@ -209,12 +222,12 @@ if [[ "$reason" != exited ]]; then
     done
   fi
   kill -TERM -- "-$pgid" 2>/dev/null || true
-  for _ in $(seq 30); do
+  for _ in $(seq "$grace"); do
     pgrep -g "$pgid" >/dev/null || break
     sleep 1
   done
   if pgrep -g "$pgid" >/dev/null; then
-    log "Processes still alive after 30s; sending SIGKILL"
+    log "Processes still alive after ${grace}s; sending SIGKILL"
     kill -KILL -- "-$pgid" 2>/dev/null || true
     sleep 1
   fi
@@ -244,7 +257,7 @@ renderer_log="$run_dir/latest.log"
 "$repo_root/tools/verify-gpu-render.sh" "$renderer_log" >"$run_dir/renderer.txt" 2>&1 || status=1
 cat "$run_dir/renderer.txt" >&2
 
-[[ "$reason" == early-display-error ]] && status=1
+[[ "$reason" == early-display-error || "$reason" == interrupted ]] && status=1
 if [[ "$reason" == exited && "$exit_code" -ne 0 ]]; then
   log "error: client exited with code $exit_code (see $run_dir/console.log)"
   status=1
