@@ -138,7 +138,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P4.6 and P4.7 (follow-ups to P4.2 and P3.3) can join wave E with P4.3 or run alone. P4.6 owns `world/FesteringStages` and `world/FesterMaps` and runs before P5.2; P4.7 owns `infection/`. With P4.3 in the same wave, appoint one owner for config specs and one for remission-data-formats.
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - P5.3 → P5.4 serially, after P5.1. P5.3 owns the revenant entity, `integration/curios/` and its build-file entries; P5.4 owns its payload and coordinates `integration/journeymap/` with P8.2 (never in the same wave).
-- G: P7.2 → P7.3 → P7.4 → P7.5 serially (P7.2 and P7.3 done) (recipe types, KubeJS schemas and the variant registry are contracts), after P8.1 (done; later items append their triggers and stats to its contracts). P7.4 and P7.5 were added after the phase was planned.
+- G: P7.2 → P7.3 → P7.4 → P7.5 serially (P7.2 to P7.4 done) (recipe types, KubeJS schemas and the variant registry are contracts), after P8.1 (done; later items append their triggers and stats to its contracts). P7.4 and P7.5 were added after the phase was planned.
 - H: P8.2 + P9.1, then P8.3 + P9.2. P8.2 owns command syntax; P8.3 owns the KubeJS binding contract.
 - P8.4 (playable slice) runs alone after P4.9, P4.10, P4.11, P5.3, P5.5, P7.4, P7.5 and P8.2, and before wave I; it owns `pack/config/remission-common.toml` and may add Mekanism Generators to the pack ahead of P10.1, owning pack membership while it runs.
 - I: P10.1 alone (owns `pack/pack.toml`, `pack/mods/` and the build-file entries for every mod-side integration).
@@ -150,9 +150,9 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P4.15 (animated nidus model, after P4.10) runs alone or before P4.13; it owns the nidus renderer and assets and adds GeckoLib to the build files.
 - P4.16 (festering keeps what it covers, after P4.8 and P5.2) runs alone or alongside items that touch neither `world/` festering, `purification/` nor remission-data-formats; it removes two blocks from the registry, so it is that wave's registry owner, and must merge before P4.9.
 - P5.7 (countermeasures) is done, ahead of P5.6, P7.7, P7.8, P10.2 and P10.6, which add hazards to its contracts (the countermeasure attachment, the hazard event and query, the protocol item); it retrofitted P5.2's contact viral load as hazard `remission:contact`.
-- P5.8 (after P5.7 and P6.2, both done) runs before P7.7 and P7.8; it owns the hazard notice API, the bestiary screen's hazards tab and its payload, and appends to `integration/journeymap/` (never in the same wave as P5.4 or P8.2).
+- P5.8 (after P5.7 and P6.2) is done, ahead of P7.7 and P7.8; it owned the hazard notice API, the bestiary screen's hazards tab and its payload, and appends to `integration/journeymap/` (never in the same wave as P5.4 or P8.2).
 - P5.6 (follow-up to P5.1 and P5.7) can join any wave or run alone; it owns the viral load system and its HUD while it runs.
-- P6.4 (after P6.2 and P4.12) can join any wave or run alone; it owns `research/Bestiary`.
+- P6.4 (after P6.2 and P4.12) is done; it owned `research/Bestiary` and its team sync.
 - P7.6, P7.7 and P7.8 follow wave G: P7.6 after P7.3 and P5.3; P7.7 and P7.8 can run together after P7.2, with one remission-data-formats owner and one registry owner.
 - P11.6 runs last in wave L, after P11.3.
 - P8.5 (per-world tuning) runs alone, after P5.7 and before P11.2; it owns the config spine while it runs.
