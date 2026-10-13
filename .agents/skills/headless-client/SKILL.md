@@ -18,7 +18,7 @@ It runs `xvfb-run -a -s "-screen 0 WxHx24" /opt/VirtualGL/bin/vglrun -d egl ./gr
 
 `--scene <id>` runs a dev-only harness scene (`mod/src/harness/resources/harness/scenes/<id>.json`, format in visual-checks). It passes `-Pharness_scene`/`-Pharness_output` to `runClient`, which set `remission.harness.scene`/`remission.harness.output`; each `--scene-arg` joins `-Pharness_args` (`remission.harness.args`, `name=value,…`), the scene's declared arguments; the game builds the scene, saves the screenshots and exits by itself. The run passes only if the game exits 0 and `screenshots/harness-result.txt` says `status=ok`; reaching `--timeout` (default 600 with `--scene`) fails it, and the harness has its own 300 s watchdog. A scene run takes about 40 s once the GPU lock is held.
 
-Outputs go to `.local/runs/client-<UTC>/`, with `.local/runs/latest` pointing to the newest run:
+Outputs go to `.local/runs/client-<UTC>/`, with `.local/runs/latest` pointing to the newest run. Each run first prunes folders there older than 7 days, keeping the 30 newest and `latest` (`COUNTERSTRAIN_RUNS_KEEP_DAYS`, `COUNTERSTRAIN_RUNS_KEEP`; `0` keeps everything; `run-scenes.sh` does the same for `.local/scene-runs/`):
 - `console.log`: Gradle and game output.
 - `latest.log` / `debug.log`: copied from `mod/run/client/logs/`.
 - `framebuffer.png`: last Xvfb frame (timeout runs only; a scene run exits before capture).

@@ -47,7 +47,7 @@ and adds the following:
 - It runs in its own process group so teardown is complete.
 - It sizes the game window to the display and skips the first-launch accessibility prompt.
 - It dumps the final frame (Xvfb `-fbdir`) to `framebuffer.png`.
-- It copies logs to `.local/runs/client-<UTC>/` (`.local/runs/latest` links to the newest run).
+- It copies logs to `.local/runs/client-<UTC>/` (`.local/runs/latest` links to the newest run). At the start of each run, under the GPU lock, it deletes run folders older than 7 days, always keeping the 30 newest and `latest`; `tools/run-scenes.sh` prunes `.local/scene-runs/` the same way. `COUNTERSTRAIN_RUNS_KEEP_DAYS` and `COUNTERSTRAIN_RUNS_KEEP` change the limits, and `0` in either keeps everything (e.g. while gathering evidence for a PR). Pruning touches only the checkout the script runs in; copy screenshots you want to keep into `tools/visual-references/` or elsewhere outside `.local/`.
 - It runs `tools/verify-gpu-render.sh` on the game log.
 
 Rules:

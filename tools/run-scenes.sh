@@ -21,7 +21,8 @@
 #                    $GITHUB_STEP_SUMMARY when set)
 #   <scene>/         compare output (<shot>-diff.png, compare-result.txt),
 #                    with "/" in the scene ID replaced by "__"
-# Each client run keeps its own .local/runs/client-<UTC>/ directory.
+# Each client run keeps its own .local/runs/client-<UTC>/ directory. Summaries
+# older than 7 days are pruned like client runs (tools/run-client-headless.sh).
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
@@ -56,6 +57,7 @@ if ((list)); then
   exit 0
 fi
 
+prune_runs "$local_dir/scene-runs" 2
 out="$local_dir/scene-runs/$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$out"
 ln -sfn "$(basename "$out")" "$local_dir/scene-runs/latest"
