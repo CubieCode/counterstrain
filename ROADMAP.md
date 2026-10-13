@@ -562,8 +562,8 @@ Goals: knowledge is gathered from the world and recorded.
 
 ### P6.4: Team-shared research
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: `feat/p6.4-team-shared-research`
 - PR:
 - Depends on: P6.2, P4.12
 - Scope: Research belongs to the team (DESIGN "Teams and multiplayer"). The bestiary lists and counts the union of the team's progress through the team query (each host type at the highest stage any member scanned), synced to each member and updated when a member scans or a player joins or leaves a team. Each player's own record is kept, so a player leaving a team keeps what they scanned. `remission:host_scanned` still fires for the scanning player; a team-level bestiary query lets quests and scripts read the team total. Documented in remission-data-formats.
