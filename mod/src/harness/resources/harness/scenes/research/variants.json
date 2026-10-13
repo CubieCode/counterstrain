@@ -21,7 +21,11 @@
     {"spawn": "minecraft:zombie", "pos": [90.5, -60.0, 8.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"pylon\"]}"},
     {"corrupt": "@e[tag=base]", "level": 50},
     {"corrupt": "@e[tag=fire]", "level": 50},
-    {"corrupt": "@e[tag=pylon]", "level": 50}
+    {"corrupt": "@e[tag=pylon]", "level": 50},
+    "harness player scan_host @e[type=minecraft:cow,tag=fire]",
+    "harness player scan_host @e[type=minecraft:cow,tag=pylon]",
+    "harness player scan_host @e[type=minecraft:cow,tag=base]",
+    "harness player scan_block 56 -61 4"
   ],
   "shots": [
     {
@@ -34,13 +38,7 @@
     {
       "name": "scan_host",
       "camera": {"pos": [56.5, -60.0, 2.5], "yaw": 0.0, "pitch": 10.0},
-      "commands": [
-        "gamemode survival @a",
-        "harness player scan_host @e[type=minecraft:cow,tag=fire]",
-        "harness player scan_host @e[type=minecraft:cow,tag=pylon]",
-        "harness player scan_host @e[type=minecraft:cow,tag=base]",
-        "harness player scan_block 56 -61 4"
-      ],
+      "commands": ["gamemode survival @a"],
       "tooltip": 37,
       "gui_scale": 3
     },

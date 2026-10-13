@@ -326,10 +326,10 @@ public final class VariantTests {
         });
     }
 
-    @GameTest(template = "empty", batch = BATCH + "_command")
+    @GameTest(template = "empty", batch = BATCH + "_command", timeoutTicks = 400)
     public static void commandSetsClearsAndQueries(GameTestHelper helper) {
-        // The host's chunk is new; entity searches find a mob in it only a few ticks after it loads, as in play, where
-        // hosts live in loaded chunks. So the area is set up now and checked later.
+        // The host's chunk is new; entity searches find a mob in it only once the chunk has finished loading (in play,
+        // hosts live in loaded chunks). So the area is set up now and checked once the host can be found.
         ChunkPos own = new ChunkPos(helper.absolutePos(BlockPos.ZERO));
         Area area = new Area(helper, new ChunkPos(own.x + FAR + 5 * SPACING, own.z), new ArrayList<>(), new ArrayList<>(),
                 new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
@@ -338,14 +338,18 @@ public final class VariantTests {
         Pig host = area.pig(1, 0);
         Corruption.set(host, 50, CorruptionCause.COMMAND);
         ServerPlayer player = area.player(2, 0);
-        helper.runAfterDelay(20, () -> {
-            try {
-                commandChecks(helper, area, nidus, host, player);
-            } finally {
-                VariantSettings.override(null);
-                area.release();
-            }
-        });
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(helper.getLevel().getEntitiesOfClass(Pig.class, host.getBoundingBox())
+                        .contains(host), "host not searchable yet"))
+                .thenExecute(() -> {
+                    try {
+                        commandChecks(helper, area, nidus, host, player);
+                    } finally {
+                        VariantSettings.override(null);
+                        area.release();
+                    }
+                })
+                .thenSucceed();
     }
 
     private static void commandChecks(GameTestHelper helper, Area area, BlockPos nidus, Pig host, ServerPlayer player) {
@@ -373,7 +377,6 @@ public final class VariantTests {
         listen(VariantEmergedEvent.class, event -> event.setCanceled(true),
                 () -> assertFails(server, source, "remission variant set " + at + " " + FIRE, "set while cancelled"));
         helper.assertTrue(VariantRecords.get(level).variant(nidus).isEmpty(), "cancelled set changed the nidus");
-        helper.succeed();
     }
 
     @GameTest(template = "empty", batch = BATCH + "_off")
