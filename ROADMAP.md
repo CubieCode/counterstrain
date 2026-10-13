@@ -562,7 +562,7 @@ Goals: knowledge is gathered from the world and recorded.
 
 ### P6.4: Team-shared research
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: `feat/p6.4-team-shared-research`
 - PR:
 - Depends on: P6.2, P4.12
