@@ -27,7 +27,7 @@ import net.minecraft.resources.ResourceLocation;
  * The {@code RemissionEvents} KubeJS event group (P8.3): one server-script handler per public API event in
  * {@code com.cubiecode.remission.api}. Handlers marked cancellable take {@code event.cancel()}; the hazard events take an
  * optional hazard ID target ({@code RemissionEvents.strainHazard('remission:contact', event => ...)}). Contract:
- * remission-data-formats, "KubeJS bindings".
+ * remission-data-formats, "KubeJS event bindings".
  */
 public interface RemissionEvents {
     EventGroup GROUP = EventGroup.of("RemissionEvents");

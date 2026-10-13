@@ -38,7 +38,11 @@ import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterGameTestsEvent;
+import net.neoforged.neoforge.gametest.GameTestHooks;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
@@ -55,7 +59,22 @@ public final class KubeJSBindingTests {
     private static final UUID PROBE_PLAYER = UUID.fromString("00000000-0000-0000-0000-00000000a5a5");
     private static final ChunkPos FAR = new ChunkPos(30002, 30002);
 
+    /** The chunk row the sample tests use; see {@link #isolateSampleFirebreaks}. */
+    private static final int SAMPLE_CHUNK_Z = 40000;
+    /** The persistent data compound nidus_firebreak.js keeps its firebreaks in. */
+    private static final String SAMPLE_FIREBREAKS = "counterstrain:nidus_firebreaks";
+
     private KubeJSBindingTests() {
+    }
+
+    /** Registers the tests, and in the gametest server the firebreak isolation. Called by {@link KubeJSIntegration}. */
+    public static void register(IEventBus modBus) {
+        modBus.addListener(RegisterGameTestsEvent.class, event -> event.register(KubeJSBindingTests.class));
+        if (GameTestHooks.isGametestServer()) {
+            NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, NidusDestroyedEvent.class,
+                    KubeJSBindingTests::isolateSampleFirebreaks);
+            Remission.LOGGER.info("Gametest server: keeping the KubeJS sample's firebreaks to KubeJSBindingTests");
+        }
     }
 
     @GameTest(templateNamespace = Remission.MOD_ID, template = "empty")
@@ -142,9 +161,9 @@ public final class KubeJSBindingTests {
         ServerLevel level = helper.getLevel();
         // A fresh chunk each run: firebreaks persist with the server's data.
         int x = 40000 + level.getRandom().nextInt(100000) * 8;
-        ChunkPos chunk = new ChunkPos(x, 40000);
-        ChunkPos neighbour = new ChunkPos(x + 1, 40001);
-        ChunkPos beyond = new ChunkPos(x + 3, 40000);
+        ChunkPos chunk = new ChunkPos(x, SAMPLE_CHUNK_Z);
+        ChunkPos neighbour = new ChunkPos(x + 1, SAMPLE_CHUNK_Z + 1);
+        ChunkPos beyond = new ChunkPos(x + 3, SAMPLE_CHUNK_Z);
 
         BlockPos nidus = chunk.getMiddleBlockPosition(64);
         // A nidus removed without a player leaves no firebreak.
@@ -160,10 +179,63 @@ public final class KubeJSBindingTests {
         var beside = post(new StrainSpreadAttemptEvent(level, beyond, neighbour, 4, false));
         helper.assertTrue(!beside.isCanceled() && beside.getRateMultiplier() == 0.5,
                 "the sample did not halve spread beside the firebreak: " + beside.getRateMultiplier());
-        var away = post(new StrainSpreadAttemptEvent(level, new ChunkPos(x + 4, 40000), beyond, 4, false));
+        var away = post(new StrainSpreadAttemptEvent(level, new ChunkPos(x + 4, SAMPLE_CHUNK_Z), beyond, 4, false));
         helper.assertTrue(!away.isCanceled() && away.getRateMultiplier() == 1.0,
                 "the sample changed spread away from the firebreak");
         helper.succeed();
+    }
+
+    /** The sample's firebreaks expire: an expired one no longer cancels spread, and the next firebreak sweeps it. */
+    @GameTest(templateNamespace = Remission.MOD_ID, template = "empty")
+    public static void sampleFirebreakExpires(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 40000 + level.getRandom().nextInt(100000) * 8;
+        ChunkPos chunk = new ChunkPos(x, SAMPLE_CHUNK_Z);
+        ChunkPos neighbour = new ChunkPos(x + 1, SAMPLE_CHUNK_Z);
+        ServerPlayer player = SurgeTests.player(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+        post(new NidusDestroyedEvent(level, chunk.getMiddleBlockPosition(64), player, List.of(player.getUUID())));
+        String key = sampleFirebreakKey(level, chunk);
+        CompoundTag firebreaks = data(helper).getCompound(SAMPLE_FIREBREAKS);
+        helper.assertTrue(firebreaks.getLong(key) > level.getGameTime(), "the sample stored no firebreak");
+
+        // Expire it in place, as if FIREBREAK_TICKS had passed.
+        firebreaks.putLong(key, level.getGameTime() - 1);
+        var into = post(new StrainSpreadAttemptEvent(level, neighbour, chunk, 4, false));
+        helper.assertTrue(!into.isCanceled() && into.getRateMultiplier() == 1.0,
+                "an expired firebreak still changed spread");
+
+        ChunkPos other = new ChunkPos(x + 5, SAMPLE_CHUNK_Z);
+        post(new NidusDestroyedEvent(level, other.getMiddleBlockPosition(64), player, List.of(player.getUUID())));
+        CompoundTag after = data(helper).getCompound(SAMPLE_FIREBREAKS);
+        helper.assertFalse(after.contains(key), "a new firebreak did not sweep the expired one");
+        helper.assertTrue(after.contains(sampleFirebreakKey(level, other)), "the sample stored no second firebreak");
+        helper.succeed();
+    }
+
+    /**
+     * Keeps the pack sample's firebreaks out of other gametests: players destroy nidi in other tests' structures, and
+     * a firebreak there would change spread those tests measure. Registered by {@link #register} at the lowest
+     * priority, so it runs after every script handler whatever order the scripts load in, and only in the gametest
+     * server. It drops every firebreak outside this class's chunk row ({@link #SAMPLE_CHUNK_Z}).
+     */
+    private static void isolateSampleFirebreaks(NidusDestroyedEvent event) {
+        ChunkPos chunk = new ChunkPos(event.getPos());
+        if (chunk.z == SAMPLE_CHUNK_Z) {
+            return;
+        }
+        CompoundTag data = ((MinecraftServerKJS) event.getLevel().getServer()).kjs$getPersistentData();
+        if (data.contains(SAMPLE_FIREBREAKS)) {
+            CompoundTag firebreaks = data.getCompound(SAMPLE_FIREBREAKS);
+            firebreaks.remove(sampleFirebreakKey(event.getLevel(), chunk));
+            if (firebreaks.isEmpty()) {
+                data.remove(SAMPLE_FIREBREAKS);
+            }
+        }
+    }
+
+    /** The key nidus_firebreak.js stores a firebreak under. */
+    private static String sampleFirebreakKey(ServerLevel level, ChunkPos chunk) {
+        return level.dimension().location() + " " + chunk.x + " " + chunk.z;
     }
 
     private static void expectScript(GameTestHelper helper, String handler, Supplier<? extends Event> event) {

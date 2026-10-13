@@ -1,6 +1,6 @@
 ---
 name: kubejs-scripting
-description: Write or review Counterstrain KubeJS scripts (KubeJS 2101.x on NeoForge 1.21.1) for recipes, tags, gating, tooltips and Remission recipe types, using ProbeJS declarations as the API reference.
+description: Write or review Counterstrain KubeJS scripts (KubeJS 2101.x on NeoForge 1.21.1) for recipes, tags, gating, tooltips, Remission recipe types and Remission event bindings (`RemissionEvents` handlers for host, festering land, nidus, spread, surge, revenant, viral load, hazard and team events), using ProbeJS declarations as the API reference.
 ---
 
 # KubeJS scripting

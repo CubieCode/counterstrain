@@ -44,7 +44,6 @@ import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
 /**
  * Optional KubeJS integration (P8.3): forwards every public API event to its {@link RemissionEvents} handler, so server
@@ -86,7 +85,7 @@ public final class KubeJSIntegration {
                         new CountermeasureGranted(event));
             }
         });
-        modBus.addListener(RegisterGameTestsEvent.class, event -> event.register(KubeJSBindingTests.class));
+        KubeJSBindingTests.register(modBus);
         Remission.LOGGER.info("KubeJS present: posting Remission API events to RemissionEvents");
     }
 

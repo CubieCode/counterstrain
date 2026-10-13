@@ -38,16 +38,7 @@ RemissionEvents.nidusDamaged(event => {
     event.amount = event.amount * 2
   }
 })
-RemissionEvents.nidusDestroyed(event => {
-  seen(event.server, 'nidusDestroyed')
-  // The pack sample (nidus_firebreak.js, loaded first) makes a firebreak wherever players destroy a nidus, which would
-  // change spread in other tests' structures nearby. Keep only the ones KubeJSBindingTests makes (chunk z 40000).
-  const chunkZ = event.pos.z >> 4
-  if (chunkZ != 40000) {
-    event.server.persistentData.remove('counterstrain:nidus_firebreak ' + event.level.dimension + ' ' + (event.pos.x >> 4)
-      + ' ' + chunkZ)
-  }
-})
+RemissionEvents.nidusDestroyed(event => seen(event.server, 'nidusDestroyed'))
 RemissionEvents.surgeStarted(event => seen(event.server, 'surgeStarted'))
 RemissionEvents.surgeEnded(event => seen(event.server, 'surgeEnded'))
 RemissionEvents.revenantRisen(event => seen(event.server, 'revenantRisen'))
