@@ -215,6 +215,9 @@ The world is generated, so without a rule a player could walk away from the Stra
 
 Each tie-in creates a progression gate. **Pack-side** means KubeJS scripts and datapacks on Remission's data, recipe and API surfaces; **mod-side optional** means Java in `integration/<modid>/` against the other mod's `compileOnly` API, loaded only when that mod is present. Pack-side is the default; mod-side is used only where the other mod's content can be registered or hooked only from Java. Built in phase 10; pack membership is P10.1. Availability (a 1.21.1 NeoForge release, and a CurseForge listing per the [distribution](#distribution) policy) was checked on 2026-10-11.
 
+<details>
+<summary>Tie-ins by mod</summary>
+
 | Mod | Tie-in | Gate | Side and reasoning |
 | --- | --- | --- | --- |
 | Create | Encased fans with a purifying catalyst cleanse blocks in their stream; fan walls act as Strain firebreaks; track and belts in festering chunks rot | Kinetics needed before you can hold a frontier | Mod-side optional: fan processing types and in-stream block effects are Java registrations. Firebreaks use the spread attempt event. Rot: pack-side, by tagging track and belts `#remission:rots`. |
@@ -242,9 +245,14 @@ Each tie-in creates a progression gate. **Pack-side** means KubeJS scripts and d
 | Patchouli or Modonomicon | An in-game field journal that fills in as you scan hosts, find logs and destroy nidi, carrying the story alongside quests | Lore delivery tied to research progress | Pack-side: books and unlocks are data keyed on Remission advancements. Which book mod is decided in P10.7. |
 | Biomes O' Plenty / Terralith | More biome variety for the Strain to fester through, each with its own fester variant | Worldgen variety, no gate | Pack-side: per-biome fester variants are data. Biomes O' Plenty's 1.21.1 NeoForge files are marked beta. |
 
+</details>
+
 ### Supporting mods
 
 Mods that support a Counterstrain feature without a tie-in of their own: no Remission code and no progression gate. Availability (a 1.21.1 NeoForge file on CurseForge) was checked on 2026-10-13; added in P10.1.
+
+<details>
+<summary>Supporting mods</summary>
 
 | Mod | Supports | Notes |
 | --- | --- | --- |
@@ -256,15 +264,22 @@ Mods that support a Counterstrain feature without a tie-in of their own: no Remi
 | FTB Chunks | Server rules (P11.6): teams claim land so other players cannot break their builds or pylons; claims never stop the Strain | Pack-side config; its CurseForge file for 1.21.1 NeoForge is confirmed in P10.1. |
 | YUNG's Better Dungeons (with YUNG's API) | More places to explore beside the pack's own wreck sites; its dungeons fester like any other structure | Optional; wreck sites stay the main exploration content. |
 
+</details>
+
 Considered and not added: Apotheosis (on CurseForge for 1.21.1, but it reworks enchanting, gear and mob difficulty across the game; revisit if the P11.3 playtest finds loot dull), Explorer's Compass (no 1.21.1 file confirmed on CurseForge; P8.2's map overlay covers navigation), AmbientSounds (would suit P4.11, but its 1.21.1 NeoForge builds were found only on Modrinth, so the [distribution](#distribution) policy rules it out until a CurseForge file or redistribution permission is confirmed) and Chunky (no 1.21.1 file confirmed on CurseForge; Chunk Pregenerator covers it).
 
 ### Considered and unavailable on 1.21.1
 
 Not proposed again unless an official 1.21.1 NeoForge release appears. Unofficial ports are not used.
 
+<details>
+<summary>Checked mods</summary>
+
 - **Botania** (checked 2026-10-11): no official 1.21.1 NeoForge release; the official project stops at 1.20.1.
 - **Create: Steam 'n' Rails** (checked 2026-10-11): no official 1.21.1 NeoForge release; the official project stops at 1.20.1. Create's own track rots through the generic rot tag.
 - **DireGoo** (checked 2026-10-13): a Forge mod whose last release (1.1.0) dates from 2021; no 1.21.1 NeoForge release. Its spreading goo and the tools that revert it would also duplicate Remission's own spread and purification.
+
+</details>
 
 ## Distribution
 

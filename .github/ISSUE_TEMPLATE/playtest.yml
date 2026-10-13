@@ -1,0 +1,45 @@
+name: Playtest finding
+description: A finding from a Counterstrain playtest (balance, quests, integrations, unfinished content).
+labels: [playtest, pack]
+body:
+  - type: markdown
+    attributes:
+      value: Follow the playtesting skill (`.agents/skills/playtesting/SKILL.md`). One finding per issue.
+  - type: input
+    id: setup
+    attributes:
+      label: Setup
+      description: Pack version, Remission commit, seed and config changes.
+      placeholder: "pack 0.1.0, remission abc1234, seed 12345, default config"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Balance or pacing
+        - Quest or progression
+        - Mod integration
+        - Visual or audio
+        - Placeholder or unfinished content
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: finding
+    attributes:
+      label: Finding
+      description: What happened, where in progression, and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Screenshots (`tools/collect-screenshots.sh`), log excerpts and coordinates.
+  - type: input
+    id: roadmap
+    attributes:
+      label: Related roadmap item
+      placeholder: "P5.2"

@@ -7,6 +7,7 @@
 # RUN_GAME_DIR defaults to mod/run/client. --clear removes the copied
 # screenshots from the run directory so the next run starts empty.
 # Output: .local/screenshots/<UTC time>/ and .local/screenshots/latest
+# -h or --help prints this text.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
@@ -15,6 +16,7 @@ clear=0
 for arg in "$@"; do
   case "$arg" in
     --clear) clear=1 ;;
+    -h|--help) awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit 0 ;;
     -*) die "unknown option: $arg" ;;
     *) game_dir="$arg" ;;
   esac

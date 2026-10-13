@@ -5,9 +5,13 @@
 #   tools/bump-version.sh pack 0.2.0    edits pack/pack.toml (version) and refreshes
 #
 # It does not commit or tag; see the release skill for the tag step
-# (mod-v<version> / pack-v<version>).
+# (mod-v<version> / pack-v<version>). -h or --help prints this text.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
+if [[ "${1:-}" == -h || "${1:-}" == --help ]]; then
+  awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
+  exit 0
+fi
 
 target="${1:-}"
 version="${2:-}"

@@ -7,8 +7,12 @@
 # copied from it: no run directories, worlds, configs, instances or tokens.
 # Each lane gets its own mod/run/ and .local/; the Gradle and packwiz caches in
 # $HOME are shared safely. Client runs share one GPU through the lock in
-# tools/run-client-headless.sh.
+# tools/run-client-headless.sh. -h or --help prints this text.
 set -euo pipefail
+if [[ "${1:-}" == -h || "${1:-}" == --help ]]; then
+  awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
+  exit 0
+fi
 root_path="${1:?Usage: worktree-setup.sh ROOT_PATH WORKTREE_PATH}"
 worktree_path="${2:?Usage: worktree-setup.sh ROOT_PATH WORKTREE_PATH}"
 cd "$worktree_path"

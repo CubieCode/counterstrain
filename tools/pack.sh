@@ -12,8 +12,13 @@
 #
 # Remission is never part of the packwiz index; exports do not contain it
 # until it is published and added with `packwiz mr add` / `packwiz cf add`.
+# -h or --help prints this text; no or an unknown command prints it and exits 2.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
+if [[ "${1:-}" == -h || "${1:-}" == --help ]]; then
+  awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
+  exit 0
+fi
 require packwiz
 
 self="$(realpath "$0")"
@@ -50,7 +55,7 @@ case "$cmd" in
     exec packwiz serve --port "$port"
     ;;
   *)
-    sed -n '2,14p' "$self" >&2
+    awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$self" >&2
     exit 2
     ;;
 esac

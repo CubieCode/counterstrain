@@ -5,9 +5,13 @@
 #
 # INSTANCE_DIR defaults to $COUNTERSTRAIN_INSTANCE or .local/instance; point it
 # at a launcher instance's game directory (the one containing mods/). Older
-# remission-*.jar files there are replaced.
+# remission-*.jar files there are replaced. -h or --help prints this text.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
+if [[ "${1:-}" == -h || "${1:-}" == --help ]]; then
+  awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
+  exit 0
+fi
 
 instance="${1:-${COUNTERSTRAIN_INSTANCE:-$local_dir/instance}}"
 use_sdkman_java
