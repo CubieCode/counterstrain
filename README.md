@@ -31,7 +31,7 @@ Phases 0 to 3 and 6 are complete, 4, 5, 7 and 8 are in progress, and 9 to 12 hav
 | 5. Viral load and early purification | in progress | Viral load and its HUD meter; purifier, quarantine pylons and mendroot; remission zones; revenants; countermeasures; hazard notices and the bestiary's hazards tab |
 | 6. Research | done | Scanner, bestiary with hidden types, team-shared research |
 | 7. Tech chain | in progress | Miasma, nidus cores, analyzer, sequencer and synthesizer, serums, purifier fuel, Counterstrain prototypes, KubeJS recipe methods, reclaimers |
-| 8. Quest integration | in progress | Advancement triggers and stats, quest-fired commands, JourneyMap overlay |
+| 8. Quest integration | in progress | Advancement triggers and stats, quest-fired commands, JourneyMap overlay, KubeJS event bindings |
 | 9 to 12 | todo | Endgame cure, mod integrations, pack assembly, polish and release |
 
 ## Stack and decisions
