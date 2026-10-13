@@ -1,0 +1,201 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamerule sendCommandFeedback false",
+    "difficulty peaceful",
+    "gamerule doMobSpawning false",
+    "gamemode creative @a",
+    "harness fester -48 -60 -48 47 -60 47 60",
+    "setblock 0 -60 0 remission:nidus",
+    {
+      "spawn": "minecraft:cow",
+      "pos": [
+        10.3,
+        -60.0,
+        2.5
+      ],
+      "yaw": 0.0
+    },
+    {
+      "spawn": "minecraft:pig",
+      "pos": [
+        11.0,
+        -60.0,
+        9.8
+      ],
+      "yaw": 67.0
+    },
+    {
+      "spawn": "minecraft:sheep",
+      "pos": [
+        6.2,
+        -60.0,
+        17.6
+      ],
+      "yaw": 134.0
+    },
+    {
+      "spawn": "minecraft:cow",
+      "pos": [
+        -1.5,
+        -60.0,
+        10.3
+      ],
+      "yaw": 201.0
+    },
+    {
+      "spawn": "minecraft:pig",
+      "pos": [
+        -8.8,
+        -60.0,
+        11.0
+      ],
+      "yaw": 268.0
+    },
+    {
+      "spawn": "minecraft:sheep",
+      "pos": [
+        -16.6,
+        -60.0,
+        6.2
+      ],
+      "yaw": 335.0
+    },
+    {
+      "spawn": "minecraft:cow",
+      "pos": [
+        -9.3,
+        -60.0,
+        -1.5
+      ],
+      "yaw": 42.0
+    },
+    {
+      "spawn": "minecraft:pig",
+      "pos": [
+        -10.0,
+        -60.0,
+        -8.8
+      ],
+      "yaw": 109.0
+    },
+    {
+      "spawn": "minecraft:sheep",
+      "pos": [
+        -5.2,
+        -60.0,
+        -16.6
+      ],
+      "yaw": 176.0
+    },
+    {
+      "spawn": "minecraft:cow",
+      "pos": [
+        2.5,
+        -60.0,
+        -9.3
+      ],
+      "yaw": 243.0
+    },
+    {
+      "spawn": "minecraft:pig",
+      "pos": [
+        9.8,
+        -60.0,
+        -10.0
+      ],
+      "yaw": 310.0
+    },
+    {
+      "spawn": "minecraft:sheep",
+      "pos": [
+        17.6,
+        -60.0,
+        -5.2
+      ],
+      "yaw": 17.0
+    },
+    {
+      "spawn": "minecraft:cow",
+      "pos": [
+        35.5,
+        -60.0,
+        2.5
+      ],
+      "yaw": 90.0
+    },
+    {
+      "spawn": "minecraft:sheep",
+      "pos": [
+        -34.5,
+        -60.0,
+        -3.5
+      ],
+      "yaw": 270.0
+    },
+    "remission infect @e[type=!minecraft:player] 60"
+  ],
+  "shots": [
+    {
+      "name": "before",
+      "camera": {
+        "pos": [
+          0.5,
+          -26.0,
+          0.5
+        ],
+        "yaw": 180.0,
+        "pitch": 90.0
+      },
+      "commands": [
+        "tick step 2"
+      ]
+    },
+    {
+      "name": "struck",
+      "camera": {
+        "pos": [
+          0.5,
+          -26.0,
+          0.5
+        ],
+        "yaw": 180.0,
+        "pitch": 90.0
+      },
+      "commands": [
+        "harness nidus 0 -60 0 80",
+        "title @a actionbar \"\"",
+        "tick step 60"
+      ]
+    },
+    {
+      "name": "converging",
+      "camera": {
+        "pos": [
+          0.5,
+          -26.0,
+          0.5
+        ],
+        "yaw": 180.0,
+        "pitch": 90.0
+      },
+      "commands": [
+        "tick step 120"
+      ]
+    },
+    {
+      "name": "close",
+      "camera": {
+        "pos": [
+          0.5,
+          -53.0,
+          13.5
+        ],
+        "yaw": 180.0,
+        "pitch": 28.0
+      },
+      "commands": []
+    }
+  ]
+}

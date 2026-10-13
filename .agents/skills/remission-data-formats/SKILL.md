@@ -619,6 +619,37 @@ Default fight: a new nidus has 250 vitality and a full-grown one 375 for one pla
 
 Events: `NidusDamagedEvent` (cancellable) and `NidusDestroyedEvent` (Public API, below).
 
+## Nidus defence: rallying and sympathetic surges (built, P4.13)
+
+A nidus fight builds up and pushes back on other fronts. Both are off while `[nidi] vitality` is 0 (no fights).
+
+**Rallying.** While a nidus is under attack (in a fight and damaged within `contributorWindowTicks`), hosts in its land converge on it. Once a second it may make at most `rallyBatch` path searches: first for its rallying hosts that stopped short (path finished more than 4 blocks from the nidus, no target), then for new hosts, nearest first, among living hosts (any entity type, any mob profile) in loaded chunks at festering stage 1 or higher within `rallyRadius` blocks of the nidus. A host whose path reaches the nidus, or at least ends 2 blocks nearer, walks (or flies, or swims) along it; one that cannot get closer is left alone until the fight ends. A host with a target fights it with its own goals, then is sent on again. When the attack ends the rally ends and hosts go back to their own behaviour. Rallying uses each host's own navigation: no goal, attribute or entity data is added and nothing is saved.
+
+**Sympathetic surges.**
+
+- Each time a nidus passes one of its `thresholds` (after its own threshold surge has started), a roll against `sympatheticChance` (a hash of the game time and the nidus's position, so a replayed fight rolls the same) decides whether a sympathetic surge is set off. The nidus that answers is the nearest other nidus in the level's index within `sympatheticRadius` blocks horizontally (ties to the lower `BlockPos.asLong`); none in range, none set off. Its intensity is `max(1, round(threshold surge intensity × sympatheticIntensity))`.
+- A level still runs one surge at a time, so the sympathetic surge is **queued**: one request per level (a newer request replaces an older one). On the first tick with no surge warning or running, before a scheduled surge is considered, it is taken off the queue and, if its nidus is still indexed, is not the attacked one and `sympathetic` is still on, it warns as any surge does (`[surges] warningTicks`, title, horn, boss bar) and then starts; otherwise it is dropped. While the fight lasts its own threshold surges hold the slot, so the sympathetic surge usually warns when the fight's last surge ends or is cut short (the nidus destroyed).
+- A later threshold supersedes a sympathetic surge that is warning or running (`SurgeEndedEvent.Reason.SUPERSEDED` if it had started; it does not come back) and keeps the queued request unless it queues a newer one. `/remission surge stop` ends the current surge and drops the request.
+- When it starts, `SurgeStartedEvent.getCause()` is `SYMPATHETIC` and `getAttackedNidus()` names the nidus under attack; it is otherwise an ordinary surge (spread factor, waves, clouds, `surge_survived` for players caught in it).
+
+Config `config/remission-common.toml`, section `[nidi]`, appended keys (read when used):
+
+| Key | Default | Range | Meaning |
+| --- | --- | --- | --- |
+| `rally` | true | bool | Whether hosts rally to a nidus under attack. |
+| `rallyRadius` | 32 | 1–128 | Blocks from the nidus within which hosts in festering chunks rally. |
+| `rallyBatch` | 4 | 1–64 | Path searches per second per nidus under attack, at most: the hosts it sends for, or sends on again. |
+| `sympathetic` | true | bool | Whether a threshold passed may set off a sympathetic surge (checked again when the queued surge would start). |
+| `sympatheticRadius` | 128 | 1–1024 | Blocks (horizontal) within which another nidus may answer. |
+| `sympatheticChance` | 0.5 | 0–1 | Chance per threshold passed. |
+| `sympatheticIntensity` | 0.5 | 0–1 | Sympathetic surge intensity as a fraction of the threshold surge's, at least 1. |
+
+Saved data `data/remission_surges.dat` gains `sympathetic` (`origin`, `intensity` 1–10, `attacked`; the queued request, absent when none), and `current` gains `sympathetic_to` (the attacked nidus, only on a sympathetic surge). Both are optional; older files load unchanged.
+
+Cost (foundry, `NidusRallyBenchmark`, `REMISSION_NIDUS_RALLY=4,16,64`; 300 husk hosts 6–30 blocks from a nidus, struck for 60 s): a path search costs about 0.07–0.09 ms, so a batch costs 0.30 ms mean at `rallyBatch` 4 (61 hosts rallying after 60 s), 1.35 ms at 16 (220 rallying) and 1.58 ms mean, 11.2 ms worst at 64 (226 rallying), once a second; the server's mean tick time stayed within noise (2.1–3.3 ms per 100-tick window, idle or rallying). Details: docs/ARCHITECTURE.md (Nidus defence). Gametests: `NidusDefenceTests` (batch `nidus_defence`).
+
+Events: `SurgeStartedEvent` gains `getCause()` and `getAttackedNidus()` (Public API, below); KubeJS `surgeStarted` gains `cause` and `attackedNidus` (KubeJS event bindings, below).
+
 ## Festering stages, blocks and the fester biome (built, P4.2; caves P4.6; plants and stage order P4.16)
 
 A chunk's festering stage (`[festering] stageThresholds`, Public API below) turns its land, in `world/FesteringStages`, server side:
@@ -907,7 +938,7 @@ Conventions, for every event here and every event later items add:
 | `ChunkStageChangedEvent extends FesteringLandEvent` | `getLevel()`, `getChunk()` (`ChunkPos`), `getOldLevel()`, `getNewLevel()`, `getOldStage()`, `getNewStage()` | After the spread engine stores a chunk level whose festering stage differs from the old one: live passes and catch-up; since P5.2 also after purification lowers one (stages then fall). A catch-up posts once per chunk, so stages can jump by more than one; changes within a stage post nothing. | no |
 | `NidusDestroyedEvent extends FesteringLandEvent` | `getLevel()`, `getPos()` (the nidus block), `getPlayer()` (`Optional<ServerPlayer>`: who destroyed it, P4.10), `getContributors()` (immutable `List<UUID>`, may include offline players: every player credited, in the order they first damaged it, the destroyer included) | After a nidus leaves the level's index: its block was broken, replaced or removed, or a spread pass found an index entry without its block. Its land keeps its level. A player and contributors only when a player destroyed it (the final blow of a fight, a creative break, or a break at `[nidi] vitality` 0; Nidus encounters, above); empty for other removals. To protect a nidus, cancel `NidusDamagedEvent` (and the block break for creative players). When the block was removed, it is posted from the block's `onRemove` inside `setBlockState`: listeners must not set the block at `getPos()` in the listener (defer it). | no |
 | `BlockFesteredEvent extends FesteringLandEvent` (P4.2) | `getLevel()`, `getPos()`, `getOldState()`, `getNewState()` | After a block in a festering chunk is replaced through `remission:festers_into` (Festering stages, above), or gains festering vein faces (P4.8; old state air or a vein), once per block: it is block-scoped, so a chunk's stage batch posts one per replaced block, spread over the ticks the batch takes. The biome flip posts nothing. Listeners must not set the block at `getPos()` in the listener. | no |
-| `SurgeStartedEvent extends FesteringLandEvent` (P4.3) | `getLevel()`, `getOrigin()` (the nidus), `getIntensity()` (1–10), `getEndTime()` (game time it is due to end) | When a surge's warning runs out and it starts, after its clouds are released and before its first wave (Surges and miasma clouds, above). Never for a surge stopped during its warning. | no |
+| `SurgeStartedEvent extends FesteringLandEvent` (P4.3) | `getLevel()`, `getOrigin()` (the nidus), `getIntensity()` (1–10), `getEndTime()` (game time it is due to end), `getCause()` (`Cause.DIRECT`, or `SYMPATHETIC` for a sympathetic surge; P4.13), `getAttackedNidus()` (`Optional<BlockPos>`: for a sympathetic surge, the nidus under attack that set it off; P4.13) | When a surge's warning runs out and it starts, after its clouds are released and before its first wave (Surges and miasma clouds, above). Never for a surge stopped during its warning. | no |
 | `SurgeEndedEvent extends FesteringLandEvent` (P4.3) | `getLevel()`, `getOrigin()`, `getIntensity()`, `getReason()` (`ELAPSED`, `NIDUS_DESTROYED`, `STOPPED`, `SUPERSEDED`: a nidus under attack started a surge in its place, P4.10, with no survivors when that nidus was its own origin; treat unknown values as `STOPPED`), `getSurvivors()` (immutable list of the `ServerPlayer`s awarded `surge_survived`) | When a started surge ends, after acceleration and waves stopped and survivors were awarded. Its clouds keep drifting. | no |
 | `NidusDamagedEvent extends FesteringLandEvent` (P4.10) | `getLevel()`, `getPos()`, `getKind()` (`STRIKE`, `PROJECTILE`, `EXPLOSION`), `getPlayer()` (`Optional<ServerPlayer>`: the striker, the projectile's owner or the player behind the explosion), `getDirectEntity()` (the projectile or the explosion's direct source, or null), `getAmount()`/`setAmount(float)` (vitality lost, after the projectile or explosion fraction; negative or NaN become 0) | Before a nidus takes damage a player is behind (Nidus encounters, above; never for hosts' or unattributed damage, fake players, strikes within the strike cooldown, or while `[nidi] vitality` is 0). Projectile and explosion damage is then capped so it leaves at least 1 vitality. | yes: cancelling (or amount 0) means no damage and no credit for the player |
 | `BlockPurifiedEvent extends FesteringLandEvent` (P5.2) | `getLevel()`, `getPos()`, `getOldState()` (the festered block or vein), `getNewState()` (its `cleanses_into` target, or air for a vein), `getCause()` (`PurificationCause`) | After a block is cleansed (Purification and remission zones, below), once per block: block-scoped, so a chunk's budgeted cleanse posts one per changed block over the ticks it takes. The biome restore posts nothing. Listeners must not set the block at `getPos()` in the listener. | no |
@@ -993,7 +1024,7 @@ Handlers (server scripts only; `RemissionEvents.<handler>(event => ...)`). Each 
 | `strainSpreadAttempt` | `StrainSpreadAttemptEvent` | `from`, `to`, `amount`, `catchUp`, `rateMultiplier` (writable; compose by multiplying) | `event.cancel()` stops the step |
 | `nidusDamaged` | `NidusDamagedEvent` | `pos`, `kind`, `player` (nullable), `directEntity` (nullable), `amount` (writable) | `event.cancel()`: no damage, no credit |
 | `nidusDestroyed` | `NidusDestroyedEvent` | `pos`, `player` (final blow, nullable), `contributors` (UUIDs) | no |
-| `surgeStarted` | `SurgeStartedEvent` | `origin`, `intensity`, `endTime` | no |
+| `surgeStarted` | `SurgeStartedEvent` | `origin`, `intensity`, `endTime`, `cause` (`DIRECT` or `SYMPATHETIC`, P4.13), `attackedNidus` (null unless sympathetic, P4.13) | no |
 | `surgeEnded` | `SurgeEndedEvent` | `origin`, `intensity`, `reason`, `survivors` | no |
 | `revenantRisen` | `RevenantRisenEvent` | `entity` (revenant), `owner`, `player` (who died), `source`, `deathPos`, `items`, `experience` | no |
 | `revenantSlain` | `RevenantSlainEvent` | `entity` (revenant), `owner`, `source`, `killer` (nullable), `reclaimed` | no |

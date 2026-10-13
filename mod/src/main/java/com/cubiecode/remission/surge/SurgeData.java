@@ -21,6 +21,8 @@ public final class SurgeData extends SavedData {
     private long nextDue = UNSCHEDULED;
     @Nullable
     private Surge current;
+    @Nullable
+    private SympatheticRequest sympathetic;
 
     public static SurgeData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(FACTORY, FILE_NAME);
@@ -45,11 +47,25 @@ public final class SurgeData extends SavedData {
         setDirty();
     }
 
+    /** The sympathetic surge waiting for the slot (P4.13), or null. */
+    @Nullable
+    public SympatheticRequest sympathetic() {
+        return sympathetic;
+    }
+
+    void setSympathetic(@Nullable SympatheticRequest request) {
+        sympathetic = request;
+        setDirty();
+    }
+
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putLong("next_due", nextDue);
         if (current != null) {
             Surge.CODEC.encodeStart(NbtOps.INSTANCE, current).ifSuccess(surge -> tag.put("current", surge));
+        }
+        if (sympathetic != null) {
+            SympatheticRequest.CODEC.encodeStart(NbtOps.INSTANCE, sympathetic).ifSuccess(request -> tag.put("sympathetic", request));
         }
         return tag;
     }
@@ -60,6 +76,11 @@ public final class SurgeData extends SavedData {
         if (tag.contains("current")) {
             data.current = Surge.CODEC.parse(NbtOps.INSTANCE, tag.get("current"))
                     .resultOrPartial(error -> Remission.LOGGER.warn("Dropping unreadable surge: {}", error))
+                    .orElse(null);
+        }
+        if (tag.contains("sympathetic")) {
+            data.sympathetic = SympatheticRequest.CODEC.parse(NbtOps.INSTANCE, tag.get("sympathetic"))
+                    .resultOrPartial(error -> Remission.LOGGER.warn("Dropping unreadable sympathetic surge: {}", error))
                     .orElse(null);
         }
         return data;

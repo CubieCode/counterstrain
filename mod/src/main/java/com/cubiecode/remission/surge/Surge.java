@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -13,8 +14,8 @@ import net.minecraft.core.UUIDUtil;
 
 /**
  * One surge in a level: its origin nidus, intensity, the game times of its warning, start and end, and the players
- * caught in it so far (in the area while it ran and not dead since) and the hosts it spawned. Mutable only through its
- * started flag, players and hosts.
+ * caught in it so far (in the area while it ran and not dead since) and the hosts it spawned, and for a sympathetic
+ * surge the nidus under attack that set it off. Mutable only through its started flag, players, hosts and sympathy.
  */
 public final class Surge {
     public static final int MAX_INTENSITY = 10;
@@ -28,7 +29,8 @@ public final class Surge {
             Codec.BOOL.optionalFieldOf("started", false).forGetter(Surge::started),
             UUIDUtil.CODEC.listOf().optionalFieldOf("participants", List.of()).forGetter(surge -> List.copyOf(surge.participants)),
             UUIDUtil.CODEC.listOf().optionalFieldOf("fallen", List.of()).forGetter(surge -> List.copyOf(surge.fallen)),
-            UUIDUtil.CODEC.listOf().optionalFieldOf("hosts", List.of()).forGetter(surge -> List.copyOf(surge.hosts))
+            UUIDUtil.CODEC.listOf().optionalFieldOf("hosts", List.of()).forGetter(surge -> List.copyOf(surge.hosts)),
+            BlockPos.CODEC.optionalFieldOf("sympathetic_to").forGetter(Surge::sympatheticTo)
     ).apply(instance, Surge::new));
 
     private final BlockPos origin;
@@ -40,9 +42,11 @@ public final class Surge {
     private final Set<UUID> participants;
     private final Set<UUID> fallen;
     private final Set<UUID> hosts;
+    /** The nidus under attack that set this surge off, for a sympathetic surge (P4.13). */
+    private Optional<BlockPos> sympatheticTo;
 
     private Surge(BlockPos origin, int intensity, long warningTime, long startTime, long endTime, boolean started,
-                  List<UUID> participants, List<UUID> fallen, List<UUID> hosts) {
+                  List<UUID> participants, List<UUID> fallen, List<UUID> hosts, Optional<BlockPos> sympatheticTo) {
         this.origin = origin.immutable();
         this.intensity = intensity;
         this.warningTime = warningTime;
@@ -52,12 +56,13 @@ public final class Surge {
         this.participants = new LinkedHashSet<>(participants);
         this.fallen = new LinkedHashSet<>(fallen);
         this.hosts = new LinkedHashSet<>(hosts);
+        this.sympatheticTo = sympatheticTo.map(BlockPos::immutable);
     }
 
     /** A surge whose warning begins at {@code now}. */
     public static Surge warn(BlockPos origin, int intensity, long now, int warningTicks, int durationTicks) {
         return new Surge(origin, intensity, now, now + warningTicks, now + warningTicks + durationTicks, false, List.of(),
-                List.of(), List.of());
+                List.of(), List.of(), Optional.empty());
     }
 
     public BlockPos origin() {
@@ -118,6 +123,15 @@ public final class Surge {
         fallen.addAll(previous.fallen);
         previous.participants.stream().filter(id -> !fallen.contains(id)).forEach(participants::add);
         hosts.addAll(previous.hosts);
+    }
+
+    /** The nidus under attack that set this off, if it is a sympathetic surge (P4.13). */
+    public Optional<BlockPos> sympatheticTo() {
+        return sympatheticTo;
+    }
+
+    void markSympathetic(BlockPos attacked) {
+        sympatheticTo = Optional.of(attacked.immutable());
     }
 
     /** A participant died: they no longer count and cannot rejoin this surge. */
