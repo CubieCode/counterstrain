@@ -38,7 +38,7 @@ public final class QuestProgress {
             return;
         }
         player.awardStat(RemissionStats.HOSTS_SCANNED.get());
-        RemissionTriggers.HOST_SCANNED.get().trigger(player, host, stage, Bestiary.get(player).highestStages().size());
+        RemissionTriggers.HOST_SCANNED.get().trigger(player, host, stage, Bestiary.hostTypesScanned(Bestiary.team(player)));
     }
 
     /** The player took a block scan of the block at {@code pos}. */

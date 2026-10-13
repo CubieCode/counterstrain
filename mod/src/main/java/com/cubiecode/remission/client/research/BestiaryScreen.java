@@ -39,7 +39,7 @@ public class BestiaryScreen extends Screen {
 
     @Override
     protected void init() {
-        BestiaryProgress progress = minecraft.player == null ? BestiaryProgress.EMPTY : Bestiary.get(minecraft.player);
+        BestiaryProgress progress = minecraft.player == null ? BestiaryProgress.EMPTY : Bestiary.team(minecraft.player);
         List<HostEntry> entries = Bestiary.hostTypes().stream()
                 .map(type -> new HostEntry(type, BuiltInRegistries.ENTITY_TYPE.getKey(type), progress))
                 .sorted(Comparator.comparing((HostEntry e) -> e.stage == 0)

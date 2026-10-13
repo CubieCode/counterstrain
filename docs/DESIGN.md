@@ -73,7 +73,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | A crate of supplies called from the relay | **supply drop** | pack feature (P11.5); "the supply drop is coming in" |
 | How much the relay trusts the player or team; spent on supply drops, earned by progress | **standing** | per-team score (P11.5); "standing with the relay is low" |
 | One of several start locations of different difficulty | **crash sites** | harness scene `start/crash_site`; "the hard crash site starts next to a nidus" |
-| A player's record of host types, filled by host scans | **bestiary** | player attachment `remission:bestiary`; key mapping `key.remission.bestiary`; "12 of 79 host types scanned" |
+| A player's record of host types, filled by host scans and shared by their team | **bestiary** | player attachment `remission:bestiary` (own record) and `remission:team_bestiary` (the team's, P6.4); key mapping `key.remission.bestiary`; "12 of 79 host types scanned" |
 
 "Variant" on its own always means a resistant mutation of the Strain, never a kind of host (a **fester variant** is a biome and is always called that in full): scanning a host is a *host scan* (trigger `remission:host_scanned`), not a variant scan.
 
@@ -129,7 +129,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 ### Research
 
 - A scanner turns hosts and blocks into data items (host scans and block scans, built in P6.1). Scanning samples with the scanner is not assigned to a roadmap item; instead the analyzer (P7.2) turns samples into miasma and, for festered soil and nidus cores, block scans.
-- A bestiary of host types that grows with installed mods, because host forms are derived from entity types at runtime (built in P6.2): each host scan records the type and its highest scanned host stage for that player, and a key (default M) opens the list.
+- A bestiary of host types that grows with installed mods, because host forms are derived from entity types at runtime (built in P6.2): each host scan records the type and its highest scanned host stage for that player, and a key (default M) opens the list; the list shows the team's progress, each type at the highest stage any teammate scanned (P6.4).
 
 ### Tech chain
 

@@ -11,7 +11,8 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * One player's bestiary progress: the highest host stage they have scanned for each host type. Stored as the player's
  * {@code remission:bestiary} attachment. Ids stay ids so progress for a since-removed mod's types survives in the save;
- * the bestiary simply does not list them.
+ * the bestiary simply does not list them. A team's progress (P6.4) is the same shape: the {@link #with(BestiaryProgress)}
+ * of its members' records.
  */
 public record BestiaryProgress(Map<ResourceLocation, Integer> highestStages) {
     public static final BestiaryProgress EMPTY = new BestiaryProgress(Map.of());
@@ -50,5 +51,14 @@ public record BestiaryProgress(Map<ResourceLocation, Integer> highestStages) {
         Map<ResourceLocation, Integer> stages = new HashMap<>(highestStages);
         stages.put(type, stage);
         return new BestiaryProgress(stages);
+    }
+
+    /** This progress joined with {@code other}: every type at the higher of the two stages; this instance if it adds nothing. */
+    public BestiaryProgress with(BestiaryProgress other) {
+        BestiaryProgress joined = this;
+        for (Map.Entry<ResourceLocation, Integer> entry : other.highestStages.entrySet()) {
+            joined = joined.withScan(entry.getKey(), entry.getValue());
+        }
+        return joined;
     }
 }
