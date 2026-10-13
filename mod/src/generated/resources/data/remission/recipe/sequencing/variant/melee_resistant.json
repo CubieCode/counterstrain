@@ -1,0 +1,35 @@
+{
+  "type": "remission:sequencing",
+  "energy": 6000,
+  "fluid_ingredient": {
+    "amount": 250,
+    "fluid": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "type": "neoforge:components",
+      "components": {
+        "remission:variant": "remission:melee_resistant"
+      },
+      "count": 1,
+      "items": [
+        "remission:host_scan",
+        "remission:block_scan"
+      ]
+    },
+    {
+      "count": 1,
+      "item": "remission:strain_sequence"
+    }
+  ],
+  "results": [
+    {
+      "components": {
+        "remission:variant": "remission:melee_resistant"
+      },
+      "count": 1,
+      "id": "remission:strain_sequence"
+    }
+  ],
+  "time": 200
+}

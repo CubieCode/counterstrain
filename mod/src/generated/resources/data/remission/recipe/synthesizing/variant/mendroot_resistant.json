@@ -1,0 +1,36 @@
+{
+  "type": "remission:synthesizing",
+  "energy": 6000,
+  "fluid_ingredient": {
+    "amount": 250,
+    "fluid": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "type": "neoforge:components",
+      "components": {
+        "remission:variant": "remission:mendroot_resistant"
+      },
+      "count": 1,
+      "items": "remission:strain_sequence"
+    },
+    {
+      "count": 4,
+      "tag": "minecraft:coals"
+    },
+    {
+      "count": 1,
+      "item": "remission:festered_soil"
+    }
+  ],
+  "results": [
+    {
+      "components": {
+        "remission:variant": "remission:mendroot_resistant"
+      },
+      "count": 4,
+      "id": "remission:purifier_fuel"
+    }
+  ],
+  "time": 300
+}

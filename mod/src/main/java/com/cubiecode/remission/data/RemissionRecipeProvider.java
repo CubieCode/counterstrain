@@ -23,6 +23,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
+import net.neoforged.neoforge.common.crafting.DataComponentIngredient;
 
 /** Generic default recipes only; pack balance lives in pack/kubejs. */
 public final class RemissionRecipeProvider extends RecipeProvider {
@@ -39,6 +40,7 @@ public final class RemissionRecipeProvider extends RecipeProvider {
         synthesizing(output);
         countermeasureProtocols(output);
         products(output);
+        variants(output);
     }
 
     /** The machines themselves, from vanilla parts, so they work in any pack (P7.2). */
@@ -178,6 +180,44 @@ public final class RemissionRecipeProvider extends RecipeProvider {
                 .fluid(RemissionFluids.MIASMA.get(), 1000)
                 .result(new ItemStack(RemissionItems.COUNTERSTRAIN_PROTOTYPE.get()))
                 .save(output, "counterstrain_prototype");
+    }
+
+    /**
+     * Each default variant (P7.5): a scan of it sequenced with a strain sequence makes a strain sequence of the variant,
+     * from which the synthesizer makes the serum (damage variants) or purifier fuel (purification variants) that counters
+     * it. Each takes one more ingredient than the plain product (host tissue, festered soil), so a variant's sequence never
+     * matches both. Packs that add variants add theirs.
+     */
+    private static void variants(RecipeOutput output) {
+        for (RemissionVariantProvider.Default variant : RemissionVariantProvider.DEFAULTS) {
+            ResourceLocation id = variant.id();
+            MachineRecipeBuilder.of(MachineKind.SEQUENCER, 6000, 200)
+                    .ingredient(DataComponentIngredient.of(false, RemissionDataComponents.VARIANT, id,
+                            RemissionItems.HOST_SCAN.get(), RemissionItems.BLOCK_SCAN.get()), 1)
+                    .ingredient(RemissionItems.STRAIN_SEQUENCE.get())
+                    .fluid(RemissionFluids.MIASMA.get(), 250)
+                    .result(withVariant(new ItemStack(RemissionItems.STRAIN_SEQUENCE.get()), id))
+                    .save(output, "variant/" + id.getPath());
+            MachineRecipeBuilder synthesis = MachineRecipeBuilder.of(MachineKind.SYNTHESIZER, 6000, 300)
+                    .ingredient(DataComponentIngredient.of(false, RemissionDataComponents.VARIANT, id,
+                            RemissionItems.STRAIN_SEQUENCE.get()), 1)
+                    .fluid(RemissionFluids.MIASMA.get(), 250);
+            if (variant.damage()) {
+                synthesis.ingredient(Items.GLASS_BOTTLE, 2)
+                        .ingredient(RemissionItems.HOST_TISSUE.get())
+                        .result(withVariant(new ItemStack(RemissionItems.SERUM.get(), 2), id));
+            } else {
+                synthesis.ingredient(ItemTags.COALS, 4)
+                        .ingredient(RemissionItems.FESTERED_SOIL.get())
+                        .result(withVariant(new ItemStack(RemissionItems.PURIFIER_FUEL.get(), 4), id));
+            }
+            synthesis.save(output, "variant/" + id.getPath());
+        }
+    }
+
+    private static ItemStack withVariant(ItemStack stack, ResourceLocation variant) {
+        stack.set(RemissionDataComponents.VARIANT.get(), variant);
+        return stack;
     }
 
     private static ItemStack blockScan(Block block) {

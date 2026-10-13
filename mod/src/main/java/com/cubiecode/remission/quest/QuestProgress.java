@@ -107,4 +107,39 @@ public final class QuestProgress {
         player.awardStat(RemissionStats.COUNTERMEASURES_GAINED.get());
         RemissionTriggers.COUNTERMEASURE_GAINED.get().trigger(player, hazard);
     }
+
+    /** Blocks from a sequencer within which players are credited with the variant sequences it finishes (P7.5). */
+    public static final double SEQUENCED_CREDIT_RADIUS = 16.0;
+
+    /**
+     * {@code variant} emerged at the nidus at {@code nidus} (it is already stored, P7.5): every living, non-spectator player
+     * in the level whose chunk is within {@code reach} chunks (Manhattan) of the nidus's chunk, its land's reach, fires
+     * {@code remission:variant_emerged}.
+     */
+    public static void variantEmerged(ServerLevel level, BlockPos nidus, ResourceLocation variant, int reach) {
+        ChunkPos centre = new ChunkPos(nidus);
+        for (ServerPlayer player : level.players()) {
+            ChunkPos at = player.chunkPosition();
+            if (player instanceof FakePlayer || !player.isAlive() || player.isSpectator()
+                    || Math.abs(at.x - centre.x) + Math.abs(at.z - centre.z) > reach) {
+                continue;
+            }
+            RemissionTriggers.VARIANT_EMERGED.get().trigger(player, variant);
+        }
+    }
+
+    /**
+     * A sequencer at {@code pos} finished a strain sequence of {@code variant} (P7.5): every living, non-spectator player
+     * within {@link #SEQUENCED_CREDIT_RADIUS} blocks of it fires {@code remission:variant_sequenced}, so whoever runs the
+     * machine is credited whether they take the sequence out by hand or a network does.
+     */
+    public static void variantSequenced(ServerLevel level, BlockPos pos, ResourceLocation variant) {
+        for (ServerPlayer player : level.players()) {
+            if (player instanceof FakePlayer || !player.isAlive() || player.isSpectator()
+                    || player.distanceToSqr(pos.getCenter()) > SEQUENCED_CREDIT_RADIUS * SEQUENCED_CREDIT_RADIUS) {
+                continue;
+            }
+            RemissionTriggers.VARIANT_SEQUENCED.get().trigger(player, variant);
+        }
+    }
 }

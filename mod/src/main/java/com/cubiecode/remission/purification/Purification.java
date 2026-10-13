@@ -8,6 +8,7 @@ import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.quest.QuestProgress;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionBlocks;
+import com.cubiecode.remission.variant.VariantEffects;
 import com.cubiecode.remission.world.FesteringLand;
 import com.cubiecode.remission.world.FesteringStages;
 import com.cubiecode.remission.world.FesteringVeins;
@@ -67,6 +68,11 @@ public final class Purification {
                                      @Nullable ServerPlayer player) {
         int old = CorruptionQueries.chunkLevel(level, chunk.getPos());
         if (old <= 0 || amount <= 0) {
+            return false;
+        }
+        // A variant that resists this cause slows it in its nidus's land; every step builds pressure (P7.5).
+        amount = VariantEffects.purification(level, chunk.getPos(), amount, cause, old);
+        if (amount <= 0) {
             return false;
         }
         int next = Math.max(0, old - amount);

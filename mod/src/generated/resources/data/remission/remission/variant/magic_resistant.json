@@ -1,0 +1,9 @@
+{
+  "resistance": 0.5,
+  "resists": {
+    "type": "remission:damage",
+    "damage_types": "#minecraft:witch_resistant_to"
+  },
+  "threshold": 30.0,
+  "tint": "#FF7AFF"
+}

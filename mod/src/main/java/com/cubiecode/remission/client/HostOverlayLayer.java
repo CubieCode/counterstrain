@@ -67,15 +67,17 @@ public final class HostOverlayLayer<T extends LivingEntity, M extends EntityMode
     }
 
     /**
-     * The vertex colour for a host overlay on {@code entity} (white, alpha from {@code hosts.overlayIntensity}), or 0
-     * when nothing should be drawn: not a host, invisible, overlay turned off or the shader not loaded yet.
+     * The vertex colour for a host overlay on {@code entity} (the tint of its variant, P7.5, else white; alpha from
+     * {@code hosts.overlayIntensity}), or 0 when nothing should be drawn: not a host, invisible, overlay turned off or the
+     * shader not loaded yet.
      */
     static int overlayColor(LivingEntity entity, CorruptionState state) {
         if (!state.isHost() || entity.isInvisible() || !HostRenderTypes.ready()) {
             return 0;
         }
         double intensity = RemissionClientConfig.HOST_OVERLAY_INTENSITY.get();
-        return intensity <= 0.0 ? 0 : FastColor.ARGB32.colorFromFloat((float) intensity, 1.0F, 1.0F, 1.0F);
+        return intensity <= 0.0 ? 0
+                : FastColor.ARGB32.color(FastColor.as8BitChannel((float) intensity), VariantTints.hostTint(state));
     }
 
     /** The pattern for a host at {@code stage} (1 or more). */

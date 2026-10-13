@@ -1,0 +1,9 @@
+{
+  "resistance": 0.5,
+  "resists": {
+    "type": "remission:purification",
+    "cause": "mendroot"
+  },
+  "threshold": 150.0,
+  "tint": "#8CFF8C"
+}

@@ -1,0 +1,9 @@
+{
+  "resistance": 0.5,
+  "resists": {
+    "type": "remission:purification",
+    "cause": "pylon"
+  },
+  "threshold": 1500.0,
+  "tint": "#8C8CFF"
+}

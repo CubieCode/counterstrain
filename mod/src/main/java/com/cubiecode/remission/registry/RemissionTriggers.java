@@ -7,6 +7,7 @@ import com.cubiecode.remission.quest.LocationTrigger;
 import com.cubiecode.remission.quest.RegionCleansedTrigger;
 import com.cubiecode.remission.quest.RevenantReclaimedTrigger;
 import com.cubiecode.remission.quest.SurgeSurvivedTrigger;
+import com.cubiecode.remission.quest.VariantTrigger;
 import com.cubiecode.remission.quest.ViralLoadTrigger;
 import java.util.function.Supplier;
 import net.minecraft.advancements.CriterionTrigger;
@@ -36,6 +37,13 @@ public final class RemissionTriggers {
 
     public static final Supplier<CountermeasureGainedTrigger> COUNTERMEASURE_GAINED =
             TRIGGER_TYPES.register("countermeasure_gained", CountermeasureGainedTrigger::new);
+
+    /** A variant emerged at a nidus whose land the player is in (P7.5). */
+    public static final Supplier<VariantTrigger> VARIANT_EMERGED =
+            TRIGGER_TYPES.register("variant_emerged", VariantTrigger::new);
+    /** A sequencer near the player finished a strain sequence of a variant (P7.5). */
+    public static final Supplier<VariantTrigger> VARIANT_SEQUENCED =
+            TRIGGER_TYPES.register("variant_sequenced", VariantTrigger::new);
 
     private RemissionTriggers() {
     }

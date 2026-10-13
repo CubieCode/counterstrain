@@ -1,5 +1,7 @@
 package com.cubiecode.remission.tech;
 
+import com.cubiecode.remission.quest.QuestProgress;
+import com.cubiecode.remission.registry.RemissionDataComponents;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -221,6 +223,11 @@ public class MachineBlockEntity extends BlockEntity implements MenuProvider {
             ItemStack rest = result.copy();
             for (int i = 0; i < MachineKind.OUTPUT_SLOTS && !rest.isEmpty(); i++) {
                 rest = items.insertItem(kind.inputSlots() + i, rest, false);
+            }
+            // A sequenced variant (P7.5) credits the players running the machine.
+            ResourceLocation variant = result.get(RemissionDataComponents.VARIANT);
+            if (variant != null && kind == MachineKind.SEQUENCER && level instanceof ServerLevel serverLevel) {
+                QuestProgress.variantSequenced(serverLevel, worldPosition, variant);
             }
         }
         if (!current.fluidResult().isEmpty()) {

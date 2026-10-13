@@ -4,10 +4,12 @@
     {
       "faces": {
         "north": {
-          "texture": "#vein"
+          "texture": "#vein",
+          "tintindex": 0
         },
         "south": {
-          "texture": "#vein"
+          "texture": "#vein",
+          "tintindex": 0
         }
       },
       "from": [

@@ -1,5 +1,6 @@
 package com.cubiecode.remission.serum;
 
+import com.cubiecode.remission.variant.VariantEffects;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.advancements.CriteriaTriggers;
@@ -53,6 +54,7 @@ public class SerumItem extends Item {
         }
         if (!level.isClientSide) {
             Serums.apply(entity, SerumSettings.fromConfig());
+            VariantEffects.serumDrunk(entity, stack);
         }
         if (player != null) {
             player.awardStat(Stats.ITEM_USED.get(this));

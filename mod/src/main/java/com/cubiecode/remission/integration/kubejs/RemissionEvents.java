@@ -16,6 +16,7 @@ import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.StrainSpre
 import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.SurgeEnded;
 import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.SurgeStarted;
 import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.TeamLookup;
+import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.VariantEmerged;
 import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.ViralLoadChanged;
 import dev.latvian.mods.kubejs.event.EventGroup;
 import dev.latvian.mods.kubejs.event.EventHandler;
@@ -56,6 +57,8 @@ public interface RemissionEvents {
     TargetedEventHandler<ResourceLocation> COUNTERMEASURE_GRANTED = GROUP
             .server("countermeasureGranted", () -> CountermeasureGranted.class)
             .supportsTarget(EventTargetType.ID);
+    /** Cancellable: cancelling keeps the nidus's Strain as it was (P7.5). */
+    EventHandler VARIANT_EMERGED = GROUP.server("variantEmerged", () -> VariantEmerged.class).hasResult();
     /** Answer with {@code event.setTeammates(...)}. */
     EventHandler TEAM_LOOKUP = GROUP.server("teamLookup", () -> TeamLookup.class);
 }

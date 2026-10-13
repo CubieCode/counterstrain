@@ -6,9 +6,13 @@ import com.cubiecode.remission.corruption.CorruptionState;
 import com.cubiecode.remission.quest.QuestProgress;
 import com.cubiecode.remission.registry.RemissionDataComponents;
 import com.cubiecode.remission.registry.RemissionItems;
+import com.cubiecode.remission.variant.Variants;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -16,6 +20,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
@@ -24,7 +29,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 /**
  * Scanner behaviour. Scanning a host gives a host scan and records it in the player's {@link Bestiary}, scanning a block
- * gives a block scan; a living entity that is not a host gives nothing. Every scan attempt starts a
+ * gives a block scan; a living entity that is not a host gives nothing. A scan records the variant (P7.5) of the host,
+ * or of the land the block is in, in the {@code remission:variant} component. Every scan attempt starts a
  * {@link #COOLDOWN_TICKS} cooldown. The server decides and records; the client only claims the interaction so the arm
  * swings and the mob's own interaction (trading, mounting) is skipped.
  */
@@ -80,12 +86,15 @@ public final class Scanning {
             return InteractionResult.CONSUME;
         }
         ScanData data = ScanData.host(BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()), state.stage());
-        give(player, RemissionItems.HOST_SCAN.get().getDefaultInstance(), data);
+        give(player, RemissionItems.HOST_SCAN.get().getDefaultInstance(), data, state.variant());
         Bestiary.recordScan(player, data.id(), data.stage());
         if (player instanceof ServerPlayer serverPlayer) {
             QuestProgress.hostScanned(serverPlayer, target, data.stage());
         }
-        player.displayClientMessage(Component.translatable("message.remission.scanner.host", data.subjectName(), data.stage()), true);
+        player.displayClientMessage(state.variant()
+                .map(variant -> Component.translatable("message.remission.scanner.host_variant", data.subjectName(), data.stage(),
+                        Variants.name(variant)))
+                .orElseGet(() -> Component.translatable("message.remission.scanner.host", data.subjectName(), data.stage())), true);
         return InteractionResult.CONSUME;
     }
 
@@ -100,16 +109,22 @@ public final class Scanning {
         }
         player.getCooldowns().addCooldown(scanner.getItem(), COOLDOWN_TICKS);
         ScanData data = ScanData.block(BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()));
-        give(player, RemissionItems.BLOCK_SCAN.get().getDefaultInstance(), data);
+        // The land's variant (P7.5), whatever block was scanned there.
+        Optional<ResourceLocation> variant = level instanceof ServerLevel serverLevel
+                ? Variants.variantAt(serverLevel, new ChunkPos(pos)) : Optional.empty();
+        give(player, RemissionItems.BLOCK_SCAN.get().getDefaultInstance(), data, variant);
         if (player instanceof ServerPlayer serverPlayer) {
             QuestProgress.blockScanned(serverPlayer, pos);
         }
-        player.displayClientMessage(Component.translatable("message.remission.scanner.block", data.subjectName()), true);
+        player.displayClientMessage(variant
+                .map(id -> Component.translatable("message.remission.scanner.block_variant", data.subjectName(), Variants.name(id)))
+                .orElseGet(() -> Component.translatable("message.remission.scanner.block", data.subjectName())), true);
         return InteractionResult.CONSUME;
     }
 
-    private static void give(Player player, ItemStack scan, ScanData data) {
+    private static void give(Player player, ItemStack scan, ScanData data, Optional<ResourceLocation> variant) {
         scan.set(RemissionDataComponents.SCAN_DATA, data);
+        variant.ifPresent(id -> scan.set(RemissionDataComponents.VARIANT, id));
         if (!player.getInventory().add(scan)) {
             player.drop(scan, false);
         }

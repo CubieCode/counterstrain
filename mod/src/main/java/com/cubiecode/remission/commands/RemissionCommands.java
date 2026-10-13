@@ -3,6 +3,7 @@ package com.cubiecode.remission.commands;
 import com.cubiecode.remission.api.CorruptionCause;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.variant.Variants;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
@@ -22,7 +23,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * {@code inspect <target>}. They read and write host state only through {@link Corruption}; {@code infect} skips
  * {@linkplain Corruption#isImmune immune} targets. {@code surge} is {@link SurgeCommands}; {@code nidus} and {@code region}
  * (quest-fired events, P8.2) are {@link NidusCommands} and {@link RegionCommands}; {@code countermeasure} (P5.7) is
- * {@link CountermeasureCommands}.
+ * {@link CountermeasureCommands}; {@code variant} (P7.5) is {@link VariantCommands}.
  */
 public final class RemissionCommands {
     public static final int PERMISSION_LEVEL = 2;
@@ -57,7 +58,8 @@ public final class RemissionCommands {
                 .then(SurgeCommands.node())
                 .then(NidusCommands.node())
                 .then(RegionCommands.node())
-                .then(CountermeasureCommands.node()));
+                .then(CountermeasureCommands.node())
+                .then(VariantCommands.node()));
     }
 
     /** Sets every living, non-immune target to {@code level}; returns the number of targets changed. */
@@ -107,6 +109,9 @@ public final class RemissionCommands {
         if (state.level() == 0) {
             source.sendSuccess(() -> Component.translatable("commands.remission.inspect.clean",
                     living.getDisplayName()), false);
+        } else if (state.variant().isPresent()) {
+            source.sendSuccess(() -> Component.translatable("commands.remission.inspect.variant",
+                    living.getDisplayName(), state.level(), state.stage(), Variants.name(state.variant().get())), false);
         } else {
             source.sendSuccess(() -> Component.translatable("commands.remission.inspect.success",
                     living.getDisplayName(), state.level(), state.stage()), false);

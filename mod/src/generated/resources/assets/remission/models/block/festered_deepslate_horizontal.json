@@ -1,7 +1,12 @@
 {
-  "parent": "minecraft:block/cube_column_horizontal",
+  "parent": "remission:block/tinted_cube_horizontal",
   "textures": {
-    "end": "remission:block/festered_deepslate_top",
-    "side": "remission:block/festered_deepslate"
+    "down": "remission:block/festered_deepslate_top",
+    "east": "remission:block/festered_deepslate",
+    "north": "remission:block/festered_deepslate",
+    "particle": "remission:block/festered_deepslate",
+    "south": "remission:block/festered_deepslate",
+    "up": "remission:block/festered_deepslate_top",
+    "west": "remission:block/festered_deepslate"
   }
 }

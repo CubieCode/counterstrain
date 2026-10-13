@@ -1,6 +1,12 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "remission:block/tinted_cube",
   "textures": {
-    "all": "remission:block/festered_stone"
+    "down": "remission:block/festered_stone",
+    "east": "remission:block/festered_stone",
+    "north": "remission:block/festered_stone",
+    "particle": "remission:block/festered_stone",
+    "south": "remission:block/festered_stone",
+    "up": "remission:block/festered_stone",
+    "west": "remission:block/festered_stone"
   }
 }

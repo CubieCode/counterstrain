@@ -5,10 +5,13 @@ import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.revenant.Revenant;
+import com.cubiecode.remission.variant.Variants;
 import com.cubiecode.remission.viralload.ViralLoad;
 import com.cubiecode.remission.viralload.ViralLoadState;
 import com.cubiecode.remission.world.ChunkCorruption;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -104,5 +107,22 @@ public final class CorruptionQueries {
      */
     public static float viralLoad(Player player) {
         return ViralLoad.get(player);
+    }
+
+    /**
+     * The variant a host carries (P7.5): the id of a {@code remission:variant} entry. Empty for a host without one and for
+     * clean or non-living entities. Both sides (synced with the host).
+     */
+    public static Optional<ResourceLocation> hostVariant(Entity entity) {
+        return entity instanceof LivingEntity living ? Corruption.get(living).variant() : Optional.empty();
+    }
+
+    /**
+     * The variant of the land at {@code pos} (P7.5): that of the nidus whose land the chunk is in (the nearest nidus within
+     * its spread reach), if it carries one and {@code [variants]} is on. Server only; works for unloaded chunks too, since
+     * it reads the nidus index, and never loads one.
+     */
+    public static Optional<ResourceLocation> variantAt(ServerLevel level, BlockPos pos) {
+        return Variants.variantAt(level, new ChunkPos(pos));
     }
 }

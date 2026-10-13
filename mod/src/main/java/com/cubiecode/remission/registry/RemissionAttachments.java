@@ -8,6 +8,7 @@ import com.cubiecode.remission.countermeasure.Countermeasures;
 import com.cubiecode.remission.research.Bestiary;
 import com.cubiecode.remission.research.BestiaryProgress;
 import com.cubiecode.remission.revenant.RevenantDrop;
+import com.cubiecode.remission.variant.VariantCounters;
 import com.cubiecode.remission.viralload.ViralLoadState;
 import com.cubiecode.remission.world.ChunkCorruption;
 import com.mojang.serialization.Codec;
@@ -137,6 +138,15 @@ public final class RemissionAttachments {
     public static final Supplier<AttachmentType<BestiaryProgress>> TEAM_BESTIARY = ATTACHMENT_TYPES.register("team_bestiary",
             () -> AttachmentType.builder(() -> BestiaryProgress.EMPTY)
                     .sync(Bestiary::syncsTo, BestiaryProgress.STREAM_CODEC)
+                    .build());
+
+    /**
+     * The variants a player's serums counter, until when (P7.5). Saved with the player (never empty), server only and not
+     * copied on death, like an effect.
+     */
+    public static final Supplier<AttachmentType<VariantCounters>> VARIANT_COUNTERS = ATTACHMENT_TYPES.register("variant_counters",
+            () -> AttachmentType.builder(() -> VariantCounters.EMPTY)
+                    .serialize(VariantCounters.CODEC, counters -> !counters.isEmpty())
                     .build());
 
     private RemissionAttachments() {
