@@ -145,7 +145,7 @@ public final class RemissionCommonConfig {
         FESTERING_VEIN_MIN_STAGE = BUILDER
                 .comment("Lowest festering stage of a chunk at which veins grow; each stage above it grows more.",
                         "Above the number of festering stage thresholds, no chunk grows veins.")
-                .defineInRange("veinMinStage", 2, 1, 8);
+                .defineInRange("veinMinStage", 1, 1, 8);
         BUILDER.pop();
 
         BUILDER.push("infection");

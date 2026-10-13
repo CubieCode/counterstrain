@@ -4,20 +4,29 @@
       "block": "remission:festered_deepslate",
       "stage": 3
     },
-    "#minecraft:leaves": {
-      "block": "remission:festering_leaves",
-      "stage": 2
-    },
-    "#minecraft:logs": {
-      "block": "remission:festering_log",
-      "stage": 2
-    },
     "#minecraft:stone_ore_replaceables": {
       "block": "remission:festered_stone",
       "stage": 3
     },
+    "minecraft:fern": {
+      "block": "remission:festering_fern",
+      "stage": 2
+    },
     "minecraft:grass_block": {
-      "block": "remission:festering_grass"
+      "block": "remission:festering_grass",
+      "stage": 3
+    },
+    "minecraft:large_fern": {
+      "block": "remission:festering_large_fern",
+      "stage": 2
+    },
+    "minecraft:short_grass": {
+      "block": "remission:festering_short_grass",
+      "stage": 2
+    },
+    "minecraft:tall_grass": {
+      "block": "remission:festering_tall_grass",
+      "stage": 2
     }
   }
 }

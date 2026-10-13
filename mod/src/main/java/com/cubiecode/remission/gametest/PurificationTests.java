@@ -235,14 +235,16 @@ public final class PurificationTests {
             LevelChunk outside = area.chunk(3, 0);
             setLevel(warded, 90);
             setLevel(outside, 90);
-            BlockState log = RemissionBlocks.FESTERING_LOG.get().defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X);
-            BlockState leaves = RemissionBlocks.FESTERING_LEAVES.get().defaultBlockState()
+            // Trees never fester (P4.16), so cleansing leaves them as they are.
+            BlockState log = Blocks.BIRCH_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X);
+            BlockState leaves = Blocks.BIRCH_LEAVES.defaultBlockState()
                     .setValue(LeavesBlock.PERSISTENT, true).setValue(LeavesBlock.DISTANCE, 3);
             area.set(0, 0, 4, BASE_Y, 4, RemissionBlocks.FESTERING_GRASS.get().defaultBlockState());
             area.set(0, 0, 5, BASE_Y, 4, RemissionBlocks.FESTERED_STONE.get().defaultBlockState());
             area.set(0, 0, 6, BASE_Y, 4, log);
             area.set(0, 0, 7, BASE_Y, 4, leaves);
-            area.set(0, 0, 8, BASE_Y, 4, RemissionBlocks.FESTERED_DEEPSLATE.get().defaultBlockState());
+            area.set(0, 0, 8, BASE_Y, 4, RemissionBlocks.FESTERED_DEEPSLATE.get().defaultBlockState()
+                    .setValue(RotatedPillarBlock.AXIS, Direction.Axis.Z));
             area.set(0, 0, 5, BASE_Y, 5, RemissionBlocks.FESTERING_VEIN.get().defaultBlockState()
                     .setValue(MultifaceBlock.getFaceProperty(Direction.NORTH), true));
             area.set(3, 0, 4, BASE_Y, 4, RemissionBlocks.FESTERING_GRASS.get().defaultBlockState());
@@ -257,13 +259,12 @@ public final class PurificationTests {
             });
             helper.assertValueEqual(stateAt(area, 0, 4, 4).getBlock(), Blocks.GRASS_BLOCK, "festering grass cleansed");
             helper.assertValueEqual(stateAt(area, 0, 5, 4).getBlock(), Blocks.STONE, "festered stone cleansed");
-            helper.assertValueEqual(stateAt(area, 0, 6, 4), Blocks.OAK_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS,
-                    Direction.Axis.X), "festering log cleansed with its axis");
-            helper.assertValueEqual(stateAt(area, 0, 7, 4), Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true)
-                    .setValue(LeavesBlock.DISTANCE, 3), "festering leaves cleansed with persistence and distance");
-            helper.assertValueEqual(stateAt(area, 0, 8, 4).getBlock(), Blocks.DEEPSLATE, "festered deepslate cleansed");
+            helper.assertValueEqual(stateAt(area, 0, 6, 4), log, "birch log left alone");
+            helper.assertValueEqual(stateAt(area, 0, 7, 4), leaves, "birch leaves left alone");
+            helper.assertValueEqual(stateAt(area, 0, 8, 4), Blocks.DEEPSLATE.defaultBlockState().setValue(RotatedPillarBlock.AXIS,
+                    Direction.Axis.Z), "festered deepslate cleansed with its axis");
             helper.assertTrue(stateAt(area, 0, 5, 5).isAir(), "festering vein not cleared");
-            helper.assertValueEqual(events.size(), 6, "block purified events");
+            helper.assertValueEqual(events.size(), 4, "block purified events");
             helper.assertTrue(events.stream().allMatch(e -> e.getCause() == PurificationCause.PYLON), "event causes");
             BlockPurifiedEvent grass = events.stream().filter(e -> e.getPos().equals(area.at(0, 0, 4, BASE_Y, 4))).findFirst().orElseThrow();
             helper.assertTrue(grass.getOldState().is(RemissionBlocks.FESTERING_GRASS.get()) && grass.getNewState().is(Blocks.GRASS_BLOCK),
@@ -477,8 +478,6 @@ public final class PurificationTests {
             helper.assertTrue(Blocks.WHEAT.defaultBlockState().is(RemissionZones.YIELDS), "wheat not in #remission:remission_yields");
 
             assertCleansesInto(helper, RemissionBlocks.FESTERING_GRASS.get(), Blocks.GRASS_BLOCK);
-            assertCleansesInto(helper, RemissionBlocks.FESTERING_LOG.get(), Blocks.OAK_LOG);
-            assertCleansesInto(helper, RemissionBlocks.FESTERING_LEAVES.get(), Blocks.OAK_LEAVES);
             assertCleansesInto(helper, RemissionBlocks.FESTERED_STONE.get(), Blocks.STONE);
             assertCleansesInto(helper, RemissionBlocks.FESTERED_DEEPSLATE.get(), Blocks.DEEPSLATE);
             helper.assertTrue(Cleansing.cleansed(Blocks.STONE.defaultBlockState()) == null, "clean stone cleanses into something");

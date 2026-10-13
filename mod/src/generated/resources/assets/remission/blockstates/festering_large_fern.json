@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "half=lower": {
+      "model": "remission:block/festering_large_fern_bottom"
+    },
+    "half=upper": {
+      "model": "remission:block/festering_large_fern_top"
+    }
+  }
+}

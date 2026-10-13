@@ -33,6 +33,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.MultifaceBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -250,7 +251,7 @@ public final class FesteringVeinTests {
 
     /**
      * With every face picked, veins cover every kind of solid face of the build (floor, plank walls on all six sides,
-     * glass and cobblestone placed in the air), never a resistant block, and the shipped resistant tag is empty. Every
+     * glass and cobblestone placed in the air, a log and leaves, which never fester themselves, P4.16), never a resistant block, and the shipped resistant tag is empty. Every
      * face rather than a coverage: {@link FesteringVeins#selected} leaves a fifth of the patches bare at any coverage,
      * and the test grid lands at a random position, so a coverage would leave a block bare in about 1% of runs.
      */
@@ -260,6 +261,9 @@ public final class FesteringVeinTests {
         LevelChunk chunk = farChunk(helper, 1);
         try {
             build(level, chunk);
+            level.setBlock(at(chunk, 2, BASE_Y + 6, 12), Blocks.BIRCH_LOG.defaultBlockState(), 2);
+            level.setBlock(at(chunk, 2, BASE_Y + 9, 12), Blocks.BIRCH_LEAVES.defaultBlockState()
+                    .setValue(LeavesBlock.PERSISTENT, true), 2);
             Map<BlockPos, BlockState> before = snapshot(level, chunk);
             Predicate<BlockState> resistant = state -> state.is(Blocks.OBSIDIAN);
             FesteringVeins.FaceSelector everyFace = (pos, side) -> true;
@@ -271,6 +275,10 @@ public final class FesteringVeinTests {
             helper.assertTrue(grown.containsKey(Blocks.GLASS), "placed glass not covered");
             helper.assertTrue(grown.containsKey(Blocks.COBBLESTONE), "placed cobblestone not covered");
             helper.assertFalse(grown.containsKey(Blocks.OBSIDIAN), "resistant obsidian covered");
+            helper.assertTrue(grown.getOrDefault(Blocks.BIRCH_LOG, Set.of()).containsAll(EnumSet.allOf(Direction.class)),
+                    "log faces covered: " + grown.get(Blocks.BIRCH_LOG));
+            helper.assertTrue(grown.getOrDefault(Blocks.BIRCH_LEAVES, Set.of()).containsAll(EnumSet.allOf(Direction.class)),
+                    "leaf faces covered: " + grown.get(Blocks.BIRCH_LEAVES));
             helper.assertTrue(BuiltInRegistries.BLOCK.getTag(FesteringVeins.VEIN_RESISTANT).map(tag -> tag.size() == 0).orElse(true),
                     "shipped #remission:vein_resistant is not empty");
         } finally {

@@ -4,7 +4,9 @@ import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.api.BlockFesteredEvent;
 import com.cubiecode.remission.api.ChunkStageChangedEvent;
 import com.cubiecode.remission.api.CorruptionQueries;
+import com.cubiecode.remission.api.PurificationCause;
 import com.cubiecode.remission.config.RemissionCommonConfig;
+import com.cubiecode.remission.purification.Cleansing;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionBlocks;
 import com.cubiecode.remission.world.ChunkCorruption;
@@ -33,10 +35,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.neoforge.common.NeoForge;
@@ -121,7 +126,10 @@ public final class FesteringStageTests {
                 .unwrapKey().orElseThrow();
     }
 
-    /** Each stage festers what the default data map gives it, cumulatively, keeping shared state properties. */
+    /**
+     * Each stage festers what the default data map gives it, cumulatively: nothing before stage 3, then grass and stone
+     * (P4.16). Logs and leaves never turn and keep their state.
+     */
     @GameTest(template = "empty", batch = BATCH)
     public static void columnFestersByStage(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -137,7 +145,7 @@ public final class FesteringStageTests {
             saved.put(pos, level.getBlockState(pos));
         }
         try {
-            for (int stage = 0; stage <= 3; stage++) {
+            for (int stage = 0; stage <= CorruptionQueries.maxChunkStage(); stage++) {
                 level.setBlock(stone, Blocks.STONE.defaultBlockState(), 2);
                 level.setBlock(grass, Blocks.GRASS_BLOCK.defaultBlockState(), 2);
                 level.setBlock(log, Blocks.OAK_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.X), 2);
@@ -145,15 +153,15 @@ public final class FesteringStageTests {
                 int s = stage;
                 List<BlockFesteredEvent> events = capture(Set.of(stone, grass, log, leaves),
                         () -> FesteringStages.festerColumn(level, chunk, stone.getX() & 15, stone.getZ() & 15, s));
-                assertBlock(helper, grass, state -> state.is(s >= 1 ? RemissionBlocks.FESTERING_GRASS.get() : Blocks.GRASS_BLOCK),
+                assertBlock(helper, grass, state -> state.is(s >= 3 ? RemissionBlocks.FESTERING_GRASS.get() : Blocks.GRASS_BLOCK),
                         () -> "grass at stage " + s);
-                assertBlock(helper, log, state -> state.is(s >= 2 ? RemissionBlocks.FESTERING_LOG.get() : Blocks.OAK_LOG)
+                assertBlock(helper, log, state -> state.is(Blocks.OAK_LOG)
                         && state.getValue(RotatedPillarBlock.AXIS) == Direction.Axis.X, () -> "log and its axis at stage " + s);
-                assertBlock(helper, leaves, state -> state.is(s >= 2 ? RemissionBlocks.FESTERING_LEAVES.get() : Blocks.OAK_LEAVES)
+                assertBlock(helper, leaves, state -> state.is(Blocks.OAK_LEAVES)
                         && state.getValue(LeavesBlock.PERSISTENT), () -> "leaves and persistence at stage " + s);
                 assertBlock(helper, stone, state -> state.is(s >= 3 ? RemissionBlocks.FESTERED_STONE.get() : Blocks.STONE),
                         () -> "stone at stage " + s);
-                int expected = stage == 0 ? 0 : stage == 1 ? 1 : stage == 2 ? 3 : 4;
+                int expected = stage >= 3 ? 2 : 0;
                 helper.assertValueEqual(events.size(), expected, "block festered events at stage " + s);
                 for (BlockFesteredEvent event : events) {
                     helper.assertTrue(event.getLevel() == level, "event level");
@@ -198,20 +206,20 @@ public final class FesteringStageTests {
                 })
                 .thenWaitUntil(() -> helper.assertValueEqual(FesteringStages.festeredStage(chunk), 1, "festered stage after load"))
                 .thenExecute(() -> {
-                    assertBlock(helper, grass, state -> state.is(RemissionBlocks.FESTERING_GRASS.get()), () -> "grass at stage 1");
-                    assertBlock(helper, corner[0], state -> state.is(RemissionBlocks.FESTERING_GRASS.get()), () -> "corner grass at stage 1");
-                    assertBlock(helper, log, state -> state.is(Blocks.OAK_LOG), () -> "log at stage 1");
-                    // Stage 2 through the event the spread engine posts.
-                    setLevel(chunk, levelForStage(2));
-                    NeoForge.EVENT_BUS.post(new ChunkStageChangedEvent(level, pos, levelForStage(1), levelForStage(2), 1, 2));
+                    assertBlock(helper, grass, state -> state.is(Blocks.GRASS_BLOCK), () -> "grass at stage 1");
+                    // Stage 3 through the event the spread engine posts.
+                    setLevel(chunk, levelForStage(3));
+                    NeoForge.EVENT_BUS.post(new ChunkStageChangedEvent(level, pos, levelForStage(1), levelForStage(3), 1, 3));
                 })
-                .thenWaitUntil(() -> helper.assertValueEqual(FesteringStages.festeredStage(chunk), 2, "festered stage after the event"))
+                .thenWaitUntil(() -> helper.assertValueEqual(FesteringStages.festeredStage(chunk), 3, "festered stage after the event"))
                 .thenExecute(() -> {
-                    assertBlock(helper, log, state -> state.is(RemissionBlocks.FESTERING_LOG.get()), () -> "log at stage 2");
-                    assertBlock(helper, leaves, state -> state.is(RemissionBlocks.FESTERING_LEAVES.get()), () -> "leaves at stage 2");
+                    assertBlock(helper, grass, state -> state.is(RemissionBlocks.FESTERING_GRASS.get()), () -> "grass at stage 3");
+                    assertBlock(helper, corner[0], state -> state.is(RemissionBlocks.FESTERING_GRASS.get()), () -> "corner grass at stage 3");
+                    assertBlock(helper, log, state -> state.is(Blocks.OAK_LOG), () -> "log at stage 3");
+                    assertBlock(helper, leaves, state -> state.is(Blocks.OAK_LEAVES), () -> "leaves at stage 3");
                     helper.assertTrue(biomeAt(level, grass) == Biomes.PLAINS, "biome before the last stage");
                     setLevel(chunk, levelForStage(max));
-                    NeoForge.EVENT_BUS.post(new ChunkStageChangedEvent(level, pos, levelForStage(2), levelForStage(max), 2, max));
+                    NeoForge.EVENT_BUS.post(new ChunkStageChangedEvent(level, pos, levelForStage(3), levelForStage(max), 3, max));
                 })
                 .thenWaitUntil(() -> helper.assertValueEqual(FesteringStages.festeredStage(chunk), max, "festered stage at the last stage"))
                 .thenExecute(() -> {
@@ -230,6 +238,63 @@ public final class FesteringStageTests {
                     releaseFarChunk(level, chunk);
                 })
                 .thenSucceed();
+    }
+
+    /**
+     * Short and tall grass and ferns turn at stage 2 into one festering block each, both halves of a tall plant together,
+     * and cleanse back into the same plant, also when only one half is cleansed, as at the edge of a purifier's box
+     * (P4.16).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void plantsFesterWholeAndCleanseBack(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos ground = helper.absolutePos(new BlockPos(1, 0, 1));
+        BlockPos lower = ground.above();
+        BlockPos upper = lower.above();
+        LevelChunk chunk = level.getChunkAt(ground);
+        int localX = ground.getX() & 15;
+        int localZ = ground.getZ() & 15;
+        Map<BlockPos, BlockState> saved = new HashMap<>();
+        for (int y = upper.getY(); y >= ground.getY() - FesteringStages.GROUND_DEPTH; y--) {
+            BlockPos pos = ground.atY(y);
+            saved.put(pos, level.getBlockState(pos));
+        }
+        try {
+            Map<Block, Block> tall = Map.of(Blocks.TALL_GRASS, RemissionBlocks.FESTERING_TALL_GRASS.get(),
+                    Blocks.LARGE_FERN, RemissionBlocks.FESTERING_LARGE_FERN.get());
+            for (Map.Entry<Block, Block> plant : tall.entrySet()) {
+                level.setBlock(ground, Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+                // Cleared without shape updates first, so the last plant's halves do not break the new one's.
+                level.setBlock(upper, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                level.setBlock(lower, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                DoublePlantBlock.placeAt(level, plant.getKey().defaultBlockState(), lower, 2);
+                helper.assertValueEqual(FesteringStages.festerColumn(level, chunk, localX, localZ, 1), 0, plant.getKey() + " at stage 1");
+                FesteringStages.festerColumn(level, chunk, localX, localZ, 2);
+                assertPlant(helper, lower, upper, plant.getValue(), "festered " + plant.getKey());
+                assertBlock(helper, ground, state -> state.is(Blocks.GRASS_BLOCK), () -> "grass block at stage 2");
+                Cleansing.cleanseBlock(level, upper, level.getBlockState(upper), PurificationCause.PURIFIER);
+                assertPlant(helper, lower, upper, plant.getKey(), "cleansed " + plant.getKey());
+            }
+            level.setBlock(upper, Blocks.AIR.defaultBlockState(), 2);
+            Map<Block, Block> short_ = Map.of(Blocks.SHORT_GRASS, RemissionBlocks.FESTERING_SHORT_GRASS.get(),
+                    Blocks.FERN, RemissionBlocks.FESTERING_FERN.get());
+            for (Map.Entry<Block, Block> plant : short_.entrySet()) {
+                level.setBlock(lower, plant.getKey().defaultBlockState(), 2);
+                FesteringStages.festerColumn(level, chunk, localX, localZ, 2);
+                assertBlock(helper, lower, state -> state.is(plant.getValue()), () -> "festered " + plant.getKey());
+                helper.assertTrue(Cleansing.cleansed(level.getBlockState(lower)).is(plant.getKey()), "cleanses into " + plant.getKey());
+            }
+        } finally {
+            saved.forEach((pos, state) -> level.setBlock(pos, state, 2));
+        }
+        helper.succeed();
+    }
+
+    private static void assertPlant(GameTestHelper helper, BlockPos lower, BlockPos upper, Block block, String message) {
+        assertBlock(helper, lower, state -> state.is(block) && state.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.LOWER,
+                () -> message + ", lower half");
+        assertBlock(helper, upper, state -> state.is(block) && state.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.UPPER,
+                () -> message + ", upper half");
     }
 
     /** {@code fester_variant} resolution, the shipped defaults, and a flip into a variant. */
@@ -259,10 +324,12 @@ public final class FesteringStageTests {
         helper.assertValueEqual(FesteringStages.festerBiomes(biomes), Set.of(FesterMaps.FESTER), "default fester biomes");
         helper.assertTrue(FesteringStages.festerTarget(biomes.getHolderOrThrow(Biomes.PLAINS), biomes, Set.of(FesterMaps.FESTER))
                 .is(FesterMaps.FESTER), "plains festers to remission:fester by default");
-        FesterMaps.FesterBlock oak = Blocks.OAK_LOG.builtInRegistryHolder().getData(FesterMaps.FESTERS_INTO);
-        helper.assertTrue(oak != null && oak.block() == RemissionBlocks.FESTERING_LOG.get() && oak.stage() == 2, "oak log entry from the logs tag");
+        // Logs and leaves keep their wood type (P4.16): no default entry for any of them.
+        for (Block tree : List.of(Blocks.OAK_LOG, Blocks.BIRCH_LOG, Blocks.SPRUCE_WOOD, Blocks.OAK_LEAVES, Blocks.CHERRY_LEAVES)) {
+            helper.assertTrue(tree.builtInRegistryHolder().getData(FesterMaps.FESTERS_INTO) == null, "no entry for " + tree);
+        }
         FesterMaps.FesterBlock grass = Blocks.GRASS_BLOCK.builtInRegistryHolder().getData(FesterMaps.FESTERS_INTO);
-        helper.assertTrue(grass != null && grass.block() == RemissionBlocks.FESTERING_GRASS.get() && grass.stage() == 1, "grass entry");
+        helper.assertTrue(grass != null && grass.block() == RemissionBlocks.FESTERING_GRASS.get() && grass.stage() == 3, "grass entry");
         FesterMaps.FesterBlock deepslate = Blocks.DEEPSLATE.builtInRegistryHolder().getData(FesterMaps.FESTERS_INTO);
         helper.assertTrue(deepslate != null && deepslate.stage() == 3, "deepslate entry from deepslate_ore_replaceables");
         helper.assertTrue(Blocks.DIRT.builtInRegistryHolder().getData(FesterMaps.FESTERS_INTO) == null, "dirt has no entry");

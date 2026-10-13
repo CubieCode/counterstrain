@@ -9,6 +9,7 @@ import com.cubiecode.remission.research.ScannerItem;
 import com.cubiecode.remission.serum.SerumItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.BucketItem;
+import net.minecraft.world.item.DoubleHighBlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
@@ -41,9 +42,14 @@ public final class RemissionItems {
 
     // Festering stages (P4.2)
     public static final DeferredItem<BlockItem> FESTERING_GRASS = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_GRASS);
-    public static final DeferredItem<BlockItem> FESTERING_LOG = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_LOG);
-    public static final DeferredItem<BlockItem> FESTERING_LEAVES = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_LEAVES);
     public static final DeferredItem<BlockItem> FESTERED_STONE = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERED_STONE);
+    // Festering plants (P4.16)
+    public static final DeferredItem<BlockItem> FESTERING_SHORT_GRASS = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_SHORT_GRASS);
+    public static final DeferredItem<DoubleHighBlockItem> FESTERING_TALL_GRASS = ITEMS.registerItem("festering_tall_grass",
+            properties -> new DoubleHighBlockItem(RemissionBlocks.FESTERING_TALL_GRASS.get(), properties));
+    public static final DeferredItem<BlockItem> FESTERING_FERN = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERING_FERN);
+    public static final DeferredItem<DoubleHighBlockItem> FESTERING_LARGE_FERN = ITEMS.registerItem("festering_large_fern",
+            properties -> new DoubleHighBlockItem(RemissionBlocks.FESTERING_LARGE_FERN.get(), properties));
     public static final DeferredItem<BlockItem> FESTERED_DEEPSLATE = ITEMS.registerSimpleBlockItem(RemissionBlocks.FESTERED_DEEPSLATE);
 
     // Festering veins (P4.8)
