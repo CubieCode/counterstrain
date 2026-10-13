@@ -2,7 +2,7 @@
 # Launch the Remission dev client on foundry's virtual display with the GPU
 # redirected through VirtualGL, then verify the renderer and tear it down.
 #
-#   tools/run-client-headless.sh [--scene <area/subject> [--scene-arg name=value]...]
+#   tools/run-client-headless.sh [--scene <area/subject>... [--scene-arg name=value]...]
 #                                [--resolution 1920x1080]
 #                                [--timeout 300] [--no-framebuffer]
 #                                [--gpu-wait 1800] [--record [seconds]]
@@ -17,6 +17,14 @@
 # safety bound, and reaching it fails the run. --scene-arg sets an argument
 # the scene declares (its "args"; values in [a-z0-9_.:/-]), e.g.
 # --scene items/held --scene-arg item=remission:scanner.
+# --scene may be repeated: the scenes run one after another in one game session
+# (a fresh world each, leaving to the title screen in between), which skips the
+# Gradle and game start-up of every scene after the first. Each scene writes
+# screenshots/<scene id>/; a failed scene is recorded and the next one runs.
+# --timeout is then per scene (also the harness's own per-scene watchdog,
+# which quits the game on a hung scene), and --scene-arg is not allowed.
+# Scene runs put JourneyMap's config (mod/run/client/journeymap/config) back
+# as it was before the launch.
 # Parallel Orca lanes and CI jobs share one RTX 4070, so runs take an
 # exclusive lock (~/.cache/counterstrain/gpu.lock) and wait up to --gpu-wait
 # seconds for it; the timeout starts once the lock is held. A lock inherited
@@ -39,8 +47,10 @@
 #   latest.log       the game's log (mod/run/client/logs/latest.log)
 #   framebuffer.png  last frame of the virtual display, when captured
 #   screenshots/     --scene only: <shot>.png and harness-result.txt
+#                    (in <scene id>/ per scene with several scenes)
 #   capture.mp4      --record only: the clip (capture.log holds ffmpeg output)
-#   result.txt       renderer verdict and exit reason
+#   result.txt       renderer verdict and exit reason; with several scenes a
+#                    scene.<id>=ok|failed|missing line per scene
 # Run folders older than 7 days are deleted at the start of each run, keeping
 # the 30 newest and latest (COUNTERSTRAIN_RUNS_KEEP_DAYS, COUNTERSTRAIN_RUNS_KEEP;
 # 0 keeps everything). It happens under the GPU lock, so no run is writing one.
@@ -49,7 +59,7 @@ source "$(dirname "$0")/lib.sh"
 
 resolution=1920x1080
 timeout_s=
-scene=
+scenes=()
 scene_args=()
 framebuffer=1
 gpu_wait=1800
@@ -58,7 +68,7 @@ record_s=0
 gradle_args=()
 while (($#)); do
   case "$1" in
-    --scene) scene="${2:?}"; shift 2 ;;
+    --scene) scenes+=("${2:?}"); shift 2 ;;
     --scene-arg)
       [[ "${2:-}" =~ ^[a-z_][a-z0-9_]*=[a-z0-9_.:/-]+$ ]] || die "--scene-arg must look like name=value (value in [a-z0-9_.:/-])"
       scene_args+=("$2"); shift 2 ;;
@@ -76,15 +86,20 @@ while (($#)); do
   esac
 done
 [[ "$resolution" =~ ^[0-9]+x[0-9]+$ ]] || die "resolution must look like 1920x1080"
-if [[ -n "$scene" ]]; then
+for scene in "${scenes[@]}"; do
   [[ "$scene" =~ ^[a-z0-9_]+(/[a-z0-9_]+)*$ ]] || die "scene must look like area/subject"
   [[ -f "$mod_dir/src/harness/resources/harness/scenes/$scene.json" ]] || die "no such scene: $scene"
-elif ((${#scene_args[@]})); then
-  die "--scene-arg needs --scene"
+done
+nscenes=${#scenes[@]}
+if ((${#scene_args[@]})); then
+  ((nscenes == 1)) || die "--scene-arg needs exactly one --scene"
 fi
-: "${timeout_s:=$([[ -n "$scene" ]] && echo 600 || echo 300)}"
+: "${timeout_s:=$( ((nscenes)) && echo 600 || echo 300)}"
 [[ "$timeout_s" =~ ^[0-9]+$ ]] || die "timeout must be whole seconds"
 [[ "$gpu_wait" =~ ^[0-9]+$ ]] || die "gpu-wait must be whole seconds"
+# The safety bound covers every scene; the harness times each one out first.
+total_timeout_s=$timeout_s
+((nscenes > 1 && timeout_s > 0)) && total_timeout_s=$((timeout_s * nscenes + 60))
 
 vglrun="${VGLRUN:-/opt/VirtualGL/bin/vglrun}"
 require xvfb-run setsid flock
@@ -138,11 +153,21 @@ mkdir -p "$fb_dir"
 ln -sfn "$(basename "$run_dir")" "$local_dir/runs/latest"
 shots_dir="$run_dir/screenshots"
 harness_args=()
-[[ -n "$scene" ]] && harness_args=("-Pharness_scene=$scene" "-Pharness_output=$shots_dir")
+((nscenes)) && harness_args=("-Pharness_scene=$(IFS=,; echo "${scenes[*]}")" "-Pharness_output=$shots_dir")
+((nscenes)) && ((timeout_s > 0)) && harness_args+=("-Pharness_timeout=$timeout_s")
 ((${#scene_args[@]})) && harness_args+=("-Pharness_args=$(IFS=,; echo "${scene_args[*]}")")
 game_log="$mod_dir/run/client/logs/latest.log"
 rm -f "$game_log"
 # Skip the first-launch accessibility prompt so runs land on the title menu.
+# JourneyMap saves settings a scene changes in memory (its full-screen map
+# writes its zoom back as a world loads), so scene runs put its config back
+# afterwards: every launch starts from the same settings.
+jm_config="$mod_dir/run/client/journeymap/config"
+jm_saved=
+if ((nscenes)); then
+  jm_saved="$run_dir/.journeymap-config"
+  [[ -d "$jm_config" ]] && cp -a "$jm_config" "$jm_saved"
+fi
 options="$mod_dir/run/client/options.txt"
 mkdir -p "$(dirname "$options")"
 if [[ ! -f "$options" ]]; then
@@ -158,7 +183,10 @@ recorder=()
 ((record)) && recorder=(bash -c "$(declare -f record_display); record_display \"\$@\"" record_display
   "$clip" "$record_s" "$resolution" "$game_log" "$ffmpeg" "$fb_dir/ffmpeg.pid")
 
-log "Launching client at $resolution${scene:+, scene $scene}$( ((record)) && echo ", recording") (timeout ${timeout_s}s); output in $run_dir"
+scene_label=
+((nscenes == 1)) && scene_label=", scene ${scenes[0]}"
+((nscenes > 1)) && scene_label=", $nscenes scenes"
+log "Launching client at $resolution$scene_label$( ((record)) && echo ", recording") (timeout ${total_timeout_s}s); output in $run_dir"
 # --no-daemon is mandatory: a daemon started outside vglrun would launch the
 # game without the GPU redirect (llvmpipe). setsid gives the whole tree one
 # process group so teardown reaches Xvfb, Gradle and the game JVM.
@@ -182,7 +210,7 @@ while kill -0 "$pid" 2>/dev/null; do
     reason=interrupted
     break
   fi
-  if ((timeout_s > 0 && SECONDS - start >= timeout_s)); then
+  if ((total_timeout_s > 0 && SECONDS - start >= total_timeout_s)); then
     reason=timeout
     break
   fi
@@ -248,13 +276,18 @@ if pgrep -g "$pgid" >/dev/null; then
   pgrep -a -g "$pgid" >&2 || true
 fi
 
+if [[ -n "$jm_saved" ]]; then
+  rm -rf "$jm_config"
+  [[ -d "$jm_saved" ]] && mv "$jm_saved" "$jm_config"
+fi
 [[ -f "$game_log" ]] && cp "$game_log" "$run_dir/latest.log"
 [[ -f "$mod_dir/run/client/logs/debug.log" ]] && cp "$mod_dir/run/client/logs/debug.log" "$run_dir/debug.log"
 
 status=0
 renderer_log="$run_dir/latest.log"
 [[ -f "$renderer_log" ]] || renderer_log="$run_dir/console.log"
-"$repo_root/tools/verify-gpu-render.sh" "$renderer_log" >"$run_dir/renderer.txt" 2>&1 || status=1
+renderer=ok
+"$repo_root/tools/verify-gpu-render.sh" "$renderer_log" >"$run_dir/renderer.txt" 2>&1 || { renderer=fail; status=1; }
 cat "$run_dir/renderer.txt" >&2
 
 [[ "$reason" == early-display-error || "$reason" == interrupted ]] && status=1
@@ -283,20 +316,30 @@ if ((record)); then
     status=1
   fi
 fi
-if [[ -n "$scene" ]]; then
-  if [[ "$reason" == timeout ]]; then
-    log "error: scene $scene did not finish within ${timeout_s}s"
-    status=1
-  fi
-  if ! grep -qx 'status=ok' "$shots_dir/harness-result.txt" 2>/dev/null; then
-    log "error: scene $scene did not report success (see $shots_dir/harness-result.txt and latest.log)"
-    status=1
-  fi
-  [[ -f "$shots_dir/harness-result.txt" ]] && cat "$shots_dir/harness-result.txt" >&2
+if ((nscenes)) && [[ "$reason" == timeout ]]; then
+  log "error: the scene run did not finish within ${total_timeout_s}s"
+  status=1
 fi
+scene_results=()
+for scene in "${scenes[@]}"; do
+  result="$shots_dir/harness-result.txt"
+  ((nscenes > 1)) && result="$shots_dir/$scene/harness-result.txt"
+  scene_status=missing
+  [[ -f "$result" ]] && scene_status=failed
+  grep -qx 'status=ok' "$result" 2>/dev/null && scene_status=ok
+  if [[ "$scene_status" != ok ]]; then
+    log "error: scene $scene did not report success (see $result and latest.log)"
+    status=1
+  fi
+  [[ -f "$result" ]] && cat "$result" >&2
+  scene_results+=("scene.$scene=$scene_status")
+done
 
 {
-  [[ -n "$scene" ]] && echo "scene=$scene"
+  ((nscenes == 1)) && echo "scene=${scenes[0]}"
+  ((nscenes > 1)) && echo "scenes=$(IFS=,; echo "${scenes[*]}")"
+  ((nscenes > 1)) && printf '%s\n' "${scene_results[@]}"
+  echo "renderer=$renderer"
   echo "reason=$reason"
   echo "exit_code=$exit_code"
   echo "leftover_processes=$leftover"
