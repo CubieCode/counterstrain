@@ -1008,7 +1008,7 @@ Goals: quests and scripts can observe and drive Remission.
 
 ### P8.3: KubeJS event bindings
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p8.3-kubejs-event-bindings
 - PR:
 - Depends on: P4.4, P7.3
