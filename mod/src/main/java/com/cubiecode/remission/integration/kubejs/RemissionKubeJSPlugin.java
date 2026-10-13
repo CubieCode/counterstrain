@@ -1,5 +1,6 @@
 package com.cubiecode.remission.integration.kubejs;
 
+import com.cubiecode.remission.api.BestiaryQueries;
 import com.cubiecode.remission.api.CorruptionQueries;
 import com.cubiecode.remission.api.StrainHazards;
 import com.cubiecode.remission.api.TeamQueries;
@@ -25,6 +26,7 @@ public final class RemissionKubeJSPlugin implements KubeJSPlugin {
             bindings.add("CorruptionQueries", CorruptionQueries.class);
             bindings.add("TeamQueries", TeamQueries.class);
             bindings.add("StrainHazards", StrainHazards.class);
+            bindings.add("BestiaryQueries", BestiaryQueries.class);
         }
     }
 }
