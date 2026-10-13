@@ -6,14 +6,20 @@
     "remission:festered_stone": {
       "block": "minecraft:stone"
     },
+    "remission:festering_fern": {
+      "block": "minecraft:fern"
+    },
     "remission:festering_grass": {
       "block": "minecraft:grass_block"
     },
-    "remission:festering_leaves": {
-      "block": "minecraft:oak_leaves"
+    "remission:festering_large_fern": {
+      "block": "minecraft:large_fern"
     },
-    "remission:festering_log": {
-      "block": "minecraft:oak_log"
+    "remission:festering_short_grass": {
+      "block": "minecraft:short_grass"
+    },
+    "remission:festering_tall_grass": {
+      "block": "minecraft:tall_grass"
     }
   }
 }

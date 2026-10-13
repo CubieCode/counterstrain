@@ -6,6 +6,7 @@ import com.cubiecode.remission.api.ChunkStageChangedEvent;
 import com.cubiecode.remission.api.CorruptionQueries;
 import com.cubiecode.remission.purification.Purification;
 import com.cubiecode.remission.registry.RemissionAttachments;
+import com.cubiecode.remission.registry.RemissionBlocks;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
@@ -30,9 +31,12 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
@@ -367,7 +371,10 @@ public final class FesteringStages {
         });
     }
 
-    /** Whether any side of {@code pos} is air; a side in a chunk that is not loaded counts as solid. */
+    /**
+     * Whether any side of {@code pos} is air or a festering vein (veins fill cave air from stage 1 since P4.16, and the
+     * wall behind them is still exposed); a side in a chunk that is not loaded counts as solid.
+     */
     private static boolean facesAir(ServerLevel level, LevelChunk chunk, BlockPos pos, BlockPos.MutableBlockPos side) {
         ChunkPos chunkPos = chunk.getPos();
         for (Direction direction : DIRECTIONS) {
@@ -384,7 +391,8 @@ public final class FesteringStages {
                     continue;
                 }
             }
-            if (holder.getBlockState(side).isAir()) {
+            BlockState neighbour = holder.getBlockState(side);
+            if (neighbour.isAir() || neighbour.is(RemissionBlocks.FESTERING_VEIN.get())) {
                 return true;
             }
         }
@@ -406,12 +414,36 @@ public final class FesteringStages {
         if (state.is(entry.block()) || state.hasBlockEntity()) {
             return false;
         }
+        BlockPos paired = otherHalf(level, pos, state);
         BlockState festered = copyProperties(state, entry.block().defaultBlockState());
         if (!level.setBlock(pos, festered, FLAGS)) {
             return false;
         }
         NeoForge.EVENT_BUS.post(new BlockFesteredEvent(level, pos, state, festered));
+        if (paired != null) {
+            // Both halves of a tall plant turn together (P4.16), or the half left behind would break the other.
+            BlockState other = level.getBlockState(paired);
+            BlockState festeredOther = copyProperties(other, entry.block().defaultBlockState());
+            if (level.setBlock(paired, festeredOther, FLAGS)) {
+                NeoForge.EVENT_BUS.post(new BlockFesteredEvent(level, paired.immutable(), other, festeredOther));
+            }
+        }
         return true;
+    }
+
+    /**
+     * The other half of the two-block plant (tall grass, large fern) whose half {@code state} is at {@code pos}, or null
+     * if {@code state} is not one or its other half is not the same block.
+     */
+    @Nullable
+    public static BlockPos otherHalf(Level level, BlockPos pos, BlockState state) {
+        if (!state.hasProperty(DoublePlantBlock.HALF)) {
+            return null;
+        }
+        DoubleBlockHalf half = state.getValue(DoublePlantBlock.HALF);
+        BlockPos other = half == DoubleBlockHalf.LOWER ? pos.above() : pos.below();
+        BlockState otherState = level.getBlockState(other);
+        return otherState.is(state.getBlock()) && otherState.getValue(DoublePlantBlock.HALF) != half ? other : null;
     }
 
     /** {@code to} with every state property it shares with {@code from} set to {@code from}'s value. */

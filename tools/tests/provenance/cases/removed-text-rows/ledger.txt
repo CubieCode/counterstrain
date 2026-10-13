@@ -1,0 +1,7 @@
+# Test ledger for the removed-text-rows case (tools/check-provenance.py --self-test).
+
+| Path / ID | Type | Origin | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.kept` | lang | human (fixture) | draft | Key in the file. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.gone` | lang | human (fixture) | removed | Key removed from a file that stays: allowed. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.ke*` | lang | human (fixture) | removed | Prefix row marked removed while a key with the prefix is still there. |

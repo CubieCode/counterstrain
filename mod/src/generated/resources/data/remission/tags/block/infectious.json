@@ -1,8 +1,10 @@
 {
   "values": [
     "remission:festering_grass",
-    "remission:festering_log",
-    "remission:festering_leaves",
+    "remission:festering_short_grass",
+    "remission:festering_tall_grass",
+    "remission:festering_fern",
+    "remission:festering_large_fern",
     "remission:festered_stone",
     "remission:festered_deepslate",
     "remission:festering_vein"

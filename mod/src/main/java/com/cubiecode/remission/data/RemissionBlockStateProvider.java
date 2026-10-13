@@ -5,7 +5,9 @@ import com.cubiecode.remission.registry.RemissionBlocks;
 import net.minecraft.core.Direction;
 import com.cubiecode.remission.tech.MachineKind;
 import net.minecraft.data.PackOutput;
+import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.MultifaceBlock;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.neoforged.neoforge.client.model.generators.BlockStateProvider;
 import net.neoforged.neoforge.client.model.generators.ConfiguredModel;
 import net.neoforged.neoforge.client.model.generators.ModelFile;
@@ -30,10 +32,13 @@ public final class RemissionBlockStateProvider extends BlockStateProvider {
         // Festering stages (P4.2). Untinted: festering colour is in the textures, not the biome.
         simpleBlockWithItem(RemissionBlocks.FESTERING_GRASS.get(), models().cubeBottomTop("festering_grass",
                 modLoc("block/festering_grass_side"), mcLoc("block/dirt"), modLoc("block/festering_grass_top")));
-        logBlock(RemissionBlocks.FESTERING_LOG.get());
-        simpleBlockItem(RemissionBlocks.FESTERING_LOG.get(), models().getExistingFile(modLoc("block/festering_log")));
-        simpleBlockWithItem(RemissionBlocks.FESTERING_LEAVES.get(), models().cubeAll("festering_leaves",
-                modLoc("block/festering_leaves")).renderType("cutout_mipped"));
+        // Festering plants (P4.16): cross models like the vanilla plants, untinted; tall ones a cross per half.
+        simpleBlock(RemissionBlocks.FESTERING_SHORT_GRASS.get(), models().cross("festering_short_grass",
+                modLoc("block/festering_short_grass")).renderType("cutout"));
+        simpleBlock(RemissionBlocks.FESTERING_FERN.get(), models().cross("festering_fern",
+                modLoc("block/festering_fern")).renderType("cutout"));
+        doublePlant(RemissionBlocks.FESTERING_TALL_GRASS.get(), "festering_tall_grass");
+        doublePlant(RemissionBlocks.FESTERING_LARGE_FERN.get(), "festering_large_fern");
         simpleBlockWithItem(RemissionBlocks.FESTERED_STONE.get(), cubeAll(RemissionBlocks.FESTERED_STONE.get()));
         // Cave festering (P4.6).
         axisBlock(RemissionBlocks.FESTERED_DEEPSLATE.get(), modLoc("block/festered_deepslate"), modLoc("block/festered_deepslate_top"));
@@ -66,5 +71,13 @@ public final class RemissionBlockStateProvider extends BlockStateProvider {
             horizontalBlock(kind.block(), model);
             simpleBlockItem(kind.block(), model);
         }
+    }
+
+    /** A two-block plant: {@code <name>_bottom} and {@code <name>_top} cross models on its lower and upper half. */
+    private void doublePlant(DoublePlantBlock block, String name) {
+        ModelFile lower = models().cross(name + "_bottom", modLoc("block/" + name + "_bottom")).renderType("cutout");
+        ModelFile upper = models().cross(name + "_top", modLoc("block/" + name + "_top")).renderType("cutout");
+        getVariantBuilder(block).forAllStates(state -> ConfiguredModel.builder()
+                .modelFile(state.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.LOWER ? lower : upper).build());
     }
 }

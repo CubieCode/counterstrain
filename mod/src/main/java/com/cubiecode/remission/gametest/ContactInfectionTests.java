@@ -346,9 +346,10 @@ public final class ContactInfectionTests {
     public static void shippedDefaults(GameTestHelper helper) {
         List<Block> infectious = BuiltInRegistries.BLOCK.getTag(Contact.INFECTIOUS).orElseThrow().stream()
                 .map(holder -> holder.value()).toList();
-        helper.assertTrue(infectious.containsAll(List.of(RemissionBlocks.FESTERING_GRASS.get(), RemissionBlocks.FESTERING_LOG.get(),
-                RemissionBlocks.FESTERING_LEAVES.get(), RemissionBlocks.FESTERED_STONE.get(),
-                RemissionBlocks.FESTERED_DEEPSLATE.get(), RemissionBlocks.FESTERING_VEIN.get())) && infectious.size() == 6,
+        helper.assertTrue(infectious.containsAll(List.of(RemissionBlocks.FESTERING_GRASS.get(), RemissionBlocks.FESTERING_SHORT_GRASS.get(),
+                RemissionBlocks.FESTERING_TALL_GRASS.get(), RemissionBlocks.FESTERING_FERN.get(),
+                RemissionBlocks.FESTERING_LARGE_FERN.get(), RemissionBlocks.FESTERED_STONE.get(),
+                RemissionBlocks.FESTERED_DEEPSLATE.get(), RemissionBlocks.FESTERING_VEIN.get())) && infectious.size() == 8,
                 "shipped #remission:infectious: " + infectious);
         List<CorruptionCause> causes = List.of(CorruptionCause.values());
         // Later causes (P5.2's PURIFICATION) are inserted before OTHER too, so only the order is fixed.

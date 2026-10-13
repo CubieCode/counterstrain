@@ -22,7 +22,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Infected mobs | **hosts** | "a host cow"; the bestiary lists host types |
 | Mobs the Strain cannot take | **immune** | tag `#remission:immune` (bosses by default); "the wither is immune" |
 | How far the Strain has taken a host | **Strain level** (0–100) and **host stage** | config `hosts.stageThresholds`; `CorruptionState` fields `level`, `stage` |
-| Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_log`, `remission:festering_leaves`, `remission:festered_stone`, `remission:festered_deepslate`, biome `remission:fester`; data map `remission:festers_into` |
+| Infected land and its stages | **festering** | `remission:festering_grass`, `remission:festering_short_grass`, `remission:festering_tall_grass`, `remission:festering_fern`, `remission:festering_large_fern`, `remission:festered_stone`, `remission:festered_deepslate`, biome `remission:fester`; data map `remission:festers_into` |
 | The fester biome a particular source biome turns into | **fester variant** | data map `remission:fester_variant`; "plains festers into `remission:fester`, a pack's lavender field into its own fester variant" |
 | Growth that creeps over the faces of blocks in festering land, player builds included | **festering veins** | block `remission:festering_vein`; block tag `#remission:vein_resistant`; config `[festering] veins`, `veinMinStage`; "veins are creeping up the wall" |
 | How much punishment a nidus takes before it is destroyed; it fights back as it falls | **nidus vitality** | config `[nidi]` (P4.10); `NidusDamagedEvent`; boss bar "Nidus vitality"; "the nidus is at half vitality" |
@@ -103,8 +103,9 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 
 ### Festering land
 
-- Per-chunk corruption level (chunk Data Attachment) driving visible festering stages: festering grass, festering trees and foliage, festered stone, and finally a biome flip to `remission:fester` (or a per-biome fester variant set by data, so modded biomes fester too).
+- Per-chunk corruption level (chunk Data Attachment) driving visible festering stages: festering veins creep over the land first, then its grass and ferns fester, then the ground itself (festering grass, festered stone), and finally a biome flip to `remission:fester` (or a per-biome fester variant set by data, so modded biomes fester too).
 - **Underground:** a festering chunk is festering at every height. From a late stage its caves fester too, as a skin on the blocks facing cave air (rock inside the ground and ores are left alone, so mining stays viable), looking clearly different from sculk. Caves and underground bases are no refuge.
+- **Festering keeps what it covers:** only blocks that come in few kinds turn into festering blocks, one festering block per kind, so cleansing gives back the land that was there. Trees and flowers never turn: veins cover them, and the fester biome tints the foliage.
 - **Festering veins** creep over the faces of blocks in festering chunks without replacing them, player builds included, so a base inside festering land is overgrown unless it is warded by a quarantine pylon or cleansed.
 - The Strain spreads from **nidi** (blocks or structures). Destroying a nidus stops its spread but does not cleanse land.
 - **Nidus encounters** (P4.10): a nidus cannot be mined. Players wear down its **nidus vitality** by striking it, and it fights back as it falls, starting surges from itself and lashing nearby players, so destroying one is the climax of a region. Every player who struck it recently shares the credit, and its vitality and surges scale with the number of players fighting it, so a group neither melts it nor leaves a solo player facing a fight tuned for four.

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "half=lower": {
+      "model": "remission:block/festering_tall_grass_bottom"
+    },
+    "half=upper": {
+      "model": "remission:block/festering_tall_grass_top"
+    }
+  }
+}

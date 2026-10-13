@@ -81,13 +81,27 @@ public final class Cleansing {
         return !state.isAir() && cleansed(state) != null;
     }
 
-    /** Cleanses the block at {@code pos} if it is festered; returns whether it changed. */
+    /**
+     * Cleanses the block at {@code pos} if it is festered, with the other half of a tall plant (P4.16); returns whether
+     * it changed.
+     */
     public static boolean cleanseBlock(ServerLevel level, BlockPos pos, BlockState state, PurificationCause cause) {
         BlockState clean = state.isAir() ? null : cleansed(state);
-        if (clean == null || !level.setBlock(pos, clean, FLAGS)) {
+        if (clean == null) {
+            return false;
+        }
+        BlockPos paired = FesteringStages.otherHalf(level, pos, state);
+        if (!level.setBlock(pos, clean, FLAGS)) {
             return false;
         }
         NeoForge.EVENT_BUS.post(new BlockPurifiedEvent(level, pos, state, clean, cause));
+        if (paired != null) {
+            BlockState other = level.getBlockState(paired);
+            BlockState cleanOther = cleansed(other);
+            if (cleanOther != null && level.setBlock(paired, cleanOther, FLAGS)) {
+                NeoForge.EVENT_BUS.post(new BlockPurifiedEvent(level, paired.immutable(), other, cleanOther, cause));
+            }
+        }
         return true;
     }
 

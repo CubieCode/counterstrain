@@ -11,7 +11,9 @@ with zlib). Fails when:
   top-left square, scaled with width / 16) while its status is `final`, or
   lacks it while its status is `placeholder`;
 - a row points at a repository file that does not exist, unless its status is
-  `removed` (and a `removed` row whose file still exists fails too);
+  `removed` (and a `removed` row whose file still exists fails too; a removed
+  `file:key` row fails only while a JSON file still has that key, or a key
+  with that prefix for a `*` row);
 - a row has an unknown status, or two rows name the same file or the same text ID
   (an exact `file:key` row overriding a `file:prefix*` row is fine: the most
   specific row wins).
@@ -21,6 +23,7 @@ and pack/ (except pack/mods/, packwiz metadata). Gitignored files are skipped.
 Assets are picked by extension, so configs, scripts and packwiz TOML never
 count. The content-provenance skill documents the rules.
 """
+import json
 import os
 import re
 import shutil
@@ -237,6 +240,20 @@ def has_marker_bytes(data):
 
 # --- Check -------------------------------------------------------------------
 
+def has_text_key(path, key):
+    """Whether the JSON object in ``path`` has ``key`` (any key with its prefix for ``prefix*``); False if not JSON."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    if key.endswith("*"):
+        return any(k.startswith(key[:-1]) for k in data)
+    return key in data
+
+
 def check(root, ledger):
     failures = []
     ledger_rel = os.path.relpath(ledger, root) if ledger.startswith(root + os.sep) else ledger
@@ -254,7 +271,11 @@ def check(root, ledger):
         if not file_part.startswith(REPO_PATH_ROOTS):
             continue
         on_disk = os.path.isfile(os.path.join(root, file_part))
-        if status == "removed":
+        if status == "removed" and ":" in path_id:
+            # A removed text row: its file stays, the key must be gone.
+            if on_disk and has_text_key(os.path.join(root, file_part), path_id.split(":", 1)[1]):
+                fail(where, f"`{path_id}` has status removed but its key is still in the file; set its real status")
+        elif status == "removed":
             if on_disk:
                 fail(where, f"`{file_part}` has status removed but the file still exists; set its real status")
         elif not on_disk:

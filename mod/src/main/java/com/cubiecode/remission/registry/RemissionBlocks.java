@@ -3,6 +3,7 @@ package com.cubiecode.remission.registry;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.purification.MendrootBlock;
 import com.cubiecode.remission.purification.QuarantinePylonBlock;
+import com.cubiecode.remission.world.FesteringPlantBlock;
 import com.cubiecode.remission.world.FesteringVeinBlock;
 import com.cubiecode.remission.world.FesteringVeins;
 import com.cubiecode.remission.tech.MachineBlock;
@@ -11,7 +12,7 @@ import com.cubiecode.remission.world.NidusBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SnowyDirtBlock;
 import net.minecraft.world.level.block.SoundType;
@@ -49,18 +50,24 @@ public final class RemissionBlocks {
 
     // Festering stages (P4.2): what land in a festering chunk turns into (data map remission:festers_into). They never
     // spread or revert on their own; the chunk's Strain level drives them.
-    /** Grass block at festering stage 1. Keeps the snowy state of the grass it replaced; does not spread. */
+    /** Grass block at festering stage 3. Keeps the snowy state of the grass it replaced; does not spread. */
     public static final DeferredBlock<SnowyDirtBlock> FESTERING_GRASS = BLOCKS.registerBlock("festering_grass", SnowyDirtBlock::new,
             BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_PURPLE)
                     .strength(0.6F)
                     .sound(SoundType.GRASS));
-    /** Logs and wood at festering stage 2. In {@code #minecraft:logs}, so festering leaves around it do not decay. */
-    public static final DeferredBlock<RotatedPillarBlock> FESTERING_LOG = BLOCKS.registerBlock("festering_log", RotatedPillarBlock::new,
-            BlockBehaviour.Properties.ofFullCopy(Blocks.OAK_LOG).mapColor(MapColor.COLOR_GRAY));
-    /** Leaves at festering stage 2; decay like vanilla leaves. */
-    public static final DeferredBlock<LeavesBlock> FESTERING_LEAVES = BLOCKS.registerBlock("festering_leaves", LeavesBlock::new,
-            BlockBehaviour.Properties.ofFullCopy(Blocks.OAK_LEAVES).mapColor(MapColor.COLOR_PURPLE));
+    /**
+     * Short grass, tall grass, ferns and large ferns at festering stage 2 (P4.16), one block for each, so each cleanses
+     * back into the plant it was. Copies of the vanilla plants (replaceable, no collision, offset) with festering colour.
+     */
+    public static final DeferredBlock<FesteringPlantBlock> FESTERING_SHORT_GRASS = BLOCKS.registerBlock("festering_short_grass",
+            FesteringPlantBlock::new, BlockBehaviour.Properties.ofFullCopy(Blocks.SHORT_GRASS).mapColor(MapColor.COLOR_PURPLE));
+    public static final DeferredBlock<DoublePlantBlock> FESTERING_TALL_GRASS = BLOCKS.registerBlock("festering_tall_grass",
+            DoublePlantBlock::new, BlockBehaviour.Properties.ofFullCopy(Blocks.TALL_GRASS).mapColor(MapColor.COLOR_PURPLE));
+    public static final DeferredBlock<FesteringPlantBlock> FESTERING_FERN = BLOCKS.registerBlock("festering_fern",
+            FesteringPlantBlock::new, BlockBehaviour.Properties.ofFullCopy(Blocks.FERN).mapColor(MapColor.COLOR_PURPLE));
+    public static final DeferredBlock<DoublePlantBlock> FESTERING_LARGE_FERN = BLOCKS.registerBlock("festering_large_fern",
+            DoublePlantBlock::new, BlockBehaviour.Properties.ofFullCopy(Blocks.LARGE_FERN).mapColor(MapColor.COLOR_PURPLE));
     /** Overworld stone near the surface at festering stage 3. */
     public static final DeferredBlock<Block> FESTERED_STONE = BLOCKS.registerSimpleBlock("festered_stone",
             BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).mapColor(MapColor.TERRACOTTA_PURPLE));

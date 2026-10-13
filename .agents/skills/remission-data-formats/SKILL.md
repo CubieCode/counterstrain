@@ -569,12 +569,12 @@ Default fight: a new nidus has 250 vitality and a full-grown one 375 for one pla
 
 Events: `NidusDamagedEvent` (cancellable) and `NidusDestroyedEvent` (Public API, below).
 
-## Festering stages, blocks and the fester biome (built, P4.2; caves P4.6)
+## Festering stages, blocks and the fester biome (built, P4.2; caves P4.6; plants and stage order P4.16)
 
 A chunk's festering stage (`[festering] stageThresholds`, Public API below) turns its land, in `world/FesteringStages`, server side:
 
 - **Blocks:** when a chunk's stage rises, every block in it with a `remission:festers_into` entry (below) whose `stage` is at or below the chunk's stage is replaced by the entry's block. Stages are cumulative: a chunk that jumps from 0 to 3 gets every entry up to 3 at once. The surface pass scans each column from its highest block (`WORLD_SURFACE` heightmap) down through trees, plants and water to 5 blocks into the ground, counting the first block that blocks motion and is not in `#minecraft:logs` or `#minecraft:leaves` as the first ground block. Block states keep every property both blocks share (log `axis`, leaf `distance`, `persistent` and `waterlogged`, grass `snowy`). Blocks with block entities are never replaced. Replacement uses block update flags 2 and 16 (sent to clients, no neighbour updates), so plants on festering grass stay and nothing drops.
-- **Caves (P4.6):** after the surface pass, a cave pass replaces every block in the chunk, at any height, that faces air on at least one of its six sides (air, cave air or void air: cave walls, floors and ceilings, overhangs and the lower parts of cliff faces) and whose entry festers underground at the chunk's stage: `stage` and `underground_stage` (below) both at or below it. Rock with no air beside it and blocks without an entry (ores, dirt, gravel, sculk) stay, so mining stays viable. At or above Y=0 every such block festers; below Y=0 one in four does, picked by a hash of the block position (the same blocks in every world and on every rescan). The depth (Y=0) and fraction (1 in 4) are constants, not config. A side in a chunk that is not loaded counts as solid.
+- **Caves (P4.6):** after the surface pass, a cave pass replaces every block in the chunk, at any height, that faces air on at least one of its six sides (air, cave air or void air, or a festering vein, since veins fill cave air before the cave pass runs, P4.16: cave walls, floors and ceilings, overhangs and the lower parts of cliff faces) and whose entry festers underground at the chunk's stage: `stage` and `underground_stage` (below) both at or below it. Rock with no air beside it and blocks without an entry (ores, dirt, gravel, sculk) stay, so mining stays viable. At or above Y=0 every such block festers; below Y=0 one in four does, picked by a hash of the block position (the same blocks in every world and on every rescan). The depth (Y=0) and fraction (1 in 4) are constants, not config. A side in a chunk that is not loaded counts as solid.
 - **Biome flip:** at the last stage (the number of `stageThresholds`; 4 by default), after its blocks, every biome cell of the chunk (all heights) flips to its fester biome: the source biome's `remission:fester_variant` entry (below), else `remission:fester`. `remission:fester` and every biome a `fester_variant` entry names never flip again. Players who have the chunk get vanilla's `ClientboundChunksBiomesPacket` (as `/fillbiome` sends), so grass, foliage and water colours, fog and sky change without a relog; no Remission payload.
 - **Budget and timing:** a stage rise (`ChunkStageChangedEvent`, live or catch-up) or a chunk load queues the chunk; up to 64 columns (or queued chunks skipped) are done per tick and level, so a chunk takes 4 ticks; the cave pass then does up to 8 block layers (or sections with no block that could fester skipped) per tick and level, so a chunk with stone in every section takes about 48 ticks. Chunk attachment `remission:festered_stage` (int, saved with the chunk, never at 0, server only) records the stage a chunk was last brought up to, written when its cave pass finishes: a queued chunk at or below it is skipped, and a chunk that unloaded or a server that stopped mid-way is redone (both passes change nothing twice) when the chunk loads again. Blocks placed later in a festered chunk stay until its stage next rises. Stages never fall in phase 4; nothing reverts (purification is P5.2).
 - **Events:** `BlockFesteredEvent` once per replaced block (Public API, below). The biome flip posts no event; `ChunkStageChangedEvent` already marks the stage.
@@ -583,20 +583,22 @@ Blocks (block items too, no creative tab yet), `data/remission/loot_table/blocks
 
 | Block | Replaces by default (stage) | Behaviour | Drops | Tool tag |
 | --- | --- | --- | --- | --- |
-| `remission:festering_grass` | `minecraft:grass_block` (1) | snowy state like grass; never spreads or decays; in `#minecraft:dirt`, so plants stay on it | dirt, itself with silk touch; festered soil chance at stage 2+ (P7.1) | `mineable/shovel` |
-| `remission:festering_log` | `#minecraft:logs` (2) | pillar with `axis`; in `#minecraft:logs`, so leaves around it do not decay | itself | `mineable/axe` |
-| `remission:festering_leaves` | `#minecraft:leaves` (2) | vanilla leaves (decay, `distance`, `persistent`); in `#minecraft:leaves` | sticks (vanilla leaf chances), itself with shears or silk touch | `mineable/hoe` |
+| `remission:festering_grass` | `minecraft:grass_block` (3) | snowy state like grass; never spreads or decays; in `#minecraft:dirt`, so plants stay on it | dirt, itself with silk touch; festered soil chance at stage 2+ (P7.1) | `mineable/shovel` |
+| `remission:festering_short_grass`, `remission:festering_fern` (P4.16) | `minecraft:short_grass`, `minecraft:fern` (2) | plant like short grass (no collision, replaceable, stays on dirt and festering grass); bone meal does nothing | itself with shears, nothing otherwise | none (instant); `#minecraft:sword_efficient`, `replaceable`, `replaceable_by_trees` |
+| `remission:festering_tall_grass`, `remission:festering_large_fern` (P4.16) | `minecraft:tall_grass`, `minecraft:large_fern` (2) | two-block plant (`half`) like tall grass | two of its short plant with shears, nothing otherwise | as above |
 | `remission:festered_stone` | `#minecraft:stone_ore_replaceables` (3): stone, granite, diorite, andesite | plain stone-like block | itself | `mineable/pickaxe` |
 | `remission:festered_deepslate` (P4.6) | `#minecraft:deepslate_ore_replaceables` (3): deepslate, tuff | pillar with `axis` like deepslate (deepslate's hardness and sounds) | itself | `mineable/pickaxe` |
 
-**Data map `remission:festers_into`** (on `minecraft:block`), `data/<ns>/data_maps/block/festers_into.json`, NeoForge data map file format (keys are block ids or `#tags`; `replace`, `remove` and conditions work as for any data map). Server side only, not synced, reloaded with `/reload` (already festered chunks are not rescanned; the next stage rise uses the new map). Remission's default (datagen `RemissionDataMapProvider`):
+**Data map `remission:festers_into`** (on `minecraft:block`), `data/<ns>/data_maps/block/festers_into.json`, NeoForge data map file format (keys are block ids or `#tags`; `replace`, `remove` and conditions work as for any data map). Server side only, not synced, reloaded with `/reload` (already festered chunks are not rescanned; the next stage rise uses the new map). Remission's default (datagen `RemissionDataMapProvider`; P4.16 set the stages so veins come first, then plants, then the ground, and dropped logs and leaves, which come in too many kinds to turn into one block and back):
 
 ```json
 {
   "values": {
-    "minecraft:grass_block": { "block": "remission:festering_grass" },
-    "#minecraft:logs": { "block": "remission:festering_log", "stage": 2 },
-    "#minecraft:leaves": { "block": "remission:festering_leaves", "stage": 2 },
+    "minecraft:grass_block": { "block": "remission:festering_grass", "stage": 3 },
+    "minecraft:short_grass": { "block": "remission:festering_short_grass", "stage": 2 },
+    "minecraft:tall_grass": { "block": "remission:festering_tall_grass", "stage": 2 },
+    "minecraft:fern": { "block": "remission:festering_fern", "stage": 2 },
+    "minecraft:large_fern": { "block": "remission:festering_large_fern", "stage": 2 },
     "#minecraft:stone_ore_replaceables": { "block": "remission:festered_stone", "stage": 3 },
     "#minecraft:deepslate_ore_replaceables": { "block": "remission:festered_deepslate", "stage": 3 }
   }
@@ -605,11 +607,11 @@ Blocks (block items too, no creative tab yet), `data/remission/loot_table/blocks
 
 | Field | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `block` | block id | required | What the block turns into. A block that maps to itself (festering logs and leaves are in the tags they replace) is left alone. |
+| `block` | block id | required | What the block turns into. A block that maps to itself (a festering block in a tag it replaces) is left alone. Both halves of a two-block plant (`half` property) turn together when the other half is the same block. |
 | `stage` | int ≥ 1 | 1 | Lowest chunk festering stage at which it turns. Entries above the configured number of stages never apply. |
 | `underground_stage` | int ≥ 0 | 3 | Lowest chunk festering stage at which it also turns in the cave pass (where it faces air), never below `stage` (the higher of the two applies). `0` turns cave festering off for the entry; the surface pass still applies. (P4.6) |
 
-A pack adds modded blocks (`"biomesoplenty:origin_grass_block": {"block": "remission:festering_grass"}`), points a block at its own festering block, removes an entry (`"remove": ["#minecraft:deepslate_ore_replaceables"]`), or tunes caves: `{"block": "remission:festered_stone", "stage": 3, "underground_stage": 0}` on `#minecraft:stone_ore_replaceables` keeps caves in stone clean, and `"underground_stage": 4` delays them to the last stage.
+Logs, leaves and flowers have no default entry: trees keep their wood type and show festering through veins and, at the last stage, the fester biome's foliage colour. A pack that maps them should give each kind its own festering block with a `cleanses_into` entry back, or cleansing flattens them. A pack adds modded blocks (`"biomesoplenty:origin_grass_block": {"block": "remission:festering_grass"}`), points a block at its own festering block, removes an entry (`"remove": ["#minecraft:deepslate_ore_replaceables"]`), or tunes caves: `{"block": "remission:festered_stone", "stage": 3, "underground_stage": 0}` on `#minecraft:stone_ore_replaceables` keeps caves in stone clean, and `"underground_stage": 4` delays them to the last stage.
 
 Changed in P4.6: P4.2 shipped one `#minecraft:base_stone_overworld` entry (stone, granite, diorite, andesite, tuff and deepslate to festered stone). It is now the two ore-replaceable tags above, so deepslate gets its own block, tuff festers into festered deepslate, and a modded stone that is only in `#minecraft:base_stone_overworld` no longer festers by default (add it to one of the two tags or give it an entry). A pack that removed `#minecraft:base_stone_overworld` removes the two new keys instead. Where several entries cover a block, the one in the file loaded last (datapack order) wins, whether it names the block or a tag; within one file, list a block only once (directly or through one tag), because the order of a file's values is not defined.
 
@@ -653,7 +655,7 @@ Sound events (`RemissionSounds`; files and subtitles in `assets/remission/sounds
 
 **Growth** (`world/FesteringVeins`, `VeinGrowth`, server side): in a chunk at or above `[festering] veinMinStage`, every air block (air, cave air) of the chunk, at any height, gets a vein face on each side whose neighbour holds a multiface block (`MultifaceBlock.canAttachTo`: a full support or collision face toward it, so stone, dirt, planks, glass and leaves do, slabs from below, fences and torches do not), is not air or a vein, and is not in `#remission:vein_resistant`, where the face is **selected** for the chunk's coverage. Nothing is replaced: veins only go into air, so player builds, plants and water are never overwritten, and block entities are never touched. A neighbour in a chunk that is not loaded is left for a later visit.
 
-- **Coverage:** `15 * (stage - veinMinStage + 1)` percent of eligible faces, at most 60 (constants `COVERAGE_PER_STAGE`, `MAX_COVERAGE`, not config): with the defaults 15% at stage 2, 30% at 3, 45% at 4. Selection is a hash of the block position and side, scaled by a per-4×4×4-cell weight (0–2, by the cell's hash) so veins grow in patches; the same blocks at the same stage always get the same veins, in any world, scan order or reload, and a higher stage keeps every face of a lower one.
+- **Coverage:** `15 * (stage - veinMinStage + 1)` percent of eligible faces, at most 60 (constants `COVERAGE_PER_STAGE`, `MAX_COVERAGE`, not config): with the defaults (`veinMinStage` 1 since P4.16) 15% at stage 1, 30% at 2, 45% at 3, 60% at 4. Selection is a hash of the block position and side, scaled by a per-4×4×4-cell weight (0–2, by the cell's hash) so veins grow in patches; the same blocks at the same stage always get the same veins, in any world, scan order or reload, and a higher stage keeps every face of a lower one.
 - **Budget and timing:** a chunk load or a stage rise (`ChunkStageChangedEvent`) queues the chunk; each tick the level's pass walks up to 8 block layers of the current chunk bottom to top (`LAYER_BUDGET`), and a section that holds no air, or only air with only air above, below and beside it, costs one unit and is skipped (a typical overworld chunk takes about 20 ticks). A chunk that finished is visited again 1200 ticks later (`REVISIT_TICKS`) while it stays loaded, so a wall a player builds or a face mined open in a festering chunk is overgrown within about a minute. A chunk that unloads mid-way starts again from its load event; one that only drops below full status resumes when it is back. Nothing is saved: a chunk that loads at a higher stage gets that stage's veins at once (catch-up). Frozen ticks (`/tick freeze`) grow nothing.
 - **Events:** `BlockFesteredEvent` once per block that gained faces (old state air or a vein, new state the vein; Public API, below).
 
@@ -662,7 +664,7 @@ Block tags, `data/<ns>/tags/block/<name>.json`:
 | Tag | Default | Meaning |
 | --- | --- | --- |
 | `#remission:vein_resistant` | empty | Blocks veins never grow on (a face toward one is never added). The pack fills it, for example with a ward block or a sealed base material. Veins already on a block stay if it is added later. |
-| `#remission:infectious` | `festering_grass`, `festering_log`, `festering_leaves`, `festered_stone`, `festered_deepslate`, `festering_vein` | Blocks that infect mobs by contact (below), anywhere, festering chunk or not. |
+| `#remission:infectious` | `festering_grass`, `festering_short_grass`, `festering_tall_grass`, `festering_fern`, `festering_large_fern`, `festered_stone`, `festered_deepslate`, `festering_vein` | Blocks that infect mobs by contact (below), anywhere, festering chunk or not. |
 
 **Contact infection** (`infection/Contact`, `ContactTracker`, `ContactInfection`, server side): a `Mob` is in **contact** when a block in `#remission:infectious` reaches its bounding box grown by 0.001 blocks (standing on it, inside it, or pressed against it; the block's outline shape counts, so a floor vein touches what stands in its block), or when water (`#minecraft:water` fluid) reaches into its bounding box and the mob's chunk is at or above `[infection] festeringLandMinStage` (fish, squid, drowned, axolotls, anything swimming or wading; the water itself is not replaced). The query `Contact.of(entity)` (`Kind.NONE`, `BLOCK`, `WATER`) and `Contact.inContact(entity)` work for any entity, players included, read loaded chunks only; contact viral load (P5.2, Viral load above) reuses them for players. They are internal, not API. Inside a quarantine pylon's ward (P5.2, below) no mob counts as in contact.
 
@@ -677,7 +679,7 @@ Config `config/remission-common.toml` (read at the start of each pass):
 | Section | Key | Type | Default | Meaning |
 | --- | --- | --- | --- | --- |
 | `[festering]` | `veins` | bool | true | Vein growth on or off. Off grows nothing more; grown veins stay. |
-| `[festering]` | `veinMinStage` | int 1–8 | 2 | Lowest chunk festering stage that grows veins. Above the number of stages, none do. |
+| `[festering]` | `veinMinStage` | int 1–8 | 1 | Lowest chunk festering stage that grows veins. Above the number of stages, none do. |
 | `[infection]` | `contact` | bool | true | Contact infection on or off. Off freezes every mob's contact. |
 | `[infection]` | `contactTicks` | int 0–72000 | 100 | Contact (game ticks, net of decay) at which a mob becomes a host; 0 infects on the first pass that finds it in contact. Water uses `festeringLandMinStage` as its minimum stage. |
 
@@ -724,19 +726,19 @@ Events: `SurgeStartedEvent`, `SurgeEndedEvent` (Public API, below). Commands: Su
 
 **Lowering land and remission.** Every purification tool lowers a chunk's Strain level (`chunk_corruption`, Festering land above) through one path: the level is stored with the current game time, `ChunkStageChangedEvent` fires when the stage falls, and `festered_stage` drops to the new stage so the stage work festers the chunk again if the Strain returns. A chunk lowered from above 0 to 0 **enters remission**: chunk attachment `remission:chunk_remission` (a long, the game time it entered; saved with the chunk, server only, not synced) is set, its remaining festered blocks are queued for a cleanse, `ChunkEnteredRemissionEvent` fires and nearby players are credited (`remission:region_cleansed`, `remission:chunks_cleansed`, above). A chunk that never festered is never in remission. Any later rise of its level (spread) removes the attachment; there is no leave event. While in remission, catch-up after a reload counts missed spread passes from the remission time. A chunk in remission that loads is checked again and anything festered in it is cleansed. Read it with `CorruptionQueries.isInRemission` (Public API, below).
 
-**Cleansing.** A block is cleansed into its `remission:cleanses_into` entry, keeping the state properties both blocks share; a `remission:festering_vein` is cleared to air; blocks with block entities and blocks without an entry are left alone. One `BlockPurifiedEvent` per changed block; flags `UPDATE_CLIENTS | UPDATE_KNOWN_SHAPE` (no neighbour updates). A whole-chunk cleanse also turns every fester biome cell (`remission:fester` and every `fester_variant` target) back into the biome the level's biome source generates there, and clears `festered_stage`.
+**Cleansing.** A block is cleansed into its `remission:cleanses_into` entry, keeping the state properties both blocks share; a `remission:festering_vein` is cleared to air; blocks with block entities and blocks without an entry are left alone. One `BlockPurifiedEvent` per changed block; flags `UPDATE_CLIENTS | UPDATE_KNOWN_SHAPE` (no neighbour updates). The other half of a two-block plant is cleansed with it (P4.16), so a cleanse that reaches only one half never leaves a broken plant. A whole-chunk cleanse also turns every fester biome cell (`remission:fester` and every `fester_variant` target) back into the biome the level's biome source generates there, and clears `festered_stage`.
 
 Data map `data/<ns>/data_maps/block/cleanses_into.json` (`remission:cleanses_into`, NeoForge data map, server only, `/reload`-able; keys are block ids or tags):
 
 ```json
-{"values": {"remission:festering_log": {"block": "minecraft:oak_log"}, "#counterstrain:festered_planks": {"block": "minecraft:oak_planks"}}}
+{"values": {"remission:festering_grass": {"block": "minecraft:grass_block"}, "#counterstrain:festered_planks": {"block": "minecraft:oak_planks"}}}
 ```
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `block` | block id | The clean block it turns back into. |
 
-Defaults: `festering_grass` → `minecraft:grass_block`, `festering_log` → `minecraft:oak_log`, `festering_leaves` → `minecraft:oak_leaves`, `festered_stone` → `minecraft:stone`, `festered_deepslate` → `minecraft:deepslate`. Which block festered is not recorded, so a pack that adds `festers_into` targets adds their `cleanses_into` entries too (a target without one is never cleansed), and a birch log cleanses into an oak log.
+Defaults: `festering_grass` → `minecraft:grass_block`, `festering_short_grass` → `minecraft:short_grass`, `festering_tall_grass` → `minecraft:tall_grass`, `festering_fern` → `minecraft:fern`, `festering_large_fern` → `minecraft:large_fern`, `festered_stone` → `minecraft:stone`, `festered_deepslate` → `minecraft:deepslate`. Which block festered is not recorded, so a pack that adds `festers_into` targets adds their `cleanses_into` entries too (a target without one is never cleansed), and festered granite cleanses into stone.
 
 **Quarantine pylon** `remission:quarantine_pylon` (block and block item; pickaxe, hardness 5, light 10, pistons cannot move it; drops itself; default recipe: iron ingots around a lightning rod over a handheld purifier). Indexed per dimension in saved data `remission_pylons` (`data/remission_pylons.dat`, a long array of positions); its block entity holds no data and re-indexes a pylon a structure placed when it loads, so a pack's crash site can ship one. Its **ward** is every chunk within `[purification] pylonRadius` chunks of the pylon's chunk (Chebyshev, a square; 5 by 5 chunks by default). Inside a ward:
 
@@ -837,7 +839,7 @@ Queries, `CorruptionQueries` (static):
 | `isRevenant(Entity)` (P5.3) | whether the entity is a `remission:revenant` | both |
 | `viralLoad(Player)` (P5.1) | the player's viral load, 0–100 (`MAX_VIRAL_LOAD`) | server for any player; a client knows only its own player's (others read 0) |
 
-Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; the default `festers_into` map turns grass at 1, trees and foliage at 2 and stone at 3, and the last stage flips the biome; Festering stages, above). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
+Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; veins grow from 1 (`veinMinStage`), the default `festers_into` map turns grass and fern plants at 2 and grass blocks and stone at 3, and the last stage flips the biome; Festering stages, above). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
 
 Team query, `TeamQueries` (static, P4.12): the one answer to "are these two players teammates?". Every Remission rule that involves teammates asks it (DESIGN, Teams and multiplayer); Remission has no teams of its own.
 
