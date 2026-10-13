@@ -4,6 +4,7 @@ import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.config.RemissionClientConfig;
 import com.cubiecode.remission.integration.journeymap.JourneyMapIntegration;
 import com.cubiecode.remission.registry.RemissionEntityTypes;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
@@ -33,6 +34,8 @@ public final class RemissionClient {
                 event.registerEntityRenderer(RemissionEntityTypes.MIASMA_CLOUD.get(), MiasmaCloudRenderer::new));
         modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
                 event.registerEntityRenderer(RemissionEntityTypes.REVENANT.get(), RevenantRenderer::new));
+        modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
+                event.registerEntityRenderer(RemissionEntityTypes.COUNTERSTRAIN_PROTOTYPE.get(), ThrownItemRenderer::new));
         modBus.addListener(ViralLoadHud::register);
         FesterFog.init();
         // Optional integrations: each class is touched only when its mod is loaded.

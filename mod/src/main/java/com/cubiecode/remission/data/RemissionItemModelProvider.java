@@ -28,5 +28,9 @@ public final class RemissionItemModelProvider extends ItemModelProvider {
         withExistingParent("mendroot", mcLoc("item/generated")).texture("layer0", modLoc("block/mendroot"));
         // Countermeasures (P5.7)
         basicItem(RemissionItems.COUNTERMEASURE_PROTOCOL.get());
+        // Synthesizer products (P7.3)
+        basicItem(RemissionItems.SERUM.get());
+        basicItem(RemissionItems.PURIFIER_FUEL.get());
+        basicItem(RemissionItems.COUNTERSTRAIN_PROTOTYPE.get());
     }
 }

@@ -1,0 +1,37 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamerule sendCommandFeedback false",
+    "fill 16 -61 -6 26 -61 0 minecraft:smooth_stone",
+    "fill 16 -60 -6 26 -57 -6 minecraft:white_concrete",
+    "summon minecraft:item_frame 19 -59 -5 {Facing:3b,Fixed:1b,Item:{id:\"remission:serum\",count:1}}",
+    "summon minecraft:item_frame 21 -59 -5 {Facing:3b,Fixed:1b,Item:{id:\"remission:purifier_fuel\",count:1}}",
+    "summon minecraft:item_frame 23 -59 -5 {Facing:3b,Fixed:1b,Item:{id:\"remission:counterstrain_prototype\",count:1}}",
+    "fill -6 -61 -6 6 -61 0 minecraft:smooth_stone",
+    "fill -6 -60 -6 6 -57 -6 minecraft:white_concrete",
+    {"spawn": "remission:counterstrain_prototype", "pos": [0.5, -58.6, -4.0], "nbt": "{NoGravity:1b}"},
+    "gamemode survival @a",
+    "effect give @a remission:inoculated infinite 0"
+  ],
+  "shots": [
+    {
+      "name": "items",
+      "camera": {"pos": [21.5, -60.0, -2.0], "yaw": 180.0, "pitch": 6.0}
+    },
+    {
+      "name": "thrown",
+      "camera": {"pos": [0.5, -60.0, 1.5], "yaw": 180.0, "pitch": 0.0}
+    },
+    {
+      "name": "effect_hud",
+      "camera": {"pos": [21.5, -60.0, -2.0], "yaw": 180.0, "pitch": 6.0},
+      "hud": true
+    },
+    {
+      "name": "effect_inventory",
+      "camera": {"pos": [21.5, -60.0, -2.0], "yaw": 180.0, "pitch": 6.0},
+      "press": "key.inventory"
+    }
+  ]
+}

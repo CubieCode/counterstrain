@@ -7,7 +7,11 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
-/** Lists the machines in the vanilla Functional Blocks tab and the strain sequence in Ingredients (P7.2). */
+/**
+ * Lists the machines in the vanilla Functional Blocks tab and the strain sequence in Ingredients (P7.2), and the
+ * synthesizer's products (P7.3): purifier fuel in Ingredients, the serum in Food and Drinks, the Counterstrain prototype
+ * in Combat, next to splash potions.
+ */
 @EventBusSubscriber(modid = Remission.MOD_ID)
 public final class TechTabs {
     private TechTabs() {
@@ -21,6 +25,11 @@ public final class TechTabs {
             event.accept(RemissionItems.SYNTHESIZER);
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(RemissionItems.STRAIN_SEQUENCE);
+            event.accept(RemissionItems.PURIFIER_FUEL);
+        } else if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
+            event.accept(RemissionItems.SERUM);
+        } else if (event.getTabKey() == CreativeModeTabs.COMBAT) {
+            event.accept(RemissionItems.COUNTERSTRAIN_PROTOTYPE);
         }
     }
 }

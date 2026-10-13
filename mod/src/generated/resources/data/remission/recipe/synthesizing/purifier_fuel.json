@@ -1,0 +1,25 @@
+{
+  "type": "remission:synthesizing",
+  "energy": 4000,
+  "fluid_ingredient": {
+    "amount": 250,
+    "fluid": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "count": 1,
+      "item": "remission:strain_sequence"
+    },
+    {
+      "count": 4,
+      "tag": "minecraft:coals"
+    }
+  ],
+  "results": [
+    {
+      "count": 4,
+      "id": "remission:purifier_fuel"
+    }
+  ],
+  "time": 200
+}
