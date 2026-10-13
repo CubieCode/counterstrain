@@ -14,18 +14,18 @@ Names follow the glossary and naming rule in docs/DESIGN.md: content IDs, trigge
 `CorruptionState` on any entity, read and written through `com.cubiecode.remission.corruption.Corruption` (`get`, `set(entity, level)`, `isHost`, `isImmune`; server writes only). `set` on an entity in `#remission:immune` ignores any level above 0 and returns the entity's current state; level 0 always cleanses. When `set` turns an entity into a host or back, it applies or removes its mob profile `attributes` (below). Saved inside the entity's `neoforge:attachments` compound, omitted at level 0:
 
 ```json
-{ "level": 50, "stage": 2 }
+{ "level": 50, "stage": 2, "variant": "remission:fire_resistant" }
 ```
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `level` | int 0–100 | How far the Strain has taken the entity. 0 removes the attachment. |
 | `stage` | int ≥ 0 | Host stage: how many `hosts.stageThresholds` entries `level` met when it was set. 0 = not a host; `isHost` is `stage >= 1`. Readers use the stored stage, never recompute it. |
-| `variant` | reserved | Resistant mutation (P7.5). Not written yet; unknown keys are ignored on load, so adding it is backward compatible. |
+| `variant` | resource location, optional | The variant the host carries (P7.5): a `remission:variant` id (Resistant variants, below). Absent for a host without one, and never present at level 0. A new host takes the variant of the land it turns in; a host keeps it while its level changes and loses it when cleansed to 0; a variant emerging at a nidus is given to the loaded hosts in its land. Kept as an id, so a variant a datapack no longer has still loads (and then resists nothing). States saved before P7.5 load without it. |
 
 Config `config/remission-common.toml`, `[hosts] stageThresholds = [1, 34, 67]`: 1–8 ints in 1–100, order-independent. Changes apply the next time a level is set.
 
-Sync: NeoForge attachment sync, wire format `CorruptionState.STREAM_CODEC` (var-int `level`, var-int `stage`), to players tracking the entity and to the entity itself if it is a player, on change, on start-tracking and on the player's login, respawn and dimension change. Clients read it with `Corruption.get`. Not copied on death or by vanilla conversions (a zombie villager cured, a pig struck by lightning); infection's own `convert_to` sets it on the replacement (below). `set` posts `HostCorruptedEvent` or `HostCleansedEvent` (Public API, below) when the state changes; `set(entity, level, cause)` names the `CorruptionCause` (infection and the debug commands pass theirs). The debug commands below drive it.
+Sync: NeoForge attachment sync, wire format `CorruptionState.STREAM_CODEC` (var-int `level`, var-int `stage`, then the optional `variant`: a boolean and the id; P7.5 added it, with `RemissionNetwork.PROTOCOL_VERSION` 5), to players tracking the entity and to the entity itself if it is a player, on change, on start-tracking and on the player's login, respawn and dimension change. Clients read it with `Corruption.get`. Not copied on death or by vanilla conversions (a zombie villager cured, a pig struck by lightning); infection's own `convert_to` sets it on the replacement (below). `set` posts `HostCorruptedEvent` or `HostCleansedEvent` (Public API, below) when the state changes; `set(entity, level, cause)` names the `CorruptionCause` (infection and the debug commands pass theirs). The debug commands below drive it.
 
 ## Scanner and data items (built, P6.1)
 
@@ -58,6 +58,8 @@ Data component `remission:scan_data`, saved with the stack (`components` in item
 Ids are stored as plain ids, not registry holders, so a scan of a since-removed mod's entity or block still loads; its tooltip then shows the raw id. The component holds no timestamp or player, so equal scans stack and a recipe can match the whole component. Wire format (`ScanData.STREAM_CODEC`): var-int kind (0 host, 1 block), resource location, var-int stage (0 for blocks).
 
 Matching scans in pack recipes (1.21.1 ingredients): any scan of a kind with `{"item": "remission:host_scan"}`; a specific scan with NeoForge's components ingredient, e.g. `{"type": "neoforge:components", "items": "remission:host_scan", "components": {"remission:scan_data": {"entity": "minecraft:cow", "stage": 2}}}` (stage is part of the value, so list one ingredient per stage that should count). A data item without the component (from `/give`) is valid but blank: no tooltip line, and it matches only plain item ingredients.
+
+Since P7.5 a scan also records a variant in the separate data component `remission:variant` (a resource location; Resistant variants, below): a host scan the host's own variant, a block scan the variant of the land the block is in. A scan without a variant has no such component, so plain scans still stack and match as before, and a recipe matches variant scans with a components ingredient on `remission:variant` alone. The action bar then uses `message.remission.scanner.host_variant` (name, stage, variant name) or `message.remission.scanner.block_variant` (name, variant name), and the tooltip of any item with the component adds `item.remission.variant` (variant name).
 
 Each host scan fires `remission:host_scanned` and counts `remission:hosts_scanned`, each block scan fires `remission:block_scanned` and counts `remission:blocks_scanned` (Advancement triggers and stats, below). Not part of this contract yet: scanning samples (unassigned). Per-player scan progress: Bestiary, below.
 
@@ -453,6 +455,8 @@ Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired f
 | `remission:region_cleansed` (P5.2) | A chunk entered remission (Purification and remission zones, below) while the player was alive, not a spectator, in the same level and within 8 chunks (Chebyshev) of it. Fires once per chunk entering remission. | `radius`: int 0–16, default 4: the square of chunks around the player's own chunk the region covers; `share`: float range, the share (0–1) of the region's affected loaded chunks (in remission or festering) that are in remission (0 when none are affected); `chunks`: int range, how many of its loaded chunks are in remission. |
 | `remission:revenant_reclaimed` (P5.3) | A player killed a revenant whose items they may pick up: their own, or a teammate's (the team query). A kill by anyone else, or by a command, fires nothing. | `own`: boolean, whether the revenant was the player's own; false means a teammate's (absent matches both). |
 | `remission:countermeasure_gained` (P5.7) | A player gained a countermeasure: by protocol, from a teammate (a grant, or pooling on login or a team change) or by command; once per player who gained it, never for one already held. | `hazard`: the hazard id (absent matches every hazard). |
+| `remission:variant_emerged` (P7.5) | A variant emerged at a nidus (by pressure or `/remission variant set`) while the player was alive, not a spectator, in the same level and in that nidus's reach (Manhattan chunk distance from its chunk at most the spread radius). | `variant`: a `remission:variant` id (absent matches every variant). |
+| `remission:variant_sequenced` (P7.5) | A sequencer finished a craft whose result carries a `remission:variant` component while the player was alive, not a spectator and within 16 blocks of it, so whoever runs the machine is credited whether a network or the player takes the sequence out. | `variant`: a `remission:variant` id (absent matches every variant). |
 | `remission:surge_survived` (P4.3) | A surge ends (any reason) and the player was caught in it: inside its area at one of its 20-tick checks while it ran, not dead since, and online and alive at the end (Surges and miasma clouds, below). A surge stopped during its warning never started and awards nothing. | `intensity`: int range, the surge's intensity (1–10). |
 
 ```json
@@ -464,6 +468,8 @@ Criterion triggers registered in `RemissionTriggers` (`quest/` classes), fired f
 {"criteria": {"cured": {"trigger": "remission:countermeasure_gained", "conditions": {"hazard": "remission:contact"}}}}
 {"criteria": {"exposed": {"trigger": "remission:viral_load_changed", "conditions": {"viral_load": {"min": 50}}}}}
 {"criteria": {"back": {"trigger": "remission:revenant_reclaimed", "conditions": {"own": true}}}}
+{"criteria": {"adapted": {"trigger": "remission:variant_emerged", "conditions": {"variant": "remission:fire_resistant"}}}}
+{"criteria": {"decoded": {"trigger": "remission:variant_sequenced"}}}
 {"criteria": {"reclaimed": {"trigger": "remission:region_cleansed", "conditions": {"radius": 6, "share": {"min": 0.75}}}}}
 {"criteria": {"first": {"trigger": "remission:region_cleansed", "conditions": {"radius": 0}}}}
 ```
@@ -480,9 +486,9 @@ Custom stats (registry `minecraft:custom_stat`, holder `RemissionStats`, formatt
 | `remission:chunks_cleansed` | chunks that entered remission within 8 chunks of the player (as `region_cleansed`; P5.2) |
 | `remission:countermeasures_gained` | countermeasures the player gained (as `countermeasure_gained`; P5.7) |
 
-Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above); `SurgeTests` for `surge_survived` and its stat; `ViralLoadTests` for `viral_load_changed`; `RevenantTests` for `revenant_reclaimed` and its stat; `PurificationTests` for `region_cleansed` and `chunks_cleansed`; `CountermeasureTests` for `countermeasure_gained` and `countermeasures_gained`.
+Read them with `/scoreboard objectives add <name> minecraft.custom:remission.nidi_destroyed`, FTB Quests stat tasks (`stat: "remission:nidi_destroyed"`) or any stat reader. Packs define the advancements (Counterstrain: `data/counterstrain/advancement/` in its KubeJS datapack); Remission ships triggers only, no advancements. Gametests: `QuestTriggerTests` (each trigger and stat, conditions parsed from the JSON above); `SurgeTests` for `surge_survived` and its stat; `ViralLoadTests` for `viral_load_changed`; `RevenantTests` for `revenant_reclaimed` and its stat; `PurificationTests` for `region_cleansed` and `chunks_cleansed`; `CountermeasureTests` for `countermeasure_gained` and `countermeasures_gained`; `VariantTests` for `variant_emerged` and `variant_sequenced` (P7.5, no stats: a variant is an event at a nidus, not a player's count).
 
-"Variant" is reserved for resistant mutations; triggers and stats for systems that are not built yet arrive with them. P8.1 deferred surge survived to P4.3 and viral load to P5.1, which built them (P5.1 adds a trigger and no stat: viral load is a level, not a count); region % cleansed is P5.2's `region_cleansed`.
+Triggers and stats for systems that are not built yet arrive with them. P8.1 deferred surge survived to P4.3 and viral load to P5.1, which built them (P5.1 adds a trigger and no stat: viral load is a level, not a count); region % cleansed is P5.2's `region_cleansed`.
 
 ## Debug commands `/remission` (built, P2.3)
 
@@ -492,7 +498,7 @@ Registered in `commands/RemissionCommands` on `RegisterCommandsEvent`. Every `/r
 | --- | --- | --- | --- |
 | `/remission infect <targets> <level>` | `targets`: entity selector, any number; `level`: int 1–100. Sets every living target to `level` (may lower it) and restages it from `hosts.stageThresholds`. Non-living and `#remission:immune` targets are skipped. | Living, non-immune targets set | `commands.remission.infect.success.single` (name, level, stage) / `.multiple` (count, level); broadcast to ops |
 | `/remission cleanse <targets>` | Sets every living target to level 0 (removes the attachment). Already clean targets count. | Living targets cleansed | `commands.remission.cleanse.success.single` (name) / `.multiple` (count); broadcast to ops |
-| `/remission inspect <target>` | One entity. Reports its stored level and stage; changes nothing. | Strain level (0 if clean) | `commands.remission.inspect.success` (name, level, stage) or `commands.remission.inspect.clean` (name) |
+| `/remission inspect <target>` | One entity. Reports its stored level and stage, and its variant (P7.5); changes nothing. | Strain level (0 if clean) | `commands.remission.inspect.success` (name, level, stage), `commands.remission.inspect.variant` (name, level, stage, variant name) or `commands.remission.inspect.clean` (name) |
 
 Errors: `commands.remission.failed.no_living_targets` when `infect` or `cleanse` selects no living entity; `commands.remission.failed.immune` when every living target of `infect` is immune; `commands.remission.failed.not_living` (name) when `inspect` targets a non-living entity. Vanilla parse errors cover an out-of-range level and a multi-entity `inspect` selector. Example: `/execute store result score @s strain run remission inspect @e[type=minecraft:cow,limit=1,sort=nearest]`.
 
@@ -532,6 +538,18 @@ Registered with the `/remission` tree (`commands/CountermeasureCommands`), same 
 | `/remission countermeasure list <target>` | One player. Reports their countermeasures; changes nothing. | countermeasures held | `commands.remission.countermeasure.list.success` (name, count, list of `.list.entry` (hazard name, id)) or `.list.none` (name) |
 
 Example (an FTB Quests command reward, run as the claiming player at permission level 2): `/remission countermeasure grant @s remission:contact`.
+
+## Variant commands `/remission variant` (built, P7.5)
+
+Registered with the `/remission` tree (`commands/VariantCommands`), same permission level 2, acting on the source's dimension, for quests and scripts. `nidus` is the position of an indexed nidus (it need not be loaded); `variant` a `remission:variant` id (the registry's entries are suggested). Resistant variants: below.
+
+| Syntax | Effect | Result | Feedback |
+| --- | --- | --- | --- |
+| `/remission variant set <nidus> <variant>` | Makes the variant emerge at the nidus as pressure would: posts `VariantEmergedEvent` with cause `COMMAND` (cancellable), then the nidus carries it, its pressure starts again, its loaded hosts take it on, clients redraw its land and players in its land fire `remission:variant_emerged`. Setting the variant it already carries changes nothing. Works while `[variants] enabled` is off, but variants then resist nothing. | 1 | `commands.remission.variant.set.success` (variant name, x, y, z); broadcast to ops |
+| `/remission variant clear <nidus>` | Takes the nidus's variant away and starts its pressure again; hosts keep theirs (they carry the mutation). | 1 | `commands.remission.variant.clear.success` (x, y, z); broadcast to ops |
+| `/remission variant query <nidus>` | Reports the nidus's variant, each variant's pressure there (in its method's unit, rounded) and the total share; changes nothing. | 1 with a variant, else 0 | `commands.remission.variant.query.success` (x, y, z, variant name or `.query.none`, list of `.query.entry` (variant name, pressure) or `.query.none`, total share as a whole-number percentage of one threshold) |
+
+Errors: `commands.remission.variant.failed.not_nidus` when no indexed nidus is at the position; `commands.remission.variant.failed.unknown` (id) for an id the registry lacks; `commands.remission.variant.set.failed.cancelled` when a listener cancelled the emergence; `commands.remission.variant.clear.failed` when the nidus has no variant. Example (an FTB Quests command reward): `/remission variant set 120 64 -40 remission:fire_resistant`.
 
 ## Map overlay payload `remission:festering_map` (built, P8.2)
 
@@ -911,6 +929,83 @@ Config `config/remission-common.toml` (read on each operation or insert):
 
 With the defaults one reclaimer brings a 9 by 9 chunk valley at stage 4 (level 100, no nidus) into remission in 810 operations, about 13.5 minutes, using 3.24 million FE (200 FE per tick) and about 51 fuel items. Lang keys: `block.remission.reclaimer`, `gui.remission.reclaimer.*` (the screen also reuses `gui.remission.machine.energy`, `.tank` and `.tank_empty`).
 
+## Resistant variants (built, P7.5)
+
+The Strain adapts to how it is fought near each nidus. `com.cubiecode.remission.variant` (`Variants`, `Variant`, `ResistedMethod`, `VariantPressure`, `VariantEffects`, `VariantRecords`, `VariantSettings`, `VariantCounters`), server side; design and data flow: docs/ARCHITECTURE.md (Resistant variants).
+
+**A nidus's land** is every chunk within its spread reach (Manhattan chunk distance at most the spread radius, 7 by default); a chunk in reach of several nidi belongs to the nearest, ties to the first in the nidus index's order (`BlockPos.asLong`). Nothing is loaded to decide it. `CorruptionQueries.variantAt(level, pos)` answers for any position.
+
+**Datapack registry `remission:variant`**, `data/<ns>/remission/variant/<name>.json`, synced to clients (they draw its tint). Like every datapack registry it loads with the world: changes need a world reload, not `/reload`.
+
+```json
+{
+  "resists": {"type": "remission:damage", "damage_types": "#minecraft:is_fire"},
+  "resistance": 0.5,
+  "threshold": 30,
+  "tint": "#FF9A3C"
+}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `resists` | object, by `type` | The method the variant resists. `{"type": "remission:purification", "cause": <cause>}`: purification by one tool, a `PurificationCause` in lower case (`purifier`, `pylon`, `mendroot`, `prototype`, `reclaimer`, `other`). `{"type": "remission:damage", "damage_types": <damage type id, list or #tag>}`: damage of those types to hosts. Later systems add types (P9.1 resists prototypes with `cause: "prototype"`); an unknown type fails to load. |
+| `resistance` | float 0–1 | How much of the method it takes away where it has emerged: a purification step or damage is multiplied by `1 - resistance`. |
+| `threshold` | float > 0 | Pressure of its method at a nidus that makes it emerge there (times `[variants] thresholdScale`). |
+| `tint` | `"#RRGGBB"` or int | Colour its hosts' overlay and its festering land are multiplied by on clients. |
+
+Defaults (datagen `RemissionVariantProvider`, all resistance 0.5; purification thresholds count Strain levels purified in the land, damage thresholds host kills):
+
+| Variant | Resists | Threshold | Tint | Countered by |
+| --- | --- | --- | --- | --- |
+| `remission:purifier_resistant` | purification `purifier` | 120 | `#80E0FF` | its purifier fuel |
+| `remission:pylon_resistant` | purification `pylon` | 1500 | `#8C8CFF` | its purifier fuel |
+| `remission:mendroot_resistant` | purification `mendroot` | 150 | `#8CFF8C` | its purifier fuel |
+| `remission:reclaimer_resistant` | purification `reclaimer` | 2000 | `#FFD966` | its purifier fuel |
+| `remission:melee_resistant` | damage `minecraft:player_attack`, `mob_attack`, `mob_attack_no_aggro` | 40 | `#FF7A7A` | its serum |
+| `remission:projectile_resistant` | damage `#minecraft:is_projectile` | 30 | `#C8FF5A` | its serum |
+| `remission:fire_resistant` | damage `#minecraft:is_fire` | 30 | `#FF9A3C` | its serum |
+| `remission:blast_resistant` | damage `#minecraft:is_explosion` | 30 | `#BDBDBD` | its serum |
+| `remission:magic_resistant` | damage `#minecraft:witch_resistant_to` | 30 | `#FF7AFF` | its serum |
+
+Name: lang key `variant.<namespace>.<path>`.
+
+**Pressure.**
+
+- **What counts:** each use of a method in a nidus's land, whoever used it, so a team's methods count together: every Strain level a purification step lowers (after resistance; `Purification.lowerLevel`, the one path every tool takes), and 1 for every host (not a player) killed there with a player behind it (the damage source's entity, or the player who hurt it in the last 100 ticks), by the killing blow's damage type.
+- **Pressure:** a use adds its amount to the pressure of every variant whose `resists` matches it, in that method's own unit (levels or kills), except the variant the nidus already carries.
+- **Share:** a use's share is `amount / threshold` of the matching variant with the lowest `threshold` (unscaled), counted once however many variants match (the carried one included), and is added to the nidus's total; a use no variant resists counts nothing. A variant's own share is `pressure / threshold`. So a pylon pass's hundreds of levels and a host kill weigh in one unit, fractions of a threshold: with the defaults one melee kill (1 of 40) counts as much as 37.5 pylon levels (of 1500) or 3 purifier levels (of 120).
+- **Emergence:** a variant emerges when its pressure reaches `threshold * thresholdScale` **and** its own share is at least `minShare` of the total, so mixing tools and damage types delays variants; the variant furthest past its scaled threshold wins. `VariantEmergedEvent` (cancellable) is posted first; cancelled, that variant's pressure goes back to 0. Otherwise the nidus carries the variant (one at a time; a later one replaces it), every pressure, the total and any counter start again from 0, the loaded hosts in its land take it on, clients redraw its land and players in its land fire `remission:variant_emerged`.
+- **Nidus gone:** destroying the nidus drops its record; its land then belongs to the next nidus in reach, if any.
+
+**Effects** (only while `[variants] enabled`):
+- Purification: in a variant nidus's land, a step by the tool it resists takes `step * (1 - resistance)` levels; a fractional remainder is one more level with that probability, from a hash of the chunk, game time and cause (deterministic). Block cleansing around a handheld purifier, mendroot or prototype is not reduced. Unless a fuel of the variant counters the nidus (below).
+- Damage: a host carrying a variant takes `amount * (1 - resistance)` of the damage types it resists (`LivingIncomingDamageEvent`), any source, unless the attacker is a player countered by the variant's serum (below).
+- Hosts: a mob turning into a host takes the variant of its chunk's land; a host keeps its variant (`CorruptionState.variant`, above).
+
+**Countering a variant** (the research loop): scan a host or block of the variant (scans carry the `remission:variant` component), sequence the scan, synthesize the serum or fuel:
+- Default recipes per default variant: `remission:sequencing/variant/<name>`: a scan with `remission:variant` = it (components ingredient on `remission:host_scan` or `remission:block_scan`) and a `remission:strain_sequence`, 250 mB miasma, 6000 FE, 200 ticks, into a strain sequence with the variant. `remission:synthesizing/variant/<name>`: that sequence (components ingredient), 250 mB miasma, 6000 FE, 300 ticks, with 2 glass bottles and host tissue into 2 serums with the variant (damage variants), or with 4 `#minecraft:coals` and festered soil into 4 purifier fuel with the variant (purification variants). Each takes one ingredient more than the plain product, so a variant sequence never matches both. Packs that add variants add their recipes; In KubeJS an item with the component is `Item.of('remission:serum[remission:variant="remission:fire_resistant"]')` (vanilla's item-with-components syntax).
+- Serum of a variant: drinking it is a normal dose and also counters the variant for the drinker for `counterTicks`: their damage to its hosts is in full. Player attachment `remission:variant_counters` (variant id to the game time it lasts until; saved, server only, not copied on death).
+- Purifier fuel of a variant (still in `#remission:purifier_fuel`, so it repairs and fuels as before): used on any block in the land of a nidus carrying that variant, one is used up, the nidus is countered for `counterTicks`, so every purification tool works in full in its land, and the use ends there (action bar `message.remission.variant.fuel_countered`, variant name). Anywhere else, or with variants off, the use goes ahead as with any item (placing, doors, machines, an anvil); the server decides, so the client always sends it. A reclaimer burning one counters each nidus of that variant whose land holds a chunk of the reclaimer's square.
+
+**Data component** `remission:variant` (resource location, saved and synced) on scans, strain sequences, serums and purifier fuel; tooltip line `item.remission.variant` (variant name).
+
+**Saved data** `data/remission_variants.dat` per dimension (`VariantRecords`): per nidus position its `variant`, `pressure` (variant id to double; floats from earlier saves are read as doubles), `share_total` (double, the total share; a record saved without it gets the sum of its variants' own shares) and `countered_until` (game time).
+
+**Payload** `remission:variant_land` (server to client, `VariantLandPayload`, `RemissionNetwork.PROTOCOL_VERSION` 5): the dimension key, a var-int count (at most 4096 per payload), then per entry the chunk position as a long and an optional variant id (boolean, id). `VariantLandSync` sends a chunk's variant with the chunk when it has one (a level without variants costs one check), and every chunk of a nidus's land to the players watching it when its variant changes or it is destroyed. The client (`VariantLandCache`) keeps the variant and tint of its loaded chunks and forgets them on chunk unload, dimension change and logout. A newly indexed nidus in a level with any variant resends its own reach too, since it takes over the nearer chunks of a neighbour's land.
+
+**Client.** Festering blocks (grass, the four plants, festered stone and deepslate, veins) have tint index 0 on every face; their colour handler multiplies them by their chunk's variant tint, white elsewhere. The host overlay's vertex colour is the host's variant tint (alpha still `hosts.overlayIntensity`).
+
+Config `config/remission-common.toml`, `[variants]` (read on each use):
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `enabled` | boolean | true | Off: no pressure is counted, no variant emerges by pressure, variants resist nothing and fuels and serums counter nothing (the command still sets them). Chunks sent while off carry no variant, but switching it off does not resend land, so clients keep the tint of land they already had until it is sent again, and hosts keep their variant (and its tint) as data. |
+| `thresholdScale` | double 0.01–100 | 1.0 | Multiplies every variant's threshold. |
+| `minShare` | double 0–1 | 0.5 | Share of a nidus's total share (in thresholds, above) the variant's own share must also hold; 0 turns the rule off. |
+| `counterTicks` | int 1–1728000 | 12000 | How long a variant's serum counters it for a player, and its fuel for a nidus. |
+
+API: `VariantEmergedEvent` and `CorruptionQueries.hostVariant`, `variantAt` (Public API, below); KubeJS `RemissionEvents.variantEmerged`. Triggers `remission:variant_emerged`, `remission:variant_sequenced` (above); command `/remission variant` (above). Gametests: `VariantTests`.
+
 ## Item contamination (planned, P10.6)
 
 Data component `remission:contaminated` on item stacks carried through festering chunks, a tag for containers that protect their contents, and a decontamination recipe type or KubeJS hook. Fields fixed in P10.6.
@@ -948,6 +1043,7 @@ Conventions, for every event here and every event later items add:
 | `RevenantSlainEvent extends RevenantEvent` (P5.3) | `getEntity()`, `getOwner()`, `getSource()`, `getKiller()` (the `ServerPlayer`, or null for a command), `isReclaimed()` (the killer may pick its items up: the owner or a teammate by the team query) | After a revenant with an owner died: its items and experience are dropped, it left the index, and a reclaim was awarded. | no |
 | `StrainHazardEvent extends Event` (P5.7) | `getServer()`, `getHazard()`, `getPlayer()` (`Optional<ServerPlayer>`: always present for a player hazard; for a block hazard the placer or an online teammate, or the nearest player for a block with no placer, empty under `ALWAYS` with nobody of the team online), `getLevel()`, `getPos()` (`Optional`s, present for a block hazard), `getPlacer()` (`Optional<UUID>`), `isBlockHazard()` | Before a hazard applies, from `StrainHazards.applies` and `appliesAtBlock`, only when nothing ruled it out already (the team holds no countermeasure; for a block, the presence rule is met). Hazard systems may ask every tick: keep listeners cheap. | yes: cancelling holds the hazard back (`applies` returns false). A listener cannot force a hazard past a countermeasure: it is not asked then |
 | `CountermeasureGrantedEvent extends PlayerEvent` (P5.7) | `getEntity()` (the `ServerPlayer`), `getHazard()`, `getCause()` (`PROTOCOL`, `TEAM`, `COMMAND`, `OTHER`; treat unknown values as `OTHER`) | After a player gained a countermeasure and it was stored, once per player who gained it (a grant posts for the player, then for each online teammate with `TEAM`). Never for one already held. | no |
+| `VariantEmergedEvent extends FesteringLandEvent` (P7.5) | `getLevel()`, `getNidus()` (the nidus's position), `getVariant()` (a `remission:variant` id), `getPreviousVariant()` (`Optional`), `getCause()` (`PRESSURE`, `COMMAND`, `OTHER`; treat unknown values as `OTHER`) | Before a nidus's Strain becomes a variant (Resistant variants, above): its pressure passed the variant's threshold and share, or `/remission variant set`. Never for setting the variant it already carries. | yes: cancelling keeps the nidus as it was; for `PRESSURE` that variant's pressure there goes back to 0 |
 | `StrainSpreadAttemptEvent extends FesteringLandEvent` | `getLevel()`, `getFrom()`, `getTo()` (`ChunkPos`), `getAmount()` (level gain at multiplier 1, capped at the target), `isCatchUp()`, `getRateMultiplier()`/`setRateMultiplier(double)` (default 1; negative or NaN become 0) | Before every chunk-to-chunk step: each live step into a loaded chunk below its target whose parent passed the threshold, and once per nidus in reach when a reloaded chunk catches up (`isCatchUp()`, `getAmount()` covers every missed pass, `getFrom()` may be unloaded). The growth of a nidus's own chunk is not a spread attempt, and a step from a loaded parent below the threshold is held without an event (live and catch-up). | yes: cancelling (or multiplier 0) stops this step; chunks reached through it stay clean while the cancelled chunk is loaded. A step from an unloaded parent is not held (the parent counts as at its target), so keep a firebreak chunk loaded or cancel the steps behind it too |
 
 Spread rate: the gain is `amount * multiplier`, capped at the chunk's target. A fractional part is added as one more level with that probability, drawn from a hash of the two chunks and the game time, so slowed spread still advances on average and the same state and ticks give the same levels. Listeners compose by multiplying (`event.setRateMultiplier(event.getRateMultiplier() * 0.5)`). `last_update_game_time` moves to now only when a catch-up changed the chunk's level: passes shortened by a multiplier below 1 are then not credited again (the chunk ends below where full-rate spread would have taken it and continues from there), while a catch-up whose steps were all cancelled, scaled to 0 or held keeps the old time, so a later reload credits that history again, still capped at the target. A parent caught up first (see the rules above) contributes its level after its own catch-up, which converges on the same targets as live spread rather than replaying exact history.
@@ -970,6 +1066,8 @@ Queries, `CorruptionQueries` (static):
 | `isInRemission(ServerLevel, ChunkPos)` (P5.2) | whether a loaded chunk is in remission (purified from festering to level 0 and not festering since); false if it never festered, is festering or is not loaded (never loads a chunk). P8.2's remission-zone map layer reads it | server |
 | `isRevenant(Entity)` (P5.3) | whether the entity is a `remission:revenant` | both |
 | `viralLoad(Player)` (P5.1) | the player's viral load, 0–100 (`MAX_VIRAL_LOAD`) | server for any player; a client knows only its own player's (others read 0) |
+| `hostVariant(Entity)` (P7.5) | `Optional<ResourceLocation>`: the variant a living host carries; empty without one | both (synced with the host) |
+| `variantAt(ServerLevel, BlockPos)` (P7.5) | `Optional<ResourceLocation>`: the variant of the land at the position (its nidus's, while `[variants]` is on); reads the nidus index, so it works for unloaded chunks and loads nothing | server |
 
 Config `config/remission-common.toml`, `[festering] stageThresholds = [1, 25, 50, 75]`: 1–8 ints in 1–100, order-independent. A chunk's stage is the number of thresholds its level meets (0 clean, 1–4 with the defaults; veins grow from 1 (`veinMinStage`), the default `festers_into` map turns grass and fern plants at 2 and grass blocks and stone at 3, and the last stage flips the biome; Festering stages, above). Read whenever a level changes or a stage is queried; changing it posts no events for chunks whose stage moved.
 
@@ -1031,6 +1129,7 @@ Handlers (server scripts only; `RemissionEvents.<handler>(event => ...)`). Each 
 | `viralLoadChanged` | `ViralLoadChangedEvent` | `player`, `oldLoad`, `newLoad`, `cause`, `rising` | no |
 | `strainHazard` | `StrainHazardEvent` | `hazard`, `player`, `level`, `pos`, `placer` (all nullable), `blockHazard` | `event.cancel()` holds the hazard back; optional target: hazard ID |
 | `countermeasureGranted` | `CountermeasureGrantedEvent` | `player`, `hazard`, `cause` | no; optional target: hazard ID |
+| `variantEmerged` (P7.5) | `VariantEmergedEvent` | `nidus`, `variant`, `previousVariant` (nullable), `cause` | `event.cancel()` keeps the nidus as it was |
 | `teamLookup` | `TeamLookupEvent` | `first`, `second` (UUIDs), `hasAnswer()`, `areTeammates()`, `setTeammates(boolean)` | no |
 
 Targets: `RemissionEvents.strainHazard('remission:contact', event => ...)` runs only for that hazard (the hazard is asked often, so target it); without a target the handler sees every hazard. `teamLookup` scripts run after the FTB Teams source (both normal priority, KubeJS registered later), so `setTeammates` replaces FTB Teams' answer; check `event.hasAnswer()` to fill gaps only. Answers must be symmetric and work for offline players (TeamLookupEvent, above).

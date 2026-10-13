@@ -1,0 +1,13 @@
+{
+  "resistance": 0.5,
+  "resists": {
+    "type": "remission:damage",
+    "damage_types": [
+      "minecraft:player_attack",
+      "minecraft:mob_attack",
+      "minecraft:mob_attack_no_aggro"
+    ]
+  },
+  "threshold": 40.0,
+  "tint": "#FF7A7A"
+}

@@ -1,7 +1,10 @@
 package com.cubiecode.remission.world;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.network.VariantLandSync;
 import com.cubiecode.remission.registry.RemissionAttachments;
+import com.cubiecode.remission.variant.VariantRecords;
+import com.cubiecode.remission.variant.Variants;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +43,10 @@ public final class FesteringLand {
 
     /** Indexes a nidus placed in or loaded into {@code level}; no-op if already indexed. */
     public static void nidusPresent(ServerLevel level, BlockPos pos) {
-        NidusIndex.get(level).add(pos, level.getGameTime());
+        if (NidusIndex.get(level).add(pos, level.getGameTime()) && VariantRecords.get(level).anyVariant()) {
+            // A new nidus takes over the nearer chunks of a variant nidus's land; clients redraw their tint (P7.5).
+            VariantLandSync.landChanged(level, pos, Variants.reach());
+        }
     }
 
     /** Drops a removed nidus from the index. Its land keeps its level; only further spread from it stops. */

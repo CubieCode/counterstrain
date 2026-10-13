@@ -1,8 +1,12 @@
 {
-  "parent": "minecraft:block/cube_bottom_top",
+  "parent": "remission:block/tinted_cube",
   "textures": {
-    "bottom": "minecraft:block/dirt",
-    "side": "remission:block/festering_grass_side",
-    "top": "remission:block/festering_grass_top"
+    "down": "minecraft:block/dirt",
+    "east": "remission:block/festering_grass_side",
+    "north": "remission:block/festering_grass_side",
+    "particle": "remission:block/festering_grass_side",
+    "south": "remission:block/festering_grass_side",
+    "up": "remission:block/festering_grass_top",
+    "west": "remission:block/festering_grass_side"
   }
 }

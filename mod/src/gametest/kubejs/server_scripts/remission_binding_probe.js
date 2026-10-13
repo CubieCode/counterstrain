@@ -55,3 +55,9 @@ RemissionEvents.teamLookup(event => {
     event.setTeammates(true)
   }
 })
+RemissionEvents.variantEmerged(event => {
+  seen(event.server, 'variantEmerged')
+  if (String(event.variant) == 'remission:kubejs_probe') {
+    event.cancel()
+  }
+})

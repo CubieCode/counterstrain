@@ -117,6 +117,10 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.IntValue RECLAIMER_MAX_ENERGY_INPUT;
     public static final ModConfigSpec.IntValue RECLAIMER_FUEL_PER_ITEM;
     public static final ModConfigSpec.IntValue RECLAIMER_FUEL_PER_BUCKET;
+    public static final ModConfigSpec.BooleanValue VARIANTS_ENABLED;
+    public static final ModConfigSpec.DoubleValue VARIANTS_THRESHOLD_SCALE;
+    public static final ModConfigSpec.DoubleValue VARIANTS_MIN_SHARE;
+    public static final ModConfigSpec.IntValue VARIANTS_COUNTER_TICKS;
 
     static {
         BUILDER.push("hosts");
@@ -522,6 +526,24 @@ public final class RemissionCommonConfig {
                 .comment("Operations 1000 mB of a fluid in #remission:purifier_fuel (empty by default; packs fill it) runs.",
                         "0 refuses fluid fuel.")
                 .defineInRange("fuelPerBucket", 16, 0, 100_000);
+        BUILDER.pop();
+
+        BUILDER.push("variants");
+        VARIANTS_ENABLED = BUILDER
+                .comment("Whether the Strain adapts to how it is fought (resistant variants). Off: no pressure is counted, no",
+                        "variant emerges and variants already there resist nothing.")
+                .define("enabled", true);
+        VARIANTS_THRESHOLD_SCALE = BUILDER
+                .comment("Multiplies every variant's threshold: the pressure of one method at a nidus that makes its variant emerge.")
+                .defineInRange("thresholdScale", 1.0, 0.01, 100.0);
+        VARIANTS_MIN_SHARE = BUILDER
+                .comment("Share of a nidus's total pressure (every method together) a method must also hold for its variant to",
+                        "emerge, so mixing tools and damage types delays variants. 0 turns the rule off.")
+                .defineInRange("minShare", 0.5, 0.0, 1.0);
+        VARIANTS_COUNTER_TICKS = BUILDER
+                .comment("Game ticks a variant's serum lets a player hurt that variant's hosts in full, and its purifier fuel",
+                        "lets every purification tool work in full in that nidus's land.")
+                .defineInRange("counterTicks", 12000, 1, 1_728_000);
         BUILDER.pop();
     }
 

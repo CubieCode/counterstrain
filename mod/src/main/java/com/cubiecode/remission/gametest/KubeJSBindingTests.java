@@ -20,6 +20,7 @@ import com.cubiecode.remission.api.StrainSpreadAttemptEvent;
 import com.cubiecode.remission.api.SurgeEndedEvent;
 import com.cubiecode.remission.api.SurgeStartedEvent;
 import com.cubiecode.remission.api.TeamQueries;
+import com.cubiecode.remission.api.VariantEmergedEvent;
 import com.cubiecode.remission.api.ViralLoadChangedEvent;
 import com.cubiecode.remission.integration.kubejs.KubeJSIntegration;
 import dev.latvian.mods.kubejs.core.MinecraftServerKJS;
@@ -116,6 +117,8 @@ public final class KubeJSBindingTests {
                 null, null, null));
         expectScript(helper, "countermeasureGranted",
                 () -> new CountermeasureGrantedEvent(player, probeHazard(), CountermeasureGrantedEvent.Cause.COMMAND));
+        expectScript(helper, "variantEmerged", () -> new VariantEmergedEvent(level, far, Remission.id("fire_resistant"), null,
+                VariantEmergedEvent.Cause.COMMAND));
 
         // Team lookup is posted by the query itself (on a cache miss).
         int before = count(helper, "teamLookup");
@@ -152,6 +155,9 @@ public final class KubeJSBindingTests {
         var other = post(new StrainHazardEvent(level.getServer(), Remission.id("contact"), null, level, far, null));
         helper.assertTrue(!other.isCanceled() && count(helper, "strainHazard") == before,
                 "a strainHazard script targeted at another hazard ran");
+
+        var variant = post(new VariantEmergedEvent(level, far, Remission.id("kubejs_probe"), null, VariantEmergedEvent.Cause.OTHER));
+        helper.assertTrue(variant.isCanceled(), "event.cancel() did not cancel a variant's emergence");
         helper.succeed();
     }
 

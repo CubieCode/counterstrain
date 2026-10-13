@@ -21,6 +21,13 @@ public final class RemissionDataComponents {
     public static final Supplier<DataComponentType<ResourceLocation>> HAZARD = DATA_COMPONENTS.registerComponentType(
             "hazard", builder -> builder.persistent(ResourceLocation.CODEC).networkSynchronized(ResourceLocation.STREAM_CODEC));
 
+    /**
+     * The variant a scan, strain sequence, serum or purifier fuel is of (P7.5): a {@code remission:variant} id. Ids stay
+     * ids, so an item of a variant a datapack no longer has still loads.
+     */
+    public static final Supplier<DataComponentType<ResourceLocation>> VARIANT = DATA_COMPONENTS.registerComponentType(
+            "variant", builder -> builder.persistent(ResourceLocation.CODEC).networkSynchronized(ResourceLocation.STREAM_CODEC));
+
     private RemissionDataComponents() {
     }
 }

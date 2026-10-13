@@ -19,6 +19,7 @@ import com.cubiecode.remission.api.StrainSpreadAttemptEvent;
 import com.cubiecode.remission.api.SurgeEndedEvent;
 import com.cubiecode.remission.api.SurgeStartedEvent;
 import com.cubiecode.remission.api.TeamLookupEvent;
+import com.cubiecode.remission.api.VariantEmergedEvent;
 import com.cubiecode.remission.api.ViralLoadChangedEvent;
 import dev.latvian.mods.kubejs.entity.KubeLivingEntityEvent;
 import dev.latvian.mods.kubejs.event.KubeEvent;
@@ -578,6 +579,34 @@ public final class RemissionKubeEvents {
 
         public void setTeammates(boolean teammates) {
             event.setTeammates(teammates);
+        }
+    }
+
+    /** Cancel to keep the nidus's Strain as it was (P7.5). */
+    public static final class VariantEmerged extends Land {
+        private final VariantEmergedEvent event;
+
+        public VariantEmerged(VariantEmergedEvent event) {
+            super(event.getLevel());
+            this.event = event;
+        }
+
+        public BlockPos getNidus() {
+            return event.getNidus();
+        }
+
+        public ResourceLocation getVariant() {
+            return event.getVariant();
+        }
+
+        /** The variant the nidus carried before, or null. */
+        @Nullable
+        public ResourceLocation getPreviousVariant() {
+            return event.getPreviousVariant().orElse(null);
+        }
+
+        public VariantEmergedEvent.Cause getCause() {
+            return event.getCause();
         }
     }
 }

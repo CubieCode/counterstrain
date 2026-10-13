@@ -1,0 +1,9 @@
+{
+  "resistance": 0.5,
+  "resists": {
+    "type": "remission:damage",
+    "damage_types": "#minecraft:is_projectile"
+  },
+  "threshold": 30.0,
+  "tint": "#C8FF5A"
+}

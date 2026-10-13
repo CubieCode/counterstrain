@@ -5,6 +5,7 @@ import com.cubiecode.remission.api.CorruptionQueries;
 import com.cubiecode.remission.api.PurificationCause;
 import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.registry.RemissionBlockEntities;
+import com.cubiecode.remission.variant.VariantEffects;
 import com.cubiecode.remission.world.Nidus;
 import com.cubiecode.remission.world.NidusIndex;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -312,8 +313,12 @@ public final class ReclaimerBlockEntity extends BlockEntity implements MenuProvi
             return true;
         }
         if (items.getStackInSlot(0).is(HandheldPurifierItem.FUEL)) {
-            items.extractItem(0, 1, false);
+            ItemStack burned = items.extractItem(0, 1, false);
             fuel += settings.fuelPerItem();
+            if (level instanceof ServerLevel serverLevel) {
+                // A variant's fuel counters that variant in the land around the reclaimer (P7.5).
+                VariantEffects.reclaimerBurned(serverLevel, worldPosition, settings.radius(), burned);
+            }
         } else if (settings.fuelPerBucket() > 0 && tank.getFluidAmount() >= FluidType.BUCKET_VOLUME
                 && isFluidFuel(tank.getFluid())) {
             tank.drain(FluidType.BUCKET_VOLUME, IFluidHandler.FluidAction.EXECUTE);

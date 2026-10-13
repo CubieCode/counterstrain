@@ -1,0 +1,9 @@
+{
+  "resistance": 0.5,
+  "resists": {
+    "type": "remission:purification",
+    "cause": "purifier"
+  },
+  "threshold": 120.0,
+  "tint": "#80E0FF"
+}

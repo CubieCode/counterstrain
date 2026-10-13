@@ -17,6 +17,7 @@ import com.cubiecode.remission.api.StrainSpreadAttemptEvent;
 import com.cubiecode.remission.api.SurgeEndedEvent;
 import com.cubiecode.remission.api.SurgeStartedEvent;
 import com.cubiecode.remission.api.TeamLookupEvent;
+import com.cubiecode.remission.api.VariantEmergedEvent;
 import com.cubiecode.remission.api.ViralLoadChangedEvent;
 import com.cubiecode.remission.gametest.KubeJSBindingTests;
 import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.BlockFestered;
@@ -35,6 +36,7 @@ import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.StrainSpre
 import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.SurgeEnded;
 import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.SurgeStarted;
 import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.TeamLookup;
+import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.VariantEmerged;
 import com.cubiecode.remission.integration.kubejs.RemissionKubeEvents.ViralLoadChanged;
 import dev.latvian.mods.kubejs.event.EventHandler;
 import dev.latvian.mods.kubejs.event.KubeEvent;
@@ -73,6 +75,7 @@ public final class KubeJSIntegration {
         forward(RevenantSlainEvent.class, RemissionEvents.REVENANT_SLAIN, RevenantSlain::new);
         forward(ViralLoadChangedEvent.class, RemissionEvents.VIRAL_LOAD_CHANGED, ViralLoadChanged::new);
         forward(TeamLookupEvent.class, RemissionEvents.TEAM_LOOKUP, TeamLookup::new);
+        forward(VariantEmergedEvent.class, RemissionEvents.VARIANT_EMERGED, VariantEmerged::new);
         NeoForge.EVENT_BUS.addListener(StrainHazardEvent.class, event -> {
             if (RemissionEvents.STRAIN_HAZARD.hasListeners()) {
                 RemissionEvents.STRAIN_HAZARD.post(ScriptType.SERVER, event.getHazard(), new StrainHazard(event))

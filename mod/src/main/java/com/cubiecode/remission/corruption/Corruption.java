@@ -8,7 +8,10 @@ import com.cubiecode.remission.behaviour.HostBehaviours;
 import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.infection.HostAttributes;
 import com.cubiecode.remission.registry.RemissionAttachments;
+import com.cubiecode.remission.variant.Variants;
+import java.util.Optional;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -56,6 +59,8 @@ public final class Corruption {
             return old;
         }
         CorruptionState state = CorruptionState.of(level, RemissionCommonConfig.STAGE_THRESHOLDS.get());
+        // A host keeps its variant; a new one takes the variant of the nidus whose land it is in (P7.5).
+        state = state.withVariant(old.level() > 0 ? old.variant() : Variants.forNewHost(entity));
         if (state.level() == 0) {
             entity.removeData(RemissionAttachments.CORRUPTION);
         } else if (!state.equals(old)) {
@@ -74,6 +79,24 @@ public final class Corruption {
                     : new HostCleansedEvent(entity, old.level(), old.stage(), state.level(), state.stage(), cause));
         }
         return state;
+    }
+
+    /**
+     * Gives a host the variant {@code variant} (or none), keeping its level and stage (P7.5). Server only; returns whether
+     * the state changed. An entity at level 0 carries no variant, so this does nothing to it. Posts no host event: a
+     * variant changes what a host resists, not how far the Strain has taken it.
+     */
+    public static boolean setVariant(LivingEntity entity, Optional<ResourceLocation> variant) {
+        if (entity.level().isClientSide()) {
+            throw new IllegalStateException("Corruption state is server-authoritative; set it on the server");
+        }
+        CorruptionState old = get(entity);
+        CorruptionState state = old.withVariant(variant);
+        if (state.equals(old)) {
+            return false;
+        }
+        entity.setData(RemissionAttachments.CORRUPTION, state);
+        return true;
     }
 
     /** Whether the entity's type is in {@code #remission:immune}, so it can never become a host. */

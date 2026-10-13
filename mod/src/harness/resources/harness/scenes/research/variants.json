@@ -1,0 +1,49 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamerule sendCommandFeedback false",
+    "harness fester 0 -60 0 111 -60 31 60",
+    "fill 20 -60 22 22 -58 24 minecraft:stone",
+    "fill 52 -60 22 54 -58 24 minecraft:stone",
+    "fill 84 -60 22 86 -58 24 minecraft:stone",
+    "harness veins 0 -64 0 111 0 31",
+    "setblock 8 -60 24 remission:nidus",
+    "setblock 56 -60 24 remission:nidus",
+    "setblock 104 -60 24 remission:nidus",
+    "remission variant set 56 -60 24 remission:fire_resistant",
+    "remission variant set 104 -60 24 remission:pylon_resistant",
+    {"spawn": "minecraft:cow", "pos": [22.5, -60.0, 8.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"base\"]}"},
+    {"spawn": "minecraft:zombie", "pos": [26.5, -60.0, 8.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"base\"]}"},
+    {"spawn": "minecraft:cow", "pos": [54.5, -60.0, 8.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"fire\"]}"},
+    {"spawn": "minecraft:zombie", "pos": [58.5, -60.0, 8.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"fire\"]}"},
+    {"spawn": "minecraft:cow", "pos": [86.5, -60.0, 8.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"pylon\"]}"},
+    {"spawn": "minecraft:zombie", "pos": [90.5, -60.0, 8.5], "yaw": 180.0, "nbt": "{NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"pylon\"]}"},
+    {"corrupt": "@e[tag=base]", "level": 50},
+    {"corrupt": "@e[tag=fire]", "level": 50},
+    {"corrupt": "@e[tag=pylon]", "level": 50},
+    "harness player scan_host @e[type=minecraft:cow,tag=fire]",
+    "harness player scan_host @e[type=minecraft:cow,tag=pylon]",
+    "harness player scan_host @e[type=minecraft:cow,tag=base]",
+    "harness player scan_block 56 -61 4"
+  ],
+  "shots": [
+    {
+      "name": "overview",
+      "camera": {"pos": [56.0, -20.0, -40.0], "yaw": 0.0, "pitch": 35.0},
+      "commands": ["harness resend 0 -64 0 111 0 31"]
+    },
+    {"name": "base_fire", "camera": {"pos": [40.0, -54.0, -6.0], "yaw": 0.0, "pitch": 18.0}},
+    {"name": "fire_pylon", "camera": {"pos": [72.0, -54.0, -6.0], "yaw": 0.0, "pitch": 18.0}},
+    {
+      "name": "scan_host",
+      "camera": {"pos": [56.5, -60.0, 2.5], "yaw": 0.0, "pitch": 10.0},
+      "commands": ["gamemode survival @a"],
+      "tooltip": 37,
+      "gui_scale": 3
+    },
+    {"name": "scan_host_pylon", "camera": {"pos": [56.5, -60.0, 2.5], "yaw": 0.0, "pitch": 10.0}, "tooltip": 38, "gui_scale": 3},
+    {"name": "scan_host_base", "camera": {"pos": [56.5, -60.0, 2.5], "yaw": 0.0, "pitch": 10.0}, "tooltip": 39, "gui_scale": 3},
+    {"name": "scan_block", "camera": {"pos": [56.5, -60.0, 2.5], "yaw": 0.0, "pitch": 10.0}, "tooltip": 40, "gui_scale": 3}
+  ]
+}

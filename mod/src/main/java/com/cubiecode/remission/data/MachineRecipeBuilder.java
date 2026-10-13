@@ -10,6 +10,7 @@ import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.common.crafting.SizedIngredient;
@@ -53,6 +54,11 @@ final class MachineRecipeBuilder {
 
     MachineRecipeBuilder ingredient(TagKey<Item> tag, int count) {
         ingredients.add(SizedIngredient.of(tag, count));
+        return this;
+    }
+
+    MachineRecipeBuilder ingredient(Ingredient ingredient, int count) {
+        ingredients.add(new SizedIngredient(ingredient, count));
         return this;
     }
 

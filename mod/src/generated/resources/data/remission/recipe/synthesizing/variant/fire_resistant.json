@@ -1,0 +1,36 @@
+{
+  "type": "remission:synthesizing",
+  "energy": 6000,
+  "fluid_ingredient": {
+    "amount": 250,
+    "fluid": "remission:miasma"
+  },
+  "ingredients": [
+    {
+      "type": "neoforge:components",
+      "components": {
+        "remission:variant": "remission:fire_resistant"
+      },
+      "count": 1,
+      "items": "remission:strain_sequence"
+    },
+    {
+      "count": 2,
+      "item": "minecraft:glass_bottle"
+    },
+    {
+      "count": 1,
+      "item": "remission:host_tissue"
+    }
+  ],
+  "results": [
+    {
+      "components": {
+        "remission:variant": "remission:fire_resistant"
+      },
+      "count": 2,
+      "id": "remission:serum"
+    }
+  ],
+  "time": 300
+}
