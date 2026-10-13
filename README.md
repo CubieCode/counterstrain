@@ -28,7 +28,7 @@ Phases 0 to 3 and 6 are complete, 4, 5, 7 and 8 are in progress, and 9 to 12 hav
 | 2. Corruption state | done | Corruption attachment, host render layer (armour, wool and other layers), `/remission` debug commands |
 | 3. Host behaviour | done | Injected combat goals with brain, flying and swimming fallbacks; infection on kill; host tissue |
 | 4. Festering land | in progress | Nidi and per-chunk spread, staged block and biome conversion, underground festering, veins and contact infection, surges and miasma, nidus fights, ambience, team query, public API events |
-| 5. Viral load and early purification | in progress | Viral load and its HUD meter; purifier, quarantine pylons and mendroot; remission zones; revenants; countermeasures |
+| 5. Viral load and early purification | in progress | Viral load and its HUD meter; purifier, quarantine pylons and mendroot; remission zones; revenants; countermeasures; hazard notices and the bestiary's hazards tab |
 | 6. Research | done | Scanner, bestiary with hidden types, team-shared research |
 | 7. Tech chain | in progress | Miasma, nidus cores, analyzer, sequencer and synthesizer, serums, purifier fuel, Counterstrain prototypes, KubeJS recipe methods |
 | 8. Quest integration | in progress | Advancement triggers and stats, quest-fired commands, JourneyMap overlay |

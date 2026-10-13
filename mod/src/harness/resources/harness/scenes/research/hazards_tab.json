@@ -1,0 +1,16 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamemode creative @a",
+    "gamerule sendCommandFeedback false",
+    "fill -6 -61 2 6 -61 6 minecraft:smooth_stone",
+    "harness notice harness:rot 40 -60 56 3",
+    "harness notice harness:fouling -48 -60 -24 1"
+  ],
+  "shots": [
+    {"name": "map", "camera": {"pos": [0.5, -60.0, -2.0], "yaw": 0.0, "pitch": 10.0}, "map": true},
+    {"name": "hazards", "camera": {"pos": [0.5, -60.0, -2.0], "yaw": 0.0, "pitch": 10.0}, "press": "key.remission.bestiary", "button": "gui.remission.bestiary.tab.hazards"},
+    {"name": "held", "camera": {"pos": [0.5, -60.0, -2.0], "yaw": 0.0, "pitch": 10.0}, "commands": ["remission countermeasure grant @a remission:contact"], "press": "key.remission.bestiary", "button": "gui.remission.bestiary.tab.hazards"}
+  ]
+}

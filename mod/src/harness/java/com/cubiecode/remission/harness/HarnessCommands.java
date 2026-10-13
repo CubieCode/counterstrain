@@ -1,11 +1,13 @@
 package com.cubiecode.remission.harness;
 
 import com.cubiecode.remission.api.CorruptionCause;
+import com.cubiecode.remission.api.HazardNotices;
 import com.cubiecode.remission.api.NidusDamagedEvent;
 import com.cubiecode.remission.api.ViralLoadChangedEvent;
 import com.cubiecode.remission.config.RemissionCommonConfig;
 import com.cubiecode.remission.corruption.Corruption;
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.notice.HazardNoticeTracker;
 import com.cubiecode.remission.purification.Purification;
 import com.cubiecode.remission.purification.PurificationSettings;
 import com.cubiecode.remission.registry.RemissionAttachments;
@@ -36,11 +38,13 @@ import java.util.function.Consumer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
@@ -184,11 +188,33 @@ final class HarnessCommands {
                                                         EntityArgument.getPlayer(context, "owner"),
                                                         IntegerArgumentType.getInteger(context, "level"),
                                                         FloatArgumentType.getFloat(context, "yaw"))))))))
+                .then(Commands.literal("notice").then(Commands.argument("hazard", ResourceLocationArgument.id())
+                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .then(Commands.argument("count", IntegerArgumentType.integer(1, 64))
+                                        .executes(context -> notice(context.getSource().getLevel(),
+                                                ResourceLocationArgument.getId(context, "hazard"),
+                                                BlockPosArgument.getBlockPos(context, "pos"),
+                                                IntegerArgumentType.getInteger(context, "count")))))))
                 .then(Commands.literal("nidus").then(Commands.argument("pos", BlockPosArgument.blockPos())
                         .then(Commands.argument("vitality", IntegerArgumentType.integer(1, 100))
                                 .executes(context -> nidus(context.getSource().getLevel(),
                                         BlockPosArgument.getLoadedBlockPos(context, "pos"),
                                         IntegerArgumentType.getInteger(context, "vitality")))))));
+    }
+
+    /**
+     * Reports {@code count} strikes of {@code hazard} at {@code pos} through the hazard notice API (P5.8), once with each
+     * player as the placer, then sends every open group at once instead of after the grouping time.
+     */
+    private static int notice(ServerLevel level, ResourceLocation hazard, BlockPos pos, int count) {
+        List<ServerPlayer> players = level.getServer().getPlayerList().getPlayers();
+        for (ServerPlayer player : players) {
+            for (int i = 0; i < count; i++) {
+                HazardNotices.report(level, hazard, pos, player.getUUID());
+            }
+        }
+        HazardNoticeTracker.sendAllNow(level.getServer());
+        return players.size();
     }
 
     /**

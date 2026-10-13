@@ -7,6 +7,7 @@ import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.StringWidget;
@@ -24,14 +25,16 @@ import net.neoforged.fml.ModList;
 
 /**
  * Read-only list of every host type ({@link Bestiary#hostTypes()}) with the local player's synced scan progress. Scanned
- * types come first, then the rest; each group sorted by mod, then name.
+ * types come first, then the rest; each group sorted by mod, then name. The footer switches to the hazards tab
+ * ({@link HazardsTab}, P5.8).
  */
 public class BestiaryScreen extends Screen {
     private static final int HEADER_HEIGHT = 48;
     private static final int ROW_HEIGHT = 24;
 
-    private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this, HEADER_HEIGHT, 33);
-    private HostList list;
+    private HeaderAndFooterLayout layout;
+    private AbstractSelectionList<?> list;
+    private boolean hazards;
 
     public BestiaryScreen() {
         super(Component.translatable("gui.remission.bestiary.title"));
@@ -39,6 +42,12 @@ public class BestiaryScreen extends Screen {
 
     @Override
     protected void init() {
+        layout = new HeaderAndFooterLayout(this, HEADER_HEIGHT, 33);
+        if (hazards) {
+            list = HazardsTab.init(this, minecraft, font, layout);
+            addFooter();
+            return;
+        }
         BestiaryProgress progress = minecraft.player == null ? BestiaryProgress.EMPTY : Bestiary.team(minecraft.player);
         List<HostEntry> entries = Bestiary.hostTypes().stream()
                 .map(type -> new HostEntry(type, BuiltInRegistries.ENTITY_TYPE.getKey(type), progress))
@@ -54,9 +63,43 @@ public class BestiaryScreen extends Screen {
         header.addChild(new StringWidget(Component.translatable("gui.remission.bestiary.progress", scanned, entries.size())
                 .withStyle(ChatFormatting.GRAY), font));
         list = layout.addToContents(new HostList(minecraft, entries));
-        layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, button -> onClose()).width(200).build());
+        addFooter();
+    }
+
+    /** The tab buttons and Done, then the widgets. */
+    private void addFooter() {
+        LinearLayout footer = layout.addToFooter(LinearLayout.horizontal().spacing(8));
+        footer.addChild(tabButton("gui.remission.bestiary.tab.hosts", false));
+        footer.addChild(tabButton("gui.remission.bestiary.tab.hazards", true));
+        footer.addChild(Button.builder(CommonComponents.GUI_DONE, button -> onClose()).width(100).build());
         layout.visitWidgets(this::addRenderableWidget);
         repositionElements();
+    }
+
+    private Button tabButton(String key, boolean hazardsTab) {
+        Button button = Button.builder(Component.translatable(key), b -> {
+            hazards = hazardsTab;
+            if (hazardsTab) {
+                HazardsTab.opened(minecraft);
+            }
+            rebuildWidgets();
+        }).width(100).build();
+        button.active = hazards != hazardsTab;
+        return button;
+    }
+
+    /** Whether the hazards tab is shown. */
+    boolean showsHazards() {
+        return hazards;
+    }
+
+    /** Rebuilds the open tab (new hazard data arrived), keeping the list's scroll position. */
+    void refresh() {
+        double scroll = list == null ? 0 : list.getScrollAmount();
+        rebuildWidgets();
+        if (list != null) {
+            list.setScrollAmount(scroll);
+        }
     }
 
     @Override

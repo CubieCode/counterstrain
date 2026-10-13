@@ -31,6 +31,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -47,6 +48,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -120,6 +122,7 @@ final class SceneRunner {
     private int stableTicks;
     private boolean captureRequested;
     private boolean pressed;
+    private boolean buttonPressed;
     private boolean recipesOpened;
     private boolean mapOpened;
     private boolean inventoryOpened;
@@ -246,6 +249,7 @@ final class SceneRunner {
                     return;
                 }
                 pressKey(mc);
+                pressButton(mc);
                 openRecipes(mc);
                 openMap(mc);
                 openInventory(mc);
@@ -520,6 +524,7 @@ final class SceneRunner {
             mc.setScreen(null);
         }
         pressed = false;
+        buttonPressed = false;
         recipesOpened = false;
         mapOpened = false;
         inventoryOpened = false;
@@ -595,6 +600,27 @@ final class SceneRunner {
         KeyMapping.click(mapping.getKey());
         pressed = true;
         RemissionHarness.LOGGER.debug("Scene {}: pressed {}", sceneId, name);
+    }
+
+    /**
+     * Presses the shot's {@code button} (by its message's lang key) on the screen its key press opened, once (P5.8).
+     * The shot settles after it, so it shows the screen as the button left it.
+     */
+    private void pressButton(Minecraft mc) {
+        String key = scene.shots().get(shotIndex).button().orElse(null);
+        if (key == null || buttonPressed || !pressed || mc.screen == null) {
+            return;
+        }
+        AbstractButton button = mc.screen.children().stream()
+                .filter(AbstractButton.class::isInstance).map(AbstractButton.class::cast)
+                .filter(b -> b.getMessage().getContents() instanceof TranslatableContents contents
+                        && contents.getKey().equals(key))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("no button " + key + " on " + mc.screen.getClass().getName()));
+        button.onPress();
+        buttonPressed = true;
+        stableTicks = 0;
+        RemissionHarness.LOGGER.debug("Scene {}: pressed button {}", sceneId, key);
     }
 
     /**

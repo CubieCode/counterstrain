@@ -237,6 +237,33 @@ Config `config/remission-common.toml`, `[countermeasures]`:
 
 Trigger `remission:countermeasure_gained` and stat `remission:countermeasures_gained` (Advancement triggers and stats, below); `/remission countermeasure` (below).
 
+## Hazard notices and the hazards tab (built, P5.8)
+
+Every hazard is visible (DESIGN "Hazards and countermeasures"). `com.cubiecode.remission.notice` (internal) behind the API class `HazardNotices` and three methods appended to `StrainHazards`; server authoritative.
+
+**Reporting a strike** (`HazardNotices`, server thread): `report(ServerLevel level, ResourceLocation hazard, BlockPos pos, @Nullable UUID placer)`, called by a hazard system after its hazard struck a block (fouling, rot and containment breaches report here). Recipients: the placer and their online teammates (the team query), so an offline placer's online team is still told; with no known placer, the nearest non-spectator player in the level within 128 blocks (`Countermeasures.NEARBY_RADIUS`) and their online teammates; nobody else. A report never asks whether the hazard applies (that is `StrainHazards.applies`/`appliesAtBlock`, asked before striking).
+
+**Grouping and rate limit** (`notice.HazardNoticeTracker`, constants, no config): per recipient, a report joins the open group of the same hazard and dimension whose first strike is within `GROUP_RADIUS` (32) blocks, or opens one. A player has at most 32 open groups (`MAX_GROUPS`): past that, a report joins the nearest open group of its hazard (same dimension first), which then covers more than one area, and a hazard with no open group still opens one, so no report is dropped. A group is sent `GROUP_TICKS` (100, 5 s) after it opened, but never sooner than `COOLDOWN_TICKS` (600, 30 s) after that player's last notice of the same hazard; repeats inside the cooldown keep collecting. A notice names the group's first strike position, its strike count and its areas. At most `MAX_NOTICES_PER_HAZARD` (3) notices of one hazard go to a player in one flush: when more of its groups are due (a cooldown ending over a spread-out burst), the two largest are sent as they are and the rest as one summary notice with their summed strikes and areas, positioned at the largest of them. Nothing is saved: open groups are dropped when the player logs out or the server stops.
+
+**Payload `remission:hazard_notice`** (server to client, `HazardNoticePayload`): the hazard id, the dimension key, the position (`BlockPos` as a long), the count and the areas (var-ints; areas is 1 except for a summary). The client shows it in chat (gold) unless its hazard is muted, keeps the last 8 for the hazards tab (`network/HazardClientCache`, cleared on logout) and, with JourneyMap, adds a temporary waypoint. Text: the hazard's own lang key `notice.<namespace>.<path>` when the language has one, else `notice.remission.hazard` (one strike) or `notice.remission.hazard.repeated`, and a summary of several areas always `notice.remission.hazard.areas`; every key gets the arguments hazard name (`StrainHazards.displayName`), count, x, y, z, areas, so a hazard item ships, for example, `"notice.remission.rot": "%2$s blocks rotted near %3$s, %4$s, %5$s"`. A notice from another dimension than the player's appends `notice.remission.hazard.dimension` with the dimension id.
+
+**Hazards tab** (the bestiary screen's footer switches tabs): when the player switches to it, the client sends (once; rebuilding the open tab when new data arrives never asks again, and keeps the list's scroll position) **`remission:hazard_status_request`** (client to server, no body; answered at most every 250 ms per player) and the server answers **`remission:hazard_status`** (`HazardStatusPayload`: two lists of hazard ids, each a var-int count then the ids): `active`, the listed hazards for which `StrainHazards.applies(player, hazard)` is true (so a countermeasure the team holds or a `StrainHazardEvent` listener holding the hazard back hides it; block hazards are asked in the player form too), and `held`, every countermeasure the player's team holds (`teamCountermeasures`). Listed hazards: the declared ones (declarations last for the game session), every hazard reported on the running server (forgotten when it stops, so singleplayer worlds do not share them) and every hazard the team holds a countermeasure for. The tab also lists the recent notices, muted ones marked. These three payloads bumped `RemissionNetwork.PROTOCOL_VERSION` to 4.
+
+**`StrainHazards` additions** (P5.8):
+
+| Method | Returns |
+| --- | --- |
+| `declare(ResourceLocation hazard)` | Lists a hazard in the hazards tab while it applies; Remission declares `remission:contact`, later hazard items their own; integrations declare theirs once at startup. Any thread. |
+| `declared()` | Every declared hazard and every hazard reported on the running server, sorted. Any thread. |
+| `teamCountermeasures(MinecraftServer, UUID player)` | Every countermeasure that player (online or not) or a teammate holds, from the saved records, sorted. Server thread. |
+
+Client config `config/remission-client.toml`, `[notices]` (per player, presentation only):
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `muted` | list of hazard ids (strings) | `[]` | Hazards whose notices stay out of chat and off the map; the hazards tab still lists them, marked "Muted". |
+| `waypointSeconds` | int 0–3600 | 300 | How long a notice's JourneyMap waypoint stays (session only, never saved); 0 adds none. |
+
 ## Entity tag `#remission:immune` (built, P3.3)
 
 `data/<ns>/tags/entity_type/immune.json`, standard tag JSON (`{"replace": false, "values": ["minecraft:wither", "#c:bosses", {"id": "othermod:x", "required": false}]}`); Java `Corruption.IMMUNE`. An immune entity never becomes a host by any route: `Corruption.set` ignores levels above 0, infection on kill and `convert_to` skip it, and `/remission infect` skips it. A type added to the tag after it already carries the Strain keeps its state until cleansed. Remission ships only `#c:bosses` (ender dragon, wither, and whatever other mods tag); the pack extends it. Players are deliberately not immune: they can carry the Strain (`/remission infect`, rendered by the host overlay, scannable), but infection on kill never takes them because it only converts `Mob`s.

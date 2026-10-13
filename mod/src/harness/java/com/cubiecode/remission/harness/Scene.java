@@ -102,10 +102,12 @@ record Scene(long time, String weather, boolean festerFog, List<Step> setup, Lis
      * viewer, EMI when it is loaded, else JEI (P7.2). {@code screen} says a shot command opens a screen (such as
      * {@code harness player use} on a machine); the shot then waits for it. {@code map} opens JourneyMap's full-screen map
      * (P8.2; its key shares J with other mappings, so {@code press} cannot). {@code press}, {@code recipes} and {@code map}
-     * imply {@code screen}.
+     * imply {@code screen}. {@code button} (P5.8) names the lang key of a button on the screen {@code press} opened (e.g.
+     * {@code gui.remission.bestiary.tab.hazards}), pressed once that screen is open; the shot fails if it has none.
      */
     record Shot(String name, Camera camera, CameraType view, Optional<String> press, List<String> commands, boolean hud,
-                int guiScale, Optional<ResourceLocation> recipes, boolean screen, boolean map, Optional<Integer> tooltip) {
+                int guiScale, Optional<ResourceLocation> recipes, boolean screen, boolean map, Optional<Integer> tooltip,
+                Optional<String> button) {
         private static final Codec<CameraType> VIEW_CODEC = Codec.STRING.comapFlatMap(
                 v -> Arrays.stream(CameraType.values()).filter(t -> t.name().toLowerCase(Locale.ROOT).equals(v))
                         .findFirst().map(DataResult::success)
@@ -126,7 +128,8 @@ record Scene(long time, String weather, boolean festerFog, List<Step> setup, Lis
                 ResourceLocation.CODEC.optionalFieldOf("recipes").forGetter(Shot::recipes),
                 Codec.BOOL.optionalFieldOf("screen", false).forGetter(Shot::screen),
                 Codec.BOOL.optionalFieldOf("map", false).forGetter(Shot::map),
-                Codec.intRange(0, 45).optionalFieldOf("tooltip").forGetter(Shot::tooltip)
+                Codec.intRange(0, 45).optionalFieldOf("tooltip").forGetter(Shot::tooltip),
+                Codec.STRING.optionalFieldOf("button").forGetter(Shot::button)
         ).apply(i, Shot::new));
 
         /** Whether the shot shows a screen rather than the world. */

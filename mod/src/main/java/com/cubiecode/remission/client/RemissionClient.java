@@ -1,6 +1,7 @@
 package com.cubiecode.remission.client;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.client.notice.HazardNoticeDisplay;
 import com.cubiecode.remission.config.RemissionClientConfig;
 import com.cubiecode.remission.integration.journeymap.JourneyMapIntegration;
 import com.cubiecode.remission.registry.RemissionBlockEntities;
@@ -18,7 +19,7 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 /**
- * Client entrypoint: renderers (the nidus's animated block entity renderer among them), render layers, HUD layers, festering fog, client config and client-side integrations
+ * Client entrypoint: renderers (the nidus's animated block entity renderer among them), render layers, HUD layers, festering fog, hazard notices, client config and client-side integrations
  * (JourneyMap).
  */
 @Mod(value = Remission.MOD_ID, dist = Dist.CLIENT)
@@ -41,6 +42,7 @@ public final class RemissionClient {
                 event.registerBlockEntityRenderer(RemissionBlockEntities.NIDUS.get(), NidusRenderer::new));
         modBus.addListener(ViralLoadHud::register);
         FesterFog.init();
+        HazardNoticeDisplay.init();
         // Optional integrations: each class is touched only when its mod is loaded.
         if (ModList.get().isLoaded(JourneyMapIntegration.MOD_ID)) {
             JourneyMapIntegration.init();
