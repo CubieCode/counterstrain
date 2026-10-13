@@ -1,0 +1,45 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamerule sendCommandFeedback false",
+    "difficulty peaceful",
+    "gamemode creative @a",
+    "harness fester -16 -60 -32 31 -60 31 60",
+    "setblock 0 -60 0 remission:nidus",
+    "setblock 10 -60 0 remission:nidus",
+    "tp @a 5.5 -60 -10 0 8"
+  ],
+  "shots": [
+    {
+      "name": "idle",
+      "camera": {"pos": [0.5, -59.0, -6.0], "yaw": 0.0, "pitch": 12.0},
+      "commands": ["tick step 30"]
+    },
+    {
+      "name": "hit",
+      "camera": {"pos": [0.5, -59.0, -6.0], "yaw": 0.0, "pitch": 12.0},
+      "commands": ["harness nidus 0 -60 0 90", "tick step 2"]
+    },
+    {
+      "name": "hit_settled",
+      "camera": {"pos": [0.5, -59.0, -6.0], "yaw": 0.0, "pitch": 12.0},
+      "commands": ["tick step 20"]
+    },
+    {
+      "name": "enraged",
+      "camera": {"pos": [10.5, -59.0, -6.0], "yaw": 0.0, "pitch": 12.0},
+      "commands": ["harness nidus 10 -60 0 40", "kill @e[type=remission:miasma_cloud]", "title @a actionbar \"\"", "tick step 30"]
+    },
+    {
+      "name": "enraged_near_death",
+      "camera": {"pos": [10.5, -59.0, -6.0], "yaw": 0.0, "pitch": 12.0},
+      "commands": ["harness nidus 10 -60 0 20", "kill @e[type=remission:miasma_cloud]", "title @a actionbar \"\"", "tick step 30"]
+    },
+    {
+      "name": "calmed",
+      "camera": {"pos": [10.5, -59.0, -6.0], "yaw": 0.0, "pitch": 12.0},
+      "commands": ["remission surge stop", "tick step 30"]
+    }
+  ]
+}

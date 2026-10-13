@@ -7,32 +7,32 @@
     "gamemode creative @a",
     "harness fester -16 -60 -16 31 -60 31 60",
     "setblock 0 -60 0 remission:nidus",
-    "setblock 0 -60 3 remission:festered_stone"
+    "setblock 0 -60 -3 remission:festered_stone"
   ],
   "shots": [
     {
       "name": "struck",
       "hud": true,
-      "camera": {"pos": [0.5, -59.0, 3.5], "yaw": 180.0, "pitch": 40.0},
+      "camera": {"pos": [0.5, -59.0, -2.5], "yaw": 0.0, "pitch": 25.0},
       "commands": ["harness nidus 0 -60 0 80", "title @a actionbar \"\""]
     },
     {
       "name": "threshold_75",
       "hud": true,
-      "camera": {"pos": [0.5, -59.0, 3.5], "yaw": 180.0, "pitch": 40.0},
-      "commands": ["harness nidus 0 -60 0 74", "title @a actionbar \"\""]
+      "camera": {"pos": [0.5, -59.0, -2.5], "yaw": 0.0, "pitch": 25.0},
+      "commands": ["harness nidus 0 -60 0 74", "kill @e[type=remission:miasma_cloud]", "title @a actionbar \"\""]
     },
     {
       "name": "threshold_50",
       "hud": true,
-      "camera": {"pos": [0.5, -59.0, 3.5], "yaw": 180.0, "pitch": 40.0},
-      "commands": ["harness nidus 0 -60 0 49", "title @a actionbar \"\""]
+      "camera": {"pos": [0.5, -59.0, -2.5], "yaw": 0.0, "pitch": 25.0},
+      "commands": ["harness nidus 0 -60 0 49", "kill @e[type=remission:miasma_cloud]", "title @a actionbar \"\""]
     },
     {
       "name": "threshold_25",
       "hud": true,
-      "camera": {"pos": [0.5, -59.0, 3.5], "yaw": 180.0, "pitch": 40.0},
-      "commands": ["harness nidus 0 -60 0 24", "title @a actionbar \"\""]
+      "camera": {"pos": [0.5, -59.0, -2.5], "yaw": 0.0, "pitch": 25.0},
+      "commands": ["harness nidus 0 -60 0 24", "kill @e[type=remission:miasma_cloud]", "title @a actionbar \"\""]
     }
   ]
 }

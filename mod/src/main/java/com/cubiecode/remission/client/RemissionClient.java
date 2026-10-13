@@ -3,6 +3,7 @@ package com.cubiecode.remission.client;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.config.RemissionClientConfig;
 import com.cubiecode.remission.integration.journeymap.JourneyMapIntegration;
+import com.cubiecode.remission.registry.RemissionBlockEntities;
 import com.cubiecode.remission.registry.RemissionEntityTypes;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.neoforged.api.distmarker.Dist;
@@ -17,7 +18,7 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 /**
- * Client entrypoint: renderers, render layers, HUD layers, festering fog, client config and client-side integrations
+ * Client entrypoint: renderers (the nidus's animated block entity renderer among them), render layers, HUD layers, festering fog, client config and client-side integrations
  * (JourneyMap).
  */
 @Mod(value = Remission.MOD_ID, dist = Dist.CLIENT)
@@ -36,6 +37,8 @@ public final class RemissionClient {
                 event.registerEntityRenderer(RemissionEntityTypes.REVENANT.get(), RevenantRenderer::new));
         modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
                 event.registerEntityRenderer(RemissionEntityTypes.COUNTERSTRAIN_PROTOTYPE.get(), ThrownItemRenderer::new));
+        modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
+                event.registerBlockEntityRenderer(RemissionBlockEntities.NIDUS.get(), NidusRenderer::new));
         modBus.addListener(ViralLoadHud::register);
         FesterFog.init();
         // Optional integrations: each class is touched only when its mod is loaded.

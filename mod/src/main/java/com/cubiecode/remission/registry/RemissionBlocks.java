@@ -31,6 +31,7 @@ public final class RemissionBlocks {
                     .mapColor(MapColor.COLOR_PURPLE)
                     .strength(5.0F, 6.0F)
                     .sound(SoundType.SCULK_CATALYST)
+                    .noOcclusion()
                     .pushReaction(PushReaction.BLOCK));
 
     /** Miasma in the world (P7.1). */

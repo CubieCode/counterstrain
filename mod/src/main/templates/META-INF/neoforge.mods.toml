@@ -24,6 +24,14 @@ description='''${mod_description}'''
     ordering="NONE"
     side="BOTH"
 
+# GeckoLib animates the nidus (its block entity and renderer); 4.9 is the line Remission is built against.
+[[dependencies.${mod_id}]]
+    modId="geckolib"
+    type="required"
+    versionRange="[4.9,)"
+    ordering="NONE"
+    side="BOTH"
+
 # Optional integrations (integration/<modid>/): never required; the range only rejects versions whose API differs.
 # Mekanism 10.7 unified gases into chemicals, which the miasma chemical (P7.1) is built on.
 [[dependencies.${mod_id}]]

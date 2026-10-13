@@ -3,6 +3,8 @@ package com.cubiecode.remission.world;
 import com.cubiecode.remission.api.NidusDamagedEvent;
 import com.cubiecode.remission.api.ViralLoadChangedEvent;
 import com.cubiecode.remission.registry.RemissionBlockEntities;
+import com.cubiecode.remission.registry.RemissionSounds;
+import com.cubiecode.remission.surge.Surge;
 import com.cubiecode.remission.surge.Surges;
 import com.cubiecode.remission.viralload.ViralLoad;
 import com.cubiecode.remission.viralload.ViralLoadSettings;
@@ -15,17 +17,21 @@ import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -35,6 +41,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
+import software.bernie.geckolib.animatable.GeoBlockEntity;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animation.AnimationController;
+import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.RawAnimation;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
  * The nidus block entity. It re-indexes its nidus when loaded, which covers nidi placed by world generation or
@@ -50,12 +64,29 @@ import org.jetbrains.annotations.Nullable;
  * damaged it within {@code contributorWindowTicks} is credited. Players within range see a boss bar while it fights (a
  * vanilla packet), and the block's {@link NidusBlock#DAMAGE} state shows the quarters of vitality lost. Saved with the
  * block entity.
+ *
+ * <p>It is also a GeckoLib animatable: the client draws it with {@code client/NidusRenderer}, at the health stage the
+ * {@link NidusBlock#DAMAGE} state gives. A {@code body} controller loops {@link #IDLE}, or {@link #ENRAGED} while a
+ * surge from this nidus is running (synced to clients in the block entity's update tag, not saved: the surge controller
+ * is the record), and a {@code hit} controller plays {@link #HIT} once on top of it for each damage dealt (a block event,
+ * {@link #EVENT_HIT}), after which the loop carries on. Clients tick it for its spores and wet heartbeat sounds.
  */
-public final class NidusBlockEntity extends BlockEntity {
+public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntity {
     /** Ticks between counts of the players in the fight (players joining raise vitality) and contributor pruning. */
     public static final int CHECK_TICKS = 20;
     /** Ticks between boss bar refreshes (who sees it); its progress also updates on every change. */
     public static final int BAR_TICKS = 10;
+
+    /** Block event id: the nidus took damage; clients play its hit reaction. */
+    public static final int EVENT_HIT = 1;
+    public static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.nidus.idle");
+    public static final RawAnimation ENRAGED = RawAnimation.begin().thenLoop("animation.nidus.enraged");
+    public static final RawAnimation HIT = RawAnimation.begin().thenPlay("animation.nidus.hit");
+    /** Ticks the body controller takes to blend between idle and enraged. */
+    public static final int BLEND_TICKS = 10;
+    private static final Vector3f SPORE_GREEN = new Vector3f(0.62F, 0.9F, 0.25F);
+    private static final Vector3f SPORE_VIOLET = new Vector3f(0.5F, 0.22F, 0.6F);
+    private static final Vector3f WOUND_CRIMSON = new Vector3f(0.75F, 0.08F, 0.12F);
 
     private float base;
     private int players;
@@ -65,6 +96,12 @@ public final class NidusBlockEntity extends BlockEntity {
     private final Map<UUID, Long> contributors = new LinkedHashMap<>();
     /** Game time of each player's last strike that counted, for the strike cooldown; transient. */
     private final Map<UUID, Long> lastStrikes = new HashMap<>();
+
+    /** A surge from this nidus is running: the body thrashes (server: from the surge controller; client: synced). */
+    private boolean enraged;
+    private final AnimatableInstanceCache animations = GeckoLibUtil.createInstanceCache(this);
+    /** Client: the health stage the body controller's loop was loaded for (near death has its own, weaker loops). */
+    private int animatedStage = -1;
 
     private final ServerBossEvent bar = new ServerBossEvent(Component.translatable("event.remission.nidus.bar"),
             BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.PROGRESS);
@@ -88,7 +125,7 @@ public final class NidusBlockEntity extends BlockEntity {
         }
     }
 
-    // ---- state -------------------------------------------------------------------------------------------------------
+    // ---- state ------------------------------------------------------------------------------------------------------
 
     /** Whether a fight is under way (it has been damaged and has not regenerated fully since). */
     public boolean fighting() {
@@ -146,7 +183,7 @@ public final class NidusBlockEntity extends BlockEntity {
         return found;
     }
 
-    // ---- damage ------------------------------------------------------------------------------------------------------
+    // ---- damage -----------------------------------------------------------------------------------------------------
 
     /**
      * A strike by {@code player} at game time {@code now}: unless the player struck this nidus within
@@ -207,6 +244,7 @@ public final class NidusBlockEntity extends BlockEntity {
             destroy(level, player, settings, now);
             return dealt;
         }
+        level.blockEvent(worldPosition, getBlockState().getBlock(), EVENT_HIT, 0);
         float percent = (max - damage) / max * 100.0F;
         List<Integer> thresholds = settings.thresholds();
         while (thresholdsPassed < thresholds.size() && percent <= thresholds.get(thresholdsPassed)) {
@@ -306,7 +344,7 @@ public final class NidusBlockEntity extends BlockEntity {
         return taken;
     }
 
-    // ---- ticking -----------------------------------------------------------------------------------------------------
+    // ---- ticking ----------------------------------------------------------------------------------------------------
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, NidusBlockEntity entity) {
         if (level instanceof ServerLevel serverLevel) {
@@ -314,8 +352,15 @@ public final class NidusBlockEntity extends BlockEntity {
         }
     }
 
-    /** One tick at game time {@code now}: regeneration, players joining, contributor pruning, boss bar and damage state. */
+    /**
+     * One tick at game time {@code now}: the enraged check (every {@link #CHECK_TICKS}; surge events set it at once),
+     * regeneration, players joining, contributor pruning, boss bar and damage state.
+     */
     public void tick(ServerLevel level, NidusSettings settings, long now) {
+        if (now % CHECK_TICKS == 0) {
+            Surge surge = Surges.controller(level).current();
+            setEnraged(surge != null && surge.started() && surge.origin().equals(worldPosition));
+        }
         if (!fighting()) {
             return;
         }
@@ -420,7 +465,120 @@ public final class NidusBlockEntity extends BlockEntity {
         bar.removeAllPlayers();
     }
 
-    // ---- saving ------------------------------------------------------------------------------------------------------
+    // ---- appearance -------------------------------------------------------------------------------------------------
+
+    /** Whether a surge from this nidus is running (on clients, as last synced). */
+    public boolean enraged() {
+        return enraged;
+    }
+
+    /** Server: sets whether a surge from this nidus is running and sends it to clients tracking the chunk on a change. */
+    public void setEnraged(boolean value) {
+        if (enraged == value) {
+            return;
+        }
+        enraged = value;
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        }
+    }
+
+    /**
+     * The health stage the nidus shows, 0 (healthy) to {@link NidusBlock#MAX_DAMAGE} (near death): its
+     * {@link NidusBlock#DAMAGE} state, so with the default fight it is healthy above 75% vitality, lightly wounded above
+     * 50%, badly wounded above 25% and near death at 25% or below.
+     */
+    public int healthStage() {
+        return damageStage();
+    }
+
+    @Override
+    public boolean triggerEvent(int id, int param) {
+        if (id == EVENT_HIT) {
+            if (level != null && level.isClientSide) {
+                triggerAnim("hit", "hit");
+            }
+            return true;
+        }
+        return super.triggerEvent(id, param);
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>(this, "body", BLEND_TICKS, state -> {
+            // Near death loads its own idle and enraged loops under the same names: reload when the stage changes.
+            int stage = healthStage();
+            if (stage != animatedStage) {
+                animatedStage = stage;
+                state.getController().forceAnimationReset();
+            }
+            return state.setAndContinue(enraged ? ENRAGED : IDLE);
+        }));
+        controllers.add(new AnimationController<>(this, "hit", 0, state -> PlayState.STOP).triggerableAnim("hit", HIT));
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return animations;
+    }
+
+    public static void clientTick(Level level, BlockPos pos, BlockState state, NidusBlockEntity entity) {
+        entity.ambience(level, level.random);
+    }
+
+    /**
+     * Client: spores drifting up from the crown (more while enraged), crimson drops from the wounds once badly wounded,
+     * and now and then the festering land's wet additions sound from the nidus itself, faster and lower as it weakens.
+     */
+    private void ambience(Level level, RandomSource random) {
+        int stage = healthStage();
+        double x = worldPosition.getX() + 0.5;
+        double y = worldPosition.getY();
+        double z = worldPosition.getZ() + 0.5;
+        if (random.nextInt(enraged ? 2 : 6) == 0) {
+            Vector3f colour = random.nextInt(3) == 0 ? SPORE_VIOLET : SPORE_GREEN;
+            level.addParticle(new DustParticleOptions(colour, 0.7F + random.nextFloat() * 0.5F),
+                    x + random.triangle(0.0, 1.2), y + 1.0 + random.nextDouble() * 1.4, z + random.triangle(0.0, 1.2),
+                    0.0, 0.02 + random.nextDouble() * 0.03, 0.0);
+        }
+        if (stage >= 2 && random.nextInt(stage == NidusBlock.MAX_DAMAGE ? 4 : 10) == 0) {
+            level.addParticle(new DustParticleOptions(WOUND_CRIMSON, 0.8F),
+                    x + random.triangle(0.0, 0.7), y + 0.4 + random.nextDouble() * 0.9, z - 0.55 + random.triangle(0.0, 0.3),
+                    0.0, -0.03, 0.0);
+        }
+        int soundChance = enraged ? 60 : 200 - stage * 40;
+        if (random.nextInt(soundChance) == 0) {
+            level.playLocalSound(worldPosition, RemissionSounds.FESTER_ADDITIONS.get(), SoundSource.BLOCKS, 0.6F,
+                    0.8F - stage * 0.08F + random.nextFloat() * 0.1F, false);
+        }
+    }
+
+    // ---- syncing ----------------------------------------------------------------------------------------------------
+
+    /** What clients get with the chunk and on {@link #setEnraged} changes: only whether it is enraged. */
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = new CompoundTag();
+        tag.putBoolean("enraged", enraged);
+        return tag;
+    }
+
+    @Override
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        enraged = tag.getBoolean("enraged");
+    }
+
+    @Override
+    public void onDataPacket(Connection connection, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
+        handleUpdateTag(packet.getTag(), registries);
+    }
+
+    // ---- saving -----------------------------------------------------------------------------------------------------
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {

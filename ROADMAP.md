@@ -41,6 +41,7 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - L: P11.1 → P11.4 → P11.5 → P11.2 → P11.3 serially (one pack-content owner). P11.4 and P11.5 were added after the phase was planned, so their numbers do not follow the run order.
 - P4.12 (team query) runs before P5.3 and P6.4, alone or in any wave without another build-file owner; it owns `integration/ftbteams/` and the team query in `api/`.
 - P4.13 → P4.14 serially after P4.10 (done; both append to the nidus and surge code and the `[nidi]` config).
+- P4.15 (animated nidus model, after P4.10) runs alone or before P4.13; it owns the nidus renderer and assets and adds GeckoLib to the build files.
 - P5.7 (countermeasures) is done, ahead of P5.6, P7.7, P7.8, P10.2 and P10.6, which add hazards to its contracts (the countermeasure attachment, the hazard event and query, the protocol item); it retrofitted P5.2's contact viral load as hazard `remission:contact`.
 - P5.8 (after P5.7 and P6.2, both done) runs before P7.7 and P7.8; it owns the hazard notice API, the bestiary screen's hazards tab and its payload, and appends to `integration/journeymap/` (never in the same wave as P5.4 or P8.2).
 - P5.6 (follow-up to P5.1 and P5.7) can join any wave or run alone; it owns the viral load system and its HUD while it runs.
@@ -399,7 +400,18 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 - Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
 - Parallel: Appends to the nidus block entity, the `[nidi]` config and the surge controller; never in the same wave as P4.13.
 
-Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5 to P4.14, follow-ups added after P4.4, are not part of these exit criteria.
+### P4.15: Animated nidus model
+
+- Status: `review`
+- Owner: feat/p4.15-animated-nidus
+- PR: https://github.com/CubieCode/counterstrain/pull/98
+- Depends on: P4.10
+- Scope: The nidus looks like the living organism the fight is against instead of a cube. A GeckoLib (required dependency, the 4.9 line the pack already ships) block entity renderer draws a detailed model about two blocks across with three-block tentacles in place of the block model, never both. Four health stages (healthy, lightly wounded, badly wounded, near death) follow P4.10's `damage` state, each with its own geometry and texture chosen together. Animations: an idle loop, an enraged loop while a surge from that nidus runs, and a hit reaction on each damage that returns to the loop; near death has damped loops. The core, wounds and stumps glow (emissive, with a heartbeat and a near-death flicker) while the flesh stays normally lit; client-side spores, drips and ambient sound. Stage and enraged state reach clients on chunk load and on change (block state, block entity update tag and a block event; no new payload); enraged is not saved. Render bounds cover the whole model; collision, outline and strikes stay on the one block. Supplied assets are AI-generated (ledger). Documented in docs/ARCHITECTURE.md and remission-data-formats.
+- Acceptance: Gametests: stages follow vitality at 75, 50 and 25%; damage queues the hit event; a threshold surge enrages the nidus and its end calms it; the update tag carries enraged and the save does not. Builds and gametests pass on the dedicated-server dist. Harness scenes `world/nidus_stages` (all four stages, a side view, culling and night) and `world/nidus_motion` (idle, hit, enraged and calmed, recorded), reviewed from a GPU run; `world/nidus_fight` and `world/surge` references updated. Ledger updated; placeholders marked.
+- Skills: neoforge-mod-dev, remission-data-formats, minecraft-testing, visual-checks, content-provenance
+- Parallel: Owns the nidus renderer and assets in `client/` and `assets/remission/{geo,animations}/block/`; appends to `NidusBlock`, its block entity and `NidusEncounters`; adds GeckoLib to the build files (one build-file owner per wave); never in the same wave as P4.13 or P4.14.
+
+Exit criteria: gametests pass; spread and catch-up timings recorded; scenes reviewed; the API is documented. P4.5 to P4.15, follow-ups added after P4.4, are not part of these exit criteria.
 
 ## Phase 5: Viral load and early purification
 

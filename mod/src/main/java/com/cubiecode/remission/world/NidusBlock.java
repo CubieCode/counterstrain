@@ -35,6 +35,12 @@ import org.jetbrains.annotations.Nullable;
  * explosions wear it down at their fractions, and the fight is its {@link NidusBlockEntity}; {@link #DAMAGE} shows how
  * far it has gone. Creative players and edits
  * (such as {@code /setblock}) still remove it at once. At vitality 0 it is mined like any block.
+ *
+ * <p>It looks like a living organism two blocks across with tentacles three blocks long, drawn by its block entity's
+ * animated renderer at the health stage {@link #DAMAGE} gives; the block model only supplies the break particles and the
+ * item. Collision, the outline and strikes stay on this one block: the body and tentacles are scenery that players walk
+ * through, so the fight is always against the block at the nidus's heart. It does not occlude, so its own position is
+ * lit and the model is lit by it.
  */
 public final class NidusBlock extends BaseEntityBlock {
     public static final MapCodec<NidusBlock> CODEC = simpleCodec(NidusBlock::new);
@@ -68,12 +74,14 @@ public final class NidusBlock extends BaseEntityBlock {
 
     @Override
     public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return level.isClientSide ? null : createTickerHelper(type, RemissionBlockEntities.NIDUS.get(), NidusBlockEntity::serverTick);
+        return createTickerHelper(type, RemissionBlockEntities.NIDUS.get(),
+                level.isClientSide ? NidusBlockEntity::clientTick : NidusBlockEntity::serverTick);
     }
 
+    /** Only the block entity's renderer draws it, so the cube model never shows next to the organism. */
     @Override
     protected RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
+        return RenderShape.ENTITYBLOCK_ANIMATED;
     }
 
     @Override

@@ -18,6 +18,7 @@ import com.cubiecode.remission.world.NidusSettings;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -44,6 +45,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.BlockEventData;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -71,7 +73,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * Nidus encounters (P4.10): mining never breaks a nidus, strikes, projectiles and explosions deal their damage, each
  * threshold starts one surge from the nidus and lashes players, vitality regenerates and is saved, the final blow drops
  * the core and credits every contributor within the window, vitality and surge intensity scale with players, the
- * damaged event cancels and scales damage, and vitality 0 restores mining. Batch {@code nidi} runs on {@link #SETTINGS}
+ * damaged event cancels and scales damage, and vitality 0 restores mining. What clients draw (health stage, hit
+ * reaction, enraged while its surge runs) follows the fight. Batch {@code nidi} runs on {@link #SETTINGS}
  * (installed for the batch); batch {@code nidi_plain} on the same with vitality 0.
  */
 @GameTestHolder(Remission.MOD_ID)
@@ -108,7 +111,7 @@ public final class NidusEncounterTests {
         NidusSettings.override(null);
     }
 
-    // ---- fixtures ----------------------------------------------------------------------------------------------------
+    // ---- fixtures ---------------------------------------------------------------------------------------------------
 
     /** A nidus in the test area, survival players next to it (registered as online), and listeners; cleaned up after. */
     private static final class Fight implements AutoCloseable {
@@ -169,7 +172,7 @@ public final class NidusEncounterTests {
         return events.stream().filter(event -> event.getOrigin().equals(origin)).toList();
     }
 
-    // ---- mining ------------------------------------------------------------------------------------------------------
+    // ---- mining -----------------------------------------------------------------------------------------------------
 
     /**
      * Survival mining makes no progress and a survival break (any number of ticks, or the break itself) leaves the nidus
@@ -212,7 +215,7 @@ public final class NidusEncounterTests {
         helper.succeed();
     }
 
-    // ---- damage ------------------------------------------------------------------------------------------------------
+    // ---- damage -----------------------------------------------------------------------------------------------------
 
     /**
      * A strike through the left-click path deals the held item's attack damage scaled by attack strength (and resets
@@ -283,7 +286,7 @@ public final class NidusEncounterTests {
         helper.succeed();
     }
 
-    // ---- thresholds --------------------------------------------------------------------------------------------------
+    // ---- thresholds -------------------------------------------------------------------------------------------------
 
     /**
      * Each threshold starts one surge from that nidus at once (intensity 1, 2, 3 for one player), replacing the last, and
@@ -337,7 +340,7 @@ public final class NidusEncounterTests {
         helper.succeed();
     }
 
-    // ---- regeneration and saving -------------------------------------------------------------------------------------
+    // ---- regeneration and saving ------------------------------------------------------------------------------------
 
     /**
      * Vitality regenerates only after the delay, at the configured rate; the fight is saved with the block entity; once
@@ -380,7 +383,7 @@ public final class NidusEncounterTests {
         helper.succeed();
     }
 
-    // ---- the final blow ----------------------------------------------------------------------------------------------
+    // ---- the final blow ---------------------------------------------------------------------------------------------
 
     /**
      * The final strike destroys the nidus and drops its core; the destroyed event names the striker and every player
@@ -424,7 +427,7 @@ public final class NidusEncounterTests {
         helper.succeed();
     }
 
-    // ---- scaling -----------------------------------------------------------------------------------------------------
+    // ---- scaling ----------------------------------------------------------------------------------------------------
 
     /**
      * Vitality scales with the players in range when the fight starts and rises (keeping its share) as more join, up to
@@ -487,7 +490,7 @@ public final class NidusEncounterTests {
         helper.succeed();
     }
 
-    // ---- the damaged event -------------------------------------------------------------------------------------------
+    // ---- the damaged event ------------------------------------------------------------------------------------------
 
     /** A listener scales damage and another cancels it: a cancelled strike deals nothing and earns no credit. */
     @GameTest(template = "empty", batch = BATCH)
@@ -693,6 +696,58 @@ public final class NidusEncounterTests {
         helper.succeed();
     }
 
+    // ---- appearance -------------------------------------------------------------------------------------------------
+
+    /**
+     * What clients draw: the health stage follows the quarters of vitality lost (healthy above 75%, lightly wounded above
+     * 50%, badly wounded above 25%, near death at or below), each damage queues the hit block event, a surge from the
+     * nidus enrages it at once and its end calms it, the tick re-checks against the surge controller, and the update tag
+     * carries the enraged flag without it being saved.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void appearanceFollowsFightAndSurges(GameTestHelper helper) {
+        try (Fight fight = new Fight(helper)) {
+            ServerPlayer player = fight.player(1);
+            NidusBlockEntity nidus = fight.nidus();
+            long now = fight.level.getGameTime();
+            float max = (float) SETTINGS.vitality();
+            helper.assertValueEqual(nidus.healthStage(), 0, "stage before the fight");
+            helper.assertFalse(nidus.enraged(), "enraged before the fight");
+
+            fight.strike(player, max * 0.2F, now);
+            helper.assertValueEqual(nidus.healthStage(), 0, "stage at 80% vitality");
+            helper.assertTrue(blockEvents(fight.level).contains(
+                    new BlockEventData(fight.pos, RemissionBlocks.NIDUS.get(), NidusBlockEntity.EVENT_HIT, 0)), "hit event queued");
+            helper.assertTrue(nidus.triggerEvent(NidusBlockEntity.EVENT_HIT, 0), "hit event not sent on to clients");
+
+            fight.strike(player, max * 0.05F, now);
+            helper.assertValueEqual(nidus.healthStage(), 1, "stage at 75% vitality");
+            helper.assertTrue(nidus.enraged(), "not enraged by its own threshold surge");
+            helper.assertTrue(nidus.getUpdateTag(fight.level.registryAccess()).getBoolean("enraged"), "update tag");
+            NidusBlockEntity client = new NidusBlockEntity(fight.pos, fight.level.getBlockState(fight.pos));
+            client.handleUpdateTag(nidus.getUpdateTag(fight.level.registryAccess()), fight.level.registryAccess());
+            helper.assertTrue(client.enraged(), "enraged lost in the update tag");
+            helper.assertFalse(nidus.saveWithoutMetadata(fight.level.registryAccess()).contains("enraged"), "enraged saved");
+
+            fight.strike(player, max * 0.25F, now);
+            helper.assertValueEqual(nidus.healthStage(), 2, "stage at 50% vitality");
+            fight.strike(player, max * 0.25F, now);
+            helper.assertValueEqual(nidus.healthStage(), 3, "stage at 25% vitality");
+
+            Surges.controller(fight.level).stop(now);
+            helper.assertFalse(nidus.enraged(), "still enraged after its surge stopped");
+            nidus.setEnraged(true);
+            long check = now + NidusBlockEntity.CHECK_TICKS - Math.floorMod(now, NidusBlockEntity.CHECK_TICKS);
+            nidus.tick(fight.level, SETTINGS, check);
+            helper.assertFalse(nidus.enraged(), "the tick did not calm a nidus with no surge");
+        }
+        helper.succeed();
+    }
+
+    private static Collection<BlockEventData> blockEvents(ServerLevel level) {
+        return ObfuscationReflectionHelper.getPrivateValue(ServerLevel.class, level, "blockEvents");
+    }
+
     private static int attackTicker(ServerPlayer player) {
         return ObfuscationReflectionHelper.getPrivateValue(LivingEntity.class, player, "attackStrengthTicker");
     }
@@ -701,7 +756,7 @@ public final class NidusEncounterTests {
         ObfuscationReflectionHelper.setPrivateValue(LivingEntity.class, player, ticks, "attackStrengthTicker");
     }
 
-    // ---- helpers -----------------------------------------------------------------------------------------------------
+    // ---- helpers ----------------------------------------------------------------------------------------------------
 
     private static AdvancementHolder gate(GameTestHelper helper, ServerPlayer player) {
         return gate(helper, player, "{\"trigger\":\"remission:nidus_destroyed\"}");

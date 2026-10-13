@@ -4,13 +4,13 @@
       "model": "remission:block/nidus"
     },
     "damage=1": {
-      "model": "remission:block/nidus_damaged_1"
+      "model": "remission:block/nidus"
     },
     "damage=2": {
-      "model": "remission:block/nidus_damaged_2"
+      "model": "remission:block/nidus"
     },
     "damage=3": {
-      "model": "remission:block/nidus_damaged_3"
+      "model": "remission:block/nidus"
     }
   }
 }

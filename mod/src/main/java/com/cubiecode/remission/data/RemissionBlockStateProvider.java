@@ -4,7 +4,6 @@ import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.registry.RemissionBlocks;
 import net.minecraft.core.Direction;
 import com.cubiecode.remission.tech.MachineKind;
-import com.cubiecode.remission.world.NidusBlock;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.level.block.MultifaceBlock;
 import net.neoforged.neoforge.client.model.generators.BlockStateProvider;
@@ -20,14 +19,10 @@ public final class RemissionBlockStateProvider extends BlockStateProvider {
 
     @Override
     protected void registerStatesAndModels() {
-        // The nidus shows the quarters of vitality lost in its fight (P4.10) as wounds; the item is the whole nidus.
+        // The nidus's block entity renderer draws it at its health stage (client/NidusRenderer); the cube model only
+        // supplies its break particles and the item, for every damage state.
         ModelFile nidus = cubeAll(RemissionBlocks.NIDUS.get());
-        getVariantBuilder(RemissionBlocks.NIDUS.get()).forAllStates(state -> {
-            int damage = state.getValue(NidusBlock.DAMAGE);
-            ModelFile model = damage == 0 ? nidus
-                    : models().cubeAll("nidus_damaged_" + damage, modLoc("block/nidus_damaged_" + damage));
-            return ConfiguredModel.builder().modelFile(model).build();
-        });
+        getVariantBuilder(RemissionBlocks.NIDUS.get()).forAllStates(state -> ConfiguredModel.builder().modelFile(nidus).build());
         simpleBlockItem(RemissionBlocks.NIDUS.get(), nidus);
         // Fluid blocks render through the fluid renderer; the model only supplies the break particle.
         simpleBlock(RemissionBlocks.MIASMA.get(), models().getBuilder("miasma").texture("particle", modLoc("block/miasma_still")));
