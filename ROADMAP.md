@@ -402,9 +402,9 @@ Goals: the Strain spreads through land from nidi, visibly, and keeps progressing
 
 ### P4.15: Animated nidus model
 
-- Status: `in-progress`
+- Status: `review`
 - Owner: feat/p4.15-animated-nidus
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/98
 - Depends on: P4.10
 - Scope: The nidus looks like the living organism the fight is against instead of a cube. A GeckoLib (required dependency, the 4.9 line the pack already ships) block entity renderer draws a detailed model about two blocks across with three-block tentacles in place of the block model, never both. Four health stages (healthy, lightly wounded, badly wounded, near death) follow P4.10's `damage` state, each with its own geometry and texture chosen together. Animations: an idle loop, an enraged loop while a surge from that nidus runs, and a hit reaction on each damage that returns to the loop; near death has damped loops. The core, wounds and stumps glow (emissive, with a heartbeat and a near-death flicker) while the flesh stays normally lit; client-side spores, drips and ambient sound. Stage and enraged state reach clients on chunk load and on change (block state, block entity update tag and a block event; no new payload); enraged is not saved. Render bounds cover the whole model; collision, outline and strikes stay on the one block. Supplied assets are AI-generated (ledger). Documented in docs/ARCHITECTURE.md and remission-data-formats.
 - Acceptance: Gametests: stages follow vitality at 75, 50 and 25%; damage queues the hit event; a threshold surge enrages the nidus and its end calms it; the update tag carries enraged and the save does not. Builds and gametests pass on the dedicated-server dist. Harness scenes `world/nidus_stages` (all four stages, a side view, culling and night) and `world/nidus_motion` (idle, hit, enraged and calmed, recorded), reviewed from a GPU run; `world/nidus_fight` and `world/surge` references updated. Ledger updated; placeholders marked.
