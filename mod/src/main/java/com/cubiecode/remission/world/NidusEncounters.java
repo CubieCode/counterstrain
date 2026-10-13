@@ -2,6 +2,8 @@ package com.cubiecode.remission.world;
 
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.api.NidusDamagedEvent;
+import com.cubiecode.remission.api.SurgeEndedEvent;
+import com.cubiecode.remission.api.SurgeStartedEvent;
 import com.cubiecode.remission.quest.QuestProgress;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +31,7 @@ import org.jetbrains.annotations.VisibleForTesting;
 /**
  * Nidus encounters (P4.10): how strikes, projectiles and explosions turn into damage to a nidus's vitality, and who is
  * credited when it falls. The fight itself (vitality, thresholds, regeneration, boss bar) is {@link NidusBlockEntity}.
+ * Surges from a nidus enrage it while they run (its animation), set here from the surge events as they happen.
  */
 @EventBusSubscriber(modid = Remission.MOD_ID)
 public final class NidusEncounters {
@@ -141,6 +144,23 @@ public final class NidusEncounters {
             if (player != null) {
                 QuestProgress.nidusDestroyed(player, level, pos);
             }
+        }
+    }
+
+    @SubscribeEvent
+    static void onSurgeStarted(SurgeStartedEvent event) {
+        enrage(event.getLevel(), event.getOrigin(), true);
+    }
+
+    @SubscribeEvent
+    static void onSurgeEnded(SurgeEndedEvent event) {
+        enrage(event.getLevel(), event.getOrigin(), false);
+    }
+
+    /** Sets the enraged state of the nidus at {@code pos}, if it is loaded (its tick catches up otherwise). */
+    private static void enrage(ServerLevel level, BlockPos pos, boolean enraged) {
+        if (level.isLoaded(pos) && level.getBlockEntity(pos) instanceof NidusBlockEntity nidus) {
+            nidus.setEnraged(enraged);
         }
     }
 

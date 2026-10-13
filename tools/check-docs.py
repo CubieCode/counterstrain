@@ -160,6 +160,8 @@ def check_links_and_paths():
                 fail(doc, f"broken link {target}")
         for line_no, line in enumerate(text.splitlines(), 1):
             planned = "planned" in line.lower() or "phase" in line.lower() and "will" in line.lower()
+            # Content provenance rows for deleted assets keep their path by design (status `removed`).
+            planned = planned or "| removed |" in line
             for token in TICK.findall(line):
                 token = token.strip()
                 first = token.split()[0] if token.split() else ""

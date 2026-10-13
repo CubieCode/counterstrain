@@ -158,6 +158,9 @@ configurations {
 }
 
 dependencies {
+    // Required: the nidus's animated model (client/NidusRenderer) and its block entity's animation controllers.
+    implementation "maven.modrinth:geckolib:${geckolib_version}"
+
     // Optional mod-side integrations (integration/<modid>/): compiled against, never bundled or required,
     // and loaded only when ModList reports the mod.
     compileOnly "maven.modrinth:mekanism:${mekanism_version}"

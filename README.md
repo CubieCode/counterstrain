@@ -13,6 +13,7 @@ Status: phases 0 (scaffold), 1 (visual test harness) and 2 (corruption state) ar
 | Minecraft / loader | 1.21.1, NeoForge 21.1.259 |
 | Mod build | ModDevGradle 2.0.148, Gradle 9.8.1 wrapper, Parchment 2024.11.17, Java 21 (Temurin) |
 | Mod ID / package | `remission` / `com.cubiecode.remission` |
+| Mod dependencies | GeckoLib 4.9 (required: the animated nidus) |
 | Pack tooling | packwiz (pinned commit, built by `tools/install-packwiz.sh`) |
 | Pack content | KubeJS 2101.7 (+ ProbeJS, optional), FTB Quests 2101.1, datapacks via `kubejs/data/` |
 | Companion mods | Mekanism, Applied Energistics 2, Create, Ars Nouveau, EMI + JEI, JourneyMap |
@@ -47,6 +48,7 @@ Without SDKMAN, Gradle's Java 21 toolchain (foojay resolver) downloads a JDK its
 | `tools/cleanup-worktrees.sh [--dry-run]` | Remove lane worktrees and local branches whose PR is merged (clean tree, tip = merged head); keeps everything else and says why |
 | `tools/collect-screenshots.sh` | Copy screenshots to `.local/screenshots/latest/` |
 | `python3 -I tools/check-docs.py` | Check docs, roadmap, READMEs and skills against the code (docs-sync skill) |
+| `python3 -I tools/export-bbmodel.py MODEL.bbmodel --geo OUT.geo.json --animations OUT.animation.json` | Export a GeckoLib Blockbench project's geometry and animations without Blockbench (the nidus's `.bbmodel` sources) |
 | `tools/check-provenance.sh` | Fail if an image, sound or model lacks a [content provenance](docs/CONTENT-PROVENANCE.md) row or a texture's placeholder marker disagrees with its status; `--self-test` runs the fixtures in `tools/tests/provenance/` |
 | `tools/content-editor.sh [--port N] [--lan]` | Local web app over the provenance ledger: replace lang strings, textures, models and sounds in a `content/<date>-<slug>` worktree, with 3D and host overlay previews, then check, commit and open a draft PR ([content editor](docs/DEV-ENVIRONMENT.md#content-editor)); `--test` runs its unit tests |
 | `tools/build-mod.sh [INSTANCE]` | Build and copy the jar into a test instance's `mods/` |
