@@ -1,6 +1,6 @@
 // Content editor front end (P1.5). Plain DOM, no build step. Every request carries the
 // token from <meta name="editor-token">. All text goes in through text nodes.
-import { modelPreview, mobPreview, slugId } from '/static/preview.js?t=__TOKEN__';
+import { heldPreview, modelPreview, mobPreview, slugId } from '/static/preview.js?t=__TOKEN__';
 import { render as renderMarkdown, headings, lineDiff, slug } from '/static/markdown.js?t=__TOKEN__';
 
 const TOKEN = document.querySelector('meta[name="editor-token"]').content;
@@ -838,8 +838,21 @@ async function textureView(detail) {
   }
 
   const viewports = [];
+  const heldHost = h('div');
+  const heldUi = { show: 'replacement' };
+  function renderHeld() {
+    if (!detail.held) return;
+    const useUpload = upload.staged && upload.staged.info.width && heldUi.show === 'replacement';
+    const toggle = upload.staged && upload.staged.info.width ? h('div', { class: 'seg' }, ['replacement', 'current'].map((s) => h('button', { type: 'button', 'aria-pressed': String(heldUi.show === s), onclick: () => { heldUi.show = s; renderHeld(); } }, s))) : null;
+    const section = heldSection(detail, {
+      textureUrl: (id) => (useUpload && id === texId ? url('/api/upload', { id: upload.staged.id }) : url('/api/res', { kind: 'textures', id })),
+      extra: toggle, viewports,
+    });
+    heldHost.replaceChildren(section);
+  }
   async function renderPreviews() {
     viewports.length = 0;
+    renderHeld();
     if (detail.host) return renderHost();
     const model = detail.usedBy.find((m) => m.path.includes('/models/block/')) || detail.usedBy[0];
     if (!model) {
@@ -913,7 +926,7 @@ async function textureView(detail) {
 
   app.replaceChildren(rowHeader(detail, detail.usedBy.length ? h('span', {}, 'Used by ', detail.usedBy.slice(0, 2).map((m, i) => [i ? ', ' : '', h('span', { class: 'mono' }, m.modelId)]), detail.usedBy.length > 2 ? ` +${detail.usedBy.length - 2}` : '') : null),
     h('div', { class: 'row-flex', style: 'align-items:flex-start;gap:20px;padding:18px 24px 24px' },
-      h('div', { class: 'stack', style: 'flex:999 1 820px;min-width:0;gap:14px' }, batchGate(), toolbar, paneHost, previewHost), side));
+      h('div', { class: 'stack', style: 'flex:999 1 820px;min-width:0;gap:14px' }, batchGate(), toolbar, paneHost, previewHost, heldHost), side));
   renderPanes(); renderSide(); renderPreviews();
   const redraw = () => viewports.forEach((v) => v.draw());
   window.addEventListener('resize', redraw);
@@ -924,6 +937,7 @@ async function textureView(detail) {
 
 async function modelView(detail) {
   const r = detail.row;
+  const heldViewports = [];
   const lines = (detail.json || '').replace(/\n$/, '').split('\n');
   const code = h('div', { class: 'code' }, lines.map((l, i) => h('div', {}, h('span', { class: 'ln' }, i + 1), h('span', {}, l))));
   const views = h('div', { class: 'views' });
@@ -961,7 +975,11 @@ async function modelView(detail) {
         h('div', { class: 'row-flex' }, h('h2', { class: 'label' }, 'File'), h('span', { class: 'mono small muted' }, `${lines.length} lines`)), code,
         h('div', { class: 'row-flex', style: 'margin-top:10px' }, h('h2', { class: 'label' }, 'Preview'), h('span', { class: 'small muted' }, 'this JSON, rendered with the textures it names'),
           h('span', { class: 'grow' }), h('span', { class: 'small muted' }, 'Drag to orbit · scroll to zoom')), views,
-        h('h2', { class: 'label', style: 'margin-top:10px' }, 'Textures it names'), textures), how));
+        h('h2', { class: 'label', style: 'margin-top:10px' }, 'Textures it names'), textures,
+        detail.held ? heldSection(detail, { rev: STATE.batch ? 'worktree' : 'base', viewports: heldViewports }) : null), how));
+  const redraw = () => heldViewports.forEach((v) => v.draw());
+  window.addEventListener('resize', redraw);
+  cleanup.push(() => window.removeEventListener('resize', redraw));
 }
 
 function modelUploadSide(detail) {
@@ -997,6 +1015,104 @@ function modelUploadSide(detail) {
     h('label', { class: 'row-flex small dim' }, 'Status', h('select', { onchange: (e) => { state.status = e.target.value; } }, ['draft', 'final'].map((s) => h('option', { selected: s === state.status }, s)))),
     h('button', { type: 'button', class: 'btn', disabled: !STATE.batch, onclick: check }, 'Check'), out, upPreview, write);
   return side;
+}
+
+// --- items in hand -------------------------------------------------------------------------------
+
+// The item in the first- and third-person right hand and in the inventory, drawn at once from the model's display
+// transforms, and the same item in the real game on demand (the items/held harness scene).
+// opts: { textureUrl(id), rev, extra (header element), viewports (array the views are pushed to) }
+function heldSection(detail, opts) {
+  const held = detail.held;
+  const rev = opts.rev || 'worktree';
+  const textureUrl = opts.textureUrl || ((id) => url('/api/res', { kind: 'textures', id, rev }));
+  const first = h('canvas', { class: 'gl held first', role: 'img', 'aria-label': `${held.item} in the first-person right hand` });
+  const third = h('canvas', { class: 'gl held third', role: 'img', 'aria-label': `${held.item} in a player's right hand, third person` });
+  const gui = h('canvas', { class: 'gl held gui', role: 'img', 'aria-label': `${held.item} in an inventory slot` });
+  const fig = (canvas, title, note) => h('figure', { class: 'view', style: 'margin:0' }, canvas,
+    h('figcaption', { class: 'small dim' }, h('b', {}, title), ' ', h('span', { class: 'mono tiny muted' }, note)));
+  const views = h('div', { class: 'views held-views' },
+    fig(first, 'First person', 'firstperson_righthand'), fig(third, 'Third person', 'thirdperson_righthand · drag'), fig(gui, 'Inventory', 'gui'));
+  heldPreview({ first, third, gui }, {
+    modelId: held.modelId,
+    fetchModel: (id) => api(url('/api/res', { kind: 'models', id, rev })).catch(() => null),
+    textureUrl,
+    skinUrl: url('/api/res', { kind: 'textures', id: 'minecraft:entity/player/wide/steve' }),
+  }).then((vs) => opts.viewports && opts.viewports.push(...vs))
+    .catch((e) => views.replaceChildren(h('p', { class: 'small', style: 'color:var(--erf)' }, `Preview failed: ${e.message}`)));
+  return h('section', { class: 'card pane', 'aria-label': 'In hand' },
+    h('div', { class: 'row-flex' }, h('h2', {}, 'In hand'), h('span', { class: 'small dim mono' }, `${held.item} · ${held.modelId}`), h('span', { class: 'grow' }), opts.extra || null),
+    views,
+    h('span', { class: 'small muted' }, 'Placed as vanilla 1.21.1 places a held item at rest, from the model’s display transforms; lighting and the player are approximate. Run it in game to be sure.'),
+    harnessPanel(detail));
+}
+
+const PHASES = [['gpu', 'GPU'], ['build', 'Build'], ['world', 'World'], ['shots', 'Shots']];
+// Crops of the third-person shots around the player: [x, y] of the crop centre as a fraction of the frame.
+const CLOSE_UP = { third_person_front: [0.5, 0.615], third_person_back: [0.5, 0.6] };
+
+function harnessPanel(detail) {
+  const held = detail.held;
+  const box = h('div', { class: 'harness stack' });
+  let timer = null, stopped = false;
+  const clock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const where = STATE.batch ? STATE.branch : 'the checkout the editor runs from';
+  const start = (label) => h('button', { type: 'button', class: 'btn primary', onclick: () => guard(async () => {
+    render(await api('/api/harness/held', { body: { row: detail.row.id } }));
+    poll();
+  }) }, label);
+  function shotFigure(st, name) {
+    const src = url('/api/harness/shot', { name, n: st.started });
+    const close = CLOSE_UP[name];
+    const zoom = 2.6;
+    const crop = close ? h('div', { class: 'close-up', role: 'img', 'aria-label': `${name}, close-up`, style:
+      `background-image:url("${src}");background-size:${zoom * 100}% auto;` +
+      `background-position:${(close[0] * zoom - 0.5) / (zoom - 1) * 100}% ${(close[1] * zoom - 0.5) / (zoom - 1) * 100}%` }) : null;
+    return h('figure', { class: 'view shot', style: 'margin:0' },
+      h('a', { href: src, target: '_blank', rel: 'noopener', title: 'Open the full 1920×1080 screenshot' }, crop || h('img', { src, alt: name, class: 'shot-img' })),
+      h('figcaption', { class: 'small dim' }, h('b', {}, name.replace(/_/g, ' ')), crop ? h('span', { class: 'tiny muted' }, ' · close-up, click for the full frame') : null));
+  }
+  function render(st) {
+    const mine = st.item === held.item;
+    if (st.state === 'running' && !mine) {
+      box.replaceChildren(h('div', { class: 'row-flex small dim' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }),
+        `An in-game run for ${st.item} is going (${st.message.toLowerCase()}, ${clock(st.elapsed)}). One run at a time.`));
+      return;
+    }
+    if (st.state === 'running') {
+      const at = PHASES.findIndex(([k]) => k === st.phase);
+      box.replaceChildren(h('div', { class: 'harness-run', role: 'status', 'aria-live': 'polite' },
+        h('div', { class: 'row-flex' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), h('b', {}, st.message), h('span', { class: 'grow' }), h('span', { class: 'mono small muted' }, clock(st.elapsed))),
+        h('ol', { class: 'phases' }, PHASES.map(([k, label], i) => h('li', { class: i < at ? 'done' : i === at ? 'on' : '' }, label))),
+        h('span', { class: 'small muted' }, `items/held in ${where}. A warm build takes about a minute; a fresh worktree builds from scratch first.`)));
+      return;
+    }
+    const intro = h('div', { class: 'row-flex' }, h('h3', { class: 'label', style: 'margin:0' }, 'In game'), h('span', { class: 'grow' }),
+      start(mine && st.state !== 'idle' ? 'Run again' : 'Run in game'));
+    const hint = h('span', { class: 'small muted' }, `Runs the items/held harness scene for ${held.item} on foundry’s GPU with the files in ${where}: write a staged replacement first to see it.`);
+    if (mine && st.state === 'done') {
+      box.replaceChildren(intro, h('span', { class: 'small muted' }, `Ran in ${clock(st.elapsed)}.`),
+        h('div', { class: 'views' }, st.shots.map((name) => shotFigure(st, name))), hint);
+    } else if (mine && st.state === 'failed') {
+      box.replaceChildren(intro, h('div', { class: 'callout error' }, h('div', { class: 'stack', style: 'gap:6px;min-width:0' },
+        h('strong', {}, `The in-game run failed after ${clock(st.elapsed)}`),
+        h('span', { class: 'small' }, 'The script’s output ends with:'), h('pre', { class: 'body small' }, st.log || '(no output)'))), hint);
+    } else {
+      box.replaceChildren(intro, hint);
+    }
+  }
+  async function poll() {
+    clearTimeout(timer);
+    try {
+      const st = await api('/api/harness/status');
+      if (stopped || !box.isConnected) return;  // the page moved on, or this panel was redrawn
+      render(st);
+      if (st.state === 'running') timer = setTimeout(poll, 2000);
+    } catch (e) { box.replaceChildren(h('p', { class: 'small', style: 'color:var(--erf)' }, e.message)); }
+  }
+  cleanup.push(() => { stopped = true; clearTimeout(timer); });
+  poll();
+  return box;
 }
 
 // --- sounds ------------------------------------------------------------------------------------

@@ -231,3 +231,18 @@ footer.hint { display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 10px 0 0; 
   .figs { grid-template-columns: 1fr; }
   .panes { grid-template-columns: 1fr; }
 }
+
+/* items in hand */
+canvas.gl.held.first { width: 400px; height: 225px; cursor: default; background: linear-gradient(#8fb6ff 0 55%, #5b7f3a 55% 100%); }
+canvas.gl.held.third { width: 260px; height: 225px; background: linear-gradient(#a9c6ff 0 70%, #9a9a9a 70% 100%); }
+canvas.gl.held.gui { width: 96px; height: 96px; cursor: default; background: #8b8b8b; box-shadow: inset 3px 3px 0 #373737, inset -3px -3px 0 #fff; border-radius: 0; }
+.harness { border-top: 1px solid var(--bd); padding-top: 10px; gap: 8px; }
+.harness-run { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 8px; background: var(--acs); }
+.phases { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 12px; }
+.phases li { flex: 1; padding: 3px 8px; border-radius: 6px; background: var(--sk); color: var(--f3); opacity: .6; text-align: center; }
+.phases li.done { opacity: 1; }
+.phases li.on { opacity: 1; background: var(--ac); color: #fff; }
+.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--bd); border-top-color: var(--ac); animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+.shot .close-up, .shot .shot-img { display: block; width: 320px; height: 180px; border-radius: 8px; background-repeat: no-repeat; image-rendering: pixelated; object-fit: cover; }

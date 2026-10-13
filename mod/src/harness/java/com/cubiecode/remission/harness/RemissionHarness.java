@@ -20,6 +20,7 @@ import org.slf4j.Logger;
  *   <li>{@value #OUTPUT_PROPERTY}: directory for screenshots and {@code harness-result.txt};
  *       defaults to {@code <game dir>/screenshots/harness/<id>}.</li>
  *   <li>{@value #TIMEOUT_PROPERTY}: seconds before the harness fails the run (default 300).</li>
+ *   <li>{@value #ARGS_PROPERTY}: scene arguments, {@code name=value,name=value} (see {@link Scene}).</li>
  * </ul>
  */
 @Mod(value = RemissionHarness.MOD_ID, dist = Dist.CLIENT)
@@ -28,6 +29,7 @@ public final class RemissionHarness {
     public static final String SCENE_PROPERTY = "remission.harness.scene";
     public static final String OUTPUT_PROPERTY = "remission.harness.output";
     public static final String TIMEOUT_PROPERTY = "remission.harness.timeout";
+    public static final String ARGS_PROPERTY = "remission.harness.args";
     static final Logger LOGGER = LogUtils.getLogger();
 
     public RemissionHarness() {

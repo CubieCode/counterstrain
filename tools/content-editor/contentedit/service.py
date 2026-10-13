@@ -13,7 +13,7 @@ import re
 import secrets
 import time
 
-from . import files as atomic, glossary, host, lang, llm, markdown, models, png, props, textures
+from . import files as atomic, glossary, harness, host, lang, llm, markdown, models, png, props, textures
 from .ledger import Ledger, LedgerError, append_note
 from .repo import PACK_INDEX, RepoError, Resolver, Workspace, git, show
 
@@ -65,6 +65,7 @@ class Editor:
         self.reviewer = reviewer
         self.clock = clock or datetime.date.today
         self.uploads = {}
+        self.held_run = harness.HeldRun()
 
     # --- basics --------------------------------------------------------------
 
@@ -225,6 +226,7 @@ class Editor:
                     detail["error"] = str(e)
             detail["mcmeta"] = (self.read(row.file + ".mcmeta") or b"").decode("utf-8", "replace") or None
             detail["usedBy"] = self._models_using(row.file)
+            detail["held"] = self._held([u["modelId"] for u in detail["usedBy"]])
             detail["host"] = host.is_host_pattern(row.file)
             if detail["host"]:
                 detail["mobs"] = [{"id": k, "label": v[0], "kind": v[1],
@@ -234,6 +236,7 @@ class Editor:
             data = self.read(row.file)
             detail["json"] = data.decode("utf-8", "replace") if data is not None else None
             detail["modelId"] = self._model_id(row.file)
+            detail["held"] = self._held([detail["modelId"]])
             if data is not None:
                 try:
                     model = json.loads(data)
@@ -288,6 +291,29 @@ class Editor:
 
     def _texture_id(self, rel):
         return self._asset_id(rel, "textures")
+
+    def _held(self, model_ids):
+        """The item model and item a held preview shows for these models: the first that is an item model, or a block
+        model with an item model of the same name, as datagen writes for block items."""
+        ordered = sorted((m for m in model_ids if m), key=lambda m: ":item/" not in m)
+        for model_id in ordered:
+            namespace, _, path = model_id.partition(":")
+            folder, _, name = path.partition("/")
+            if folder not in ("item", "block") or not name:
+                continue
+            if self.resolver.repo_path(namespace, "models", f"item/{name}", ".json"):
+                return {"modelId": f"{namespace}:item/{name}", "item": f"{namespace}:{name}"}
+        return None
+
+    def held_run_start(self, row_id):
+        """Starts the items/held scene for a row's item in this workspace (written files only)."""
+        detail = self.row_detail(row_id)
+        if not detail.get("held"):
+            raise EditorError("this row has no item to hold")
+        try:
+            return self.held_run.start(self.root, detail["held"]["item"], row_id)
+        except harness.HarnessError as e:
+            raise EditorError(str(e))
 
     def _models_using(self, texture_rel):
         tex_id = self._texture_id(texture_rel)

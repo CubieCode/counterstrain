@@ -1,0 +1,16 @@
+{
+  "args": {"item": "remission:scanner"},
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamerule sendCommandFeedback false",
+    "gamemode creative @a",
+    "fill -6 -61 -6 6 -61 6 minecraft:smooth_stone",
+    "item replace entity @a weapon.mainhand with ${item}"
+  ],
+  "shots": [
+    {"name": "first_person", "camera": {"pos": [0.5, -60.0, 0.5], "yaw": 180.0, "pitch": 10.0}, "hud": true},
+    {"name": "third_person_front", "camera": {"pos": [0.5, -60.0, 0.5], "yaw": 180.0, "pitch": 10.0}, "view": "third_person_front"},
+    {"name": "third_person_back", "camera": {"pos": [0.5, -60.0, 0.5], "yaw": 180.0, "pitch": 10.0}, "view": "third_person_back"}
+  ]
+}

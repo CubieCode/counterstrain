@@ -2,7 +2,8 @@
 # Launch the Remission dev client on foundry's virtual display with the GPU
 # redirected through VirtualGL, then verify the renderer and tear it down.
 #
-#   tools/run-client-headless.sh [--scene <area/subject>] [--resolution 1920x1080]
+#   tools/run-client-headless.sh [--scene <area/subject> [--scene-arg name=value]...]
+#                                [--resolution 1920x1080]
 #                                [--timeout 300] [--no-framebuffer]
 #                                [--gpu-wait 1800] [--record [seconds]]
 #                                [-- extra gradle args]
@@ -13,7 +14,9 @@
 # scenes/<id>.json): the game builds the fixed superflat world, takes the
 # scene's screenshots and quits; the run passes only if it exits 0 and the
 # harness reports status=ok. --timeout (default 600 with --scene) is then only a
-# safety bound, and reaching it fails the run.
+# safety bound, and reaching it fails the run. --scene-arg sets an argument
+# the scene declares (its "args"; values in [a-z0-9_.:/-]), e.g.
+# --scene items/held --scene-arg item=remission:scanner.
 # Parallel Orca lanes and CI jobs share one RTX 4070, so runs take an
 # exclusive lock (~/.cache/counterstrain/gpu.lock) and wait up to --gpu-wait
 # seconds for it; the timeout starts once the lock is held.
@@ -41,6 +44,7 @@ source "$(dirname "$0")/lib.sh"
 resolution=1920x1080
 timeout_s=
 scene=
+scene_args=()
 framebuffer=1
 gpu_wait=1800
 record=0
@@ -49,6 +53,9 @@ gradle_args=()
 while (($#)); do
   case "$1" in
     --scene) scene="${2:?}"; shift 2 ;;
+    --scene-arg)
+      [[ "${2:-}" =~ ^[a-z_][a-z0-9_]*=[a-z0-9_.:/-]+$ ]] || die "--scene-arg must look like name=value (value in [a-z0-9_.:/-])"
+      scene_args+=("$2"); shift 2 ;;
     --resolution) resolution="${2:?}"; shift 2 ;;
     --timeout) timeout_s="${2:?}"; shift 2 ;;
     --no-framebuffer) framebuffer=0; shift ;;
@@ -66,6 +73,8 @@ done
 if [[ -n "$scene" ]]; then
   [[ "$scene" =~ ^[a-z0-9_]+(/[a-z0-9_]+)*$ ]] || die "scene must look like area/subject"
   [[ -f "$mod_dir/src/harness/resources/harness/scenes/$scene.json" ]] || die "no such scene: $scene"
+elif ((${#scene_args[@]})); then
+  die "--scene-arg needs --scene"
 fi
 : "${timeout_s:=$([[ -n "$scene" ]] && echo 600 || echo 300)}"
 [[ "$timeout_s" =~ ^[0-9]+$ ]] || die "timeout must be whole seconds"
@@ -129,6 +138,7 @@ ln -sfn "$(basename "$run_dir")" "$local_dir/runs/latest"
 shots_dir="$run_dir/screenshots"
 harness_args=()
 [[ -n "$scene" ]] && harness_args=("-Pharness_scene=$scene" "-Pharness_output=$shots_dir")
+((${#scene_args[@]})) && harness_args+=("-Pharness_args=$(IFS=,; echo "${scene_args[*]}")")
 game_log="$mod_dir/run/client/logs/latest.log"
 rm -f "$game_log"
 # Skip the first-launch accessibility prompt so runs land on the title menu.
