@@ -4,9 +4,14 @@
 #   tools/verify-gpu-render.sh <log> [expected-renderer-pattern]
 #
 # Default pattern: "RTX 4070" (override with EXPECTED_RENDERER). llvmpipe,
-# softpipe or a missing renderer line all fail.
+# softpipe or a missing renderer line all fail. Exit: 0 GPU renderer found,
+# 1 otherwise. -h or --help prints this text.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
+if [[ "${1:-}" == -h || "${1:-}" == --help ]]; then
+  awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
+  exit 0
+fi
 
 log_file="${1:?Usage: verify-gpu-render.sh LOG [PATTERN]}"
 expected="${2:-${EXPECTED_RENDERER:-RTX 4070}}"

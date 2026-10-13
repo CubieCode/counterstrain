@@ -97,6 +97,7 @@ Development, builds, tests and visual checks run on the headless home server `fo
 | Command | Purpose |
 | --- | --- |
 | `python3 -I tools/check-docs.py` | Check docs, roadmap, READMEs and skills against the code |
+| `python3 -I tools/roadmap-board.py [--check]` | Refresh ROADMAP's status board and fold finished items after a Status change |
 | `tools/check-provenance.sh` | Check that every image, sound and model has a provenance row and the right placeholder marker |
 | `tools/content-editor.sh [--port N] [--lan]` | Local web app for replacing player-facing content ([content editor](docs/DEV-ENVIRONMENT.md#content-editor)) |
 | `python3 -I tools/export-bbmodel.py MODEL.bbmodel --geo OUT.geo.json --animations OUT.animation.json` | Export a GeckoLib Blockbench model without Blockbench |
@@ -125,7 +126,7 @@ docs/                Design, architecture, lore, content provenance and developm
 ROADMAP.md           Phases, items, status
 .agents/skills/      Canonical agent skills (project and vendored)
 .claude/skills       Symlink to .agents/skills
-.github/workflows/   CI, docs checks, GPU smoke test, release stubs
+.github/             Workflows (CI, docs checks, GPU smoke test, release stubs), PR and issue templates
 .local/              Gitignored runs, screenshots, test instances and exports
 ```
 

@@ -5,7 +5,8 @@
 Mechanical checks only (standard library, no network): versions quoted in
 docs against build files, relative links, repository paths in backticks,
 Remission class names, Gradle properties, tools and workflows mentioned,
-skill metadata, and ROADMAP structure. Exit 1 on any failure. The docs-sync
+skill metadata, ROADMAP structure and its status board, and paragraph length
+(one long line keeps growing as lanes append to it). Exit 1 on any failure. The docs-sync
 skill covers the judgment part: whether the prose still describes the code.
 """
 import os
@@ -226,6 +227,21 @@ def check_skills():
                 fail(doc, f"links missing skill {ref}")
 
 
+# Longest allowed line in project docs and skills. Tables are exempt, and so are
+# ROADMAP item scopes and acceptance criteria, which are folded once done.
+MAX_LINE = 1500
+
+
+def check_line_length():
+    for doc in DOCS:
+        for line_no, line in enumerate(read(doc).splitlines(), 1):
+            if len(line) <= MAX_LINE or line.startswith("|"):
+                continue
+            if doc == "ROADMAP.md" and line.startswith(("- Scope:", "- Acceptance:")):
+                continue
+            fail(f"{doc}:{line_no}", f"line is {len(line)} characters (limit {MAX_LINE}); split it into bullets, a table or sections")
+
+
 ITEM = re.compile(r"^### (P\d+\.\d+): (.+)$", re.M)
 STATUSES = {"todo", "in-progress", "review", "done", "blocked"}
 
@@ -261,9 +277,14 @@ def check_roadmap():
     for item_id in ids:
         if not item_id.startswith("P0.") and item_id not in waves:
             fail("ROADMAP.md", f"{item_id} is not in any safe wave")
+    board = subprocess.run([sys.executable, "-I", os.path.join(ROOT, "tools/roadmap-board.py"), "--check"],
+                           capture_output=True, text=True)
+    if board.returncode != 0:
+        fail("ROADMAP.md", (board.stdout + board.stderr).strip().removeprefix("ROADMAP.md: "))
 
 
-for check in (check_versions, check_links_and_paths, check_tools_documented, check_skills, check_roadmap):
+for check in (check_versions, check_links_and_paths, check_tools_documented, check_skills, check_roadmap,
+              check_line_length):
     before = len(failures)
     check()
     if VERBOSE:

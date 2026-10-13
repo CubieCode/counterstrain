@@ -16,7 +16,7 @@ die() { log "error: $*"; exit 1; }
 require() {
   local cmd
   for cmd in "$@"; do
-    command -v "$cmd" >/dev/null 2>&1 || die "'$cmd' not found on PATH (see docs/dev-environment.md)"
+    command -v "$cmd" >/dev/null 2>&1 || die "'$cmd' not found on PATH (see docs/DEV-ENVIRONMENT.md)"
   done
 }
 

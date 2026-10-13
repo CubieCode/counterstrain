@@ -1,0 +1,43 @@
+name: Bug
+description: Something in Remission, the pack or the tooling behaves wrongly.
+labels: [bug]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Remission (mod)
+        - Counterstrain (pack)
+        - Tooling or CI
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Mod version or commit, pack version, and any other mods involved.
+      placeholder: "remission 0.1.0 (abc1234), pack 0.1.0"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Seed, commands and config changes, if any.
+      placeholder: |
+        1. /remission nidus seed
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and screenshots
+      description: Log excerpts (`latest.log`, crash report) and screenshots. Paste logs inside code fences.
