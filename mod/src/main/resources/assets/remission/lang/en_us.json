@@ -158,5 +158,22 @@
   "remission.configuration.muted": "remission.configuration.muted",
   "remission.configuration.muted.tooltip": "remission.configuration.muted.tooltip",
   "remission.configuration.waypointSeconds": "remission.configuration.waypointSeconds",
-  "remission.configuration.waypointSeconds.tooltip": "remission.configuration.waypointSeconds.tooltip"
+  "remission.configuration.waypointSeconds.tooltip": "remission.configuration.waypointSeconds.tooltip",
+  "block.remission.reclaimer": "block.remission.reclaimer",
+  "gui.remission.reclaimer.fuel_tank": "gui.remission.reclaimer.fuel_tank",
+  "gui.remission.reclaimer.fuel": "gui.remission.reclaimer.fuel %1$s",
+  "gui.remission.reclaimer.reach": "gui.remission.reclaimer.reach %1$s %2$s",
+  "gui.remission.reclaimer.reclaimed": "gui.remission.reclaimer.reclaimed %1$s %2$s",
+  "gui.remission.reclaimer.festering": "gui.remission.reclaimer.festering %1$s",
+  "gui.remission.reclaimer.progress": "gui.remission.reclaimer.progress %1$s %2$s",
+  "gui.remission.reclaimer.status.running": "gui.remission.reclaimer.status.running",
+  "gui.remission.reclaimer.status.clear": "gui.remission.reclaimer.status.clear",
+  "gui.remission.reclaimer.status.held": "gui.remission.reclaimer.status.held",
+  "gui.remission.reclaimer.status.no_energy": "gui.remission.reclaimer.status.no_energy",
+  "gui.remission.reclaimer.status.no_fuel": "gui.remission.reclaimer.status.no_fuel",
+  "gui.remission.reclaimer.cell.unloaded": "gui.remission.reclaimer.cell.unloaded",
+  "gui.remission.reclaimer.cell.clean": "gui.remission.reclaimer.cell.clean",
+  "gui.remission.reclaimer.cell.remission": "gui.remission.reclaimer.cell.remission",
+  "gui.remission.reclaimer.cell.festering": "gui.remission.reclaimer.cell.festering %1$s",
+  "gui.remission.reclaimer.cell.nidus": "gui.remission.reclaimer.cell.nidus"
 }

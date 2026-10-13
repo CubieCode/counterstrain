@@ -2,6 +2,7 @@ package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.purification.QuarantinePylonBlockEntity;
+import com.cubiecode.remission.purification.ReclaimerBlockEntity;
 import com.cubiecode.remission.tech.MachineBlockEntity;
 import com.cubiecode.remission.tech.MachineKind;
 import com.cubiecode.remission.world.NidusBlockEntity;
@@ -28,6 +29,10 @@ public final class RemissionBlockEntities {
     public static final Supplier<BlockEntityType<QuarantinePylonBlockEntity>> QUARANTINE_PYLON = BLOCK_ENTITY_TYPES.register(
             "quarantine_pylon", () -> BlockEntityType.Builder.of(QuarantinePylonBlockEntity::new,
                     RemissionBlocks.QUARANTINE_PYLON.get()).build(null));
+
+    // Reclaimers (P7.4)
+    public static final Supplier<BlockEntityType<ReclaimerBlockEntity>> RECLAIMER = BLOCK_ENTITY_TYPES.register(
+            "reclaimer", () -> BlockEntityType.Builder.of(ReclaimerBlockEntity::new, RemissionBlocks.RECLAIMER.get()).build(null));
 
     private static Supplier<BlockEntityType<MachineBlockEntity>> machine(MachineKind kind, Supplier<? extends Block> block) {
         return BLOCK_ENTITY_TYPES.register(kind.blockName(),

@@ -1,6 +1,7 @@
 package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.purification.ReclaimerMenu;
 import com.cubiecode.remission.tech.MachineKind;
 import com.cubiecode.remission.tech.MachineMenu;
 import java.util.function.Supplier;
@@ -17,6 +18,9 @@ public final class RemissionMenus {
     public static final Supplier<MenuType<MachineMenu>> ANALYZER = machine(MachineKind.ANALYZER);
     public static final Supplier<MenuType<MachineMenu>> SEQUENCER = machine(MachineKind.SEQUENCER);
     public static final Supplier<MenuType<MachineMenu>> SYNTHESIZER = machine(MachineKind.SYNTHESIZER);
+    // Reclaimers (P7.4)
+    public static final Supplier<MenuType<ReclaimerMenu>> RECLAIMER = MENU_TYPES.register("reclaimer",
+            () -> new MenuType<>(ReclaimerMenu::client, FeatureFlags.DEFAULT_FLAGS));
 
     private RemissionMenus() {
     }

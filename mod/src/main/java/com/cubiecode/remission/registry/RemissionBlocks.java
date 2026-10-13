@@ -3,6 +3,7 @@ package com.cubiecode.remission.registry;
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.purification.MendrootBlock;
 import com.cubiecode.remission.purification.QuarantinePylonBlock;
+import com.cubiecode.remission.purification.ReclaimerBlock;
 import com.cubiecode.remission.world.FesteringPlantBlock;
 import com.cubiecode.remission.world.FesteringVeinBlock;
 import com.cubiecode.remission.world.FesteringVeins;
@@ -111,6 +112,17 @@ public final class RemissionBlocks {
                     .sound(SoundType.GRASS)
                     .offsetType(BlockBehaviour.OffsetType.XZ)
                     .pushReaction(PushReaction.DESTROY));
+
+    // Reclaimers (P7.4)
+    /** Drains the land around it, nearest chunks first, while fed energy and purifier fuel. Does not ward. */
+    public static final DeferredBlock<ReclaimerBlock> RECLAIMER = BLOCKS.registerBlock("reclaimer", ReclaimerBlock::new,
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(5.0F, 6.0F)
+                    .requiresCorrectToolForDrops()
+                    .lightLevel(state -> 10)
+                    .sound(SoundType.METAL)
+                    .pushReaction(PushReaction.BLOCK));
 
     private static DeferredBlock<MachineBlock> machine(MachineKind kind) {
         return BLOCKS.registerBlock(kind.blockName(), properties -> new MachineBlock(kind, properties),

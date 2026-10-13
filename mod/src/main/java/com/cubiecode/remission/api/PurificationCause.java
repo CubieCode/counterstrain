@@ -14,6 +14,8 @@ public enum PurificationCause {
     MENDROOT,
     /** A thrown Counterstrain prototype landing (P7.3). */
     PROTOTYPE,
+    /** A powered reclaimer draining the chunks around it (P7.4). */
+    RECLAIMER,
     /** Any other caller, including other mods using Remission's internals. */
     OTHER
 }

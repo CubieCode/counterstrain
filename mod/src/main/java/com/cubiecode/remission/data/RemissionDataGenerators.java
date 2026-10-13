@@ -35,6 +35,7 @@ public final class RemissionDataGenerators {
         var blockTags = generator.addProvider(event.includeServer(), new RemissionBlockTagsProvider(output, lookup, files));
         generator.addProvider(event.includeServer(), new RemissionItemTagsProvider(output, lookup, blockTags.contentsGetter(), files));
         generator.addProvider(event.includeServer(), new RemissionEntityTypeTagsProvider(output, lookup, files));
+        generator.addProvider(event.includeServer(), new RemissionFluidTagsProvider(output, lookup, files));
         generator.addProvider(event.includeServer(), new RemissionRecipeProvider(output, lookup));
         generator.addProvider(event.includeServer(), new LootTableProvider(output, Set.of(),
                 List.of(new LootTableProvider.SubProviderEntry(RemissionBlockLootProvider::new, LootContextParamSets.BLOCK)), lookup));

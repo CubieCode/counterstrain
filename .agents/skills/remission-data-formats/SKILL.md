@@ -829,6 +829,40 @@ Config `config/remission-common.toml` (read when each pass, use or bonus runs):
 
 With the defaults a pylon brings a stage 4 chunk (level 100) into remission in 20 passes (about 3 minutes 20 seconds), a handheld purifier needs 100 uses for the same chunk, and one mendroot about 50 minutes. Lang keys: `item.remission.handheld_purifier` (and `.desc`), `block.remission.quarantine_pylon`, `block.remission.mendroot`, `stat.remission.chunks_cleansed`. Gametests: `PurificationTests`.
 
+## Reclaimers (built, P7.4)
+
+`com.cubiecode.remission.purification` (`ReclaimerBlock`, `ReclaimerBlockEntity`, `ReclaimerMenu`, `ReclaimerSettings`), server side, loaded chunks only. Mechanics, screen and measured cost: docs/ARCHITECTURE.md (Reclaimers).
+
+**Block** `remission:reclaimer` (block and block item; pickaxe, hardness 5, light 10, pistons cannot move it; drops itself and the item in its fuel slot; default recipe `remission:reclaimer`: iron blocks, a lightning rod, two handheld purifiers, a quarantine pylon and a redstone block). Every `intervalTicks` of game time (staggered by block position, so reclaimers do not all run on one tick), with at least `energyPerOperation` FE and fuel, it lowers the nearest loaded festering chunk within `radius` chunks of its own (a square; squared distance between chunk positions, ties by z then x) by `drainStep` through the same path as every purification tool (Purification and remission zones, above), so a chunk at 0 enters remission and gets the full cleanse. A chunk holding a live nidus (one in the nidus index) is never drained. It does **not** ward: spread, festering, veins and contact infection go on in its reach, so a live nidus holds land against it. An operation with nothing to drain uses no energy or fuel.
+
+**Events:** `ChunkEnteredRemissionEvent` and the cleanse's `BlockPurifiedEvent`s carry `PurificationCause.RECLAIMER` (no player; the chunk events' credit goes to nearby players as for any remission), so listeners (and P7.5's variants) can tell a reclaimer from the other tools. No new event.
+
+**Fuel and capabilities.** Standard block capabilities on every side (and the null side): `Capabilities.ItemHandler.BLOCK` (one slot, accepts only `#remission:purifier_fuel` items, extracts nothing), `Capabilities.FluidHandler.BLOCK` (one 4000 mB tank, fills only with fluids in the fluid tag below and only while `fuelPerBucket` is above 0; valid fuel never drains out, but a fluid in the tank that is no longer fuel, because a `/reload` dropped it from the tag or `fuelPerBucket` was set to 0, is never burned and can be drained out by pipes or an empty bucket, so the tank never jams), `Capabilities.EnergyStorage.BLOCK` (receives up to `maxEnergyInput` per insert into a buffer of `energyCapacity`, extracts nothing). A fluid container used on the block pours into the tank. When the fuel left runs out an operation burns one fuel item, or, with the slot empty, 1000 mB of fuel fluid.
+
+| Tag | Default | Meaning |
+| --- | --- | --- |
+| item `#remission:purifier_fuel` | `remission:purifier_fuel` (P7.3) | Items the reclaimer burns, `fuelPerItem` operations each. |
+| fluid `#remission:purifier_fuel` (`data/<ns>/tags/fluid/purifier_fuel.json`) | empty | Fluids the reclaimer burns, `fuelPerBucket` operations per 1000 mB. Remission ships no fuel fluid; a pack adds one (Counterstrain: P10.2). |
+
+**Comparator:** 0 while none of its reach is in remission, otherwise `1 + floor(14 * chunks in remission / chunks in reach)`, so 15 only when all of it is. Updated each operation; saved, so it holds across a reload, and refreshed by a survey on the first tick after loading; unloaded chunks count as not in remission.
+
+**Saved fields** (block entity NBT, also settable with `/data merge block`): `items` (the fuel slot, `ItemStackHandler` format), `tank` (`FluidTank` format), `energy` (int FE), `fuel` (int, operations left from the last item or bucket burned), `signal` (int 0–15, the comparator output).
+
+Config `config/remission-common.toml` (read on each operation or insert):
+
+| Section | Key | Type | Default | Meaning |
+| --- | --- | --- | --- | --- |
+| `[reclaimers]` | `radius` | int 0–8 | 4 | Chunks drained around its own chunk, in a square (4 = 9 by 9). |
+| `[reclaimers]` | `intervalTicks` | int 1–72000 | 20 | Game ticks between operations. |
+| `[reclaimers]` | `drainStep` | int 1–100 | 10 | Strain level the drained chunk loses per operation. |
+| `[reclaimers]` | `energyPerOperation` | int 0–10000000 | 4000 | FE one operation uses. |
+| `[reclaimers]` | `energyCapacity` | int 1–100000000 | 200000 | FE it stores. |
+| `[reclaimers]` | `maxEnergyInput` | int 1–10000000 | 2000 | FE it accepts per insert. |
+| `[reclaimers]` | `fuelPerItem` | int 1–100000 | 16 | Operations one fuel item runs. |
+| `[reclaimers]` | `fuelPerBucket` | int 0–100000 | 16 | Operations 1000 mB of fuel fluid runs; 0 refuses fluid fuel. |
+
+With the defaults one reclaimer brings a 9 by 9 chunk valley at stage 4 (level 100, no nidus) into remission in 810 operations, about 13.5 minutes, using 3.24 million FE (200 FE per tick) and about 51 fuel items. Lang keys: `block.remission.reclaimer`, `gui.remission.reclaimer.*` (the screen also reuses `gui.remission.machine.energy`, `.tank` and `.tank_empty`).
+
 ## Item contamination (planned, P10.6)
 
 Data component `remission:contaminated` on item stacks carried through festering chunks, a tag for containers that protect their contents, and a decontamination recipe type or KubeJS hook. Fields fixed in P10.6.
@@ -874,7 +908,7 @@ Re-entrancy: a host event listener that changes the same entity's level (`Corrup
 
 `CorruptionCause` (enum, `HostEvent.getCause()`): `INFECTION` (killed by a host and infected in place or converted), `COMMAND` (`/remission infect` or `/remission cleanse`), `FESTERING_LAND` (prolonged exposure to festering land, P4.7), `SURGE` (spawned as a host by a surge; P4.3), `CONTACT` (touched an infectious block or swam in festering water; P4.8), `PURIFICATION` (a handheld purifier used on a host; P5.2), `REVENANT` (rose as a revenant; P5.3), `OTHER` (any other caller). Later items insert their causes before `OTHER`, so never persist a cause by ordinal; treat unknown values as `OTHER`.
 
-`PurificationCause` (enum, P5.2, `BlockPurifiedEvent.getCause()` and `ChunkEnteredRemissionEvent.getCause()`): `PURIFIER` (a handheld purifier), `PYLON` (a quarantine pylon's ward), `MENDROOT`, `PROTOTYPE` (a Counterstrain prototype landing, P7.3), `OTHER` (anything else, including the re-check of a chunk in remission when it loads). Same rules: inserted before `OTHER`, never persisted by ordinal.
+`PurificationCause` (enum, P5.2, `BlockPurifiedEvent.getCause()` and `ChunkEnteredRemissionEvent.getCause()`): `PURIFIER` (a handheld purifier), `PYLON` (a quarantine pylon's ward), `MENDROOT`, `PROTOTYPE` (a Counterstrain prototype landing, P7.3), `RECLAIMER` (a reclaimer's drain and the cleanse it queues, P7.4), `OTHER` (anything else, including the re-check of a chunk in remission when it loads). Same rules: inserted before `OTHER`, never persisted by ordinal.
 
 Queries, `CorruptionQueries` (static):
 

@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": {
+      "item": "minecraft:iron_block"
+    },
+    "L": {
+      "item": "minecraft:lightning_rod"
+    },
+    "P": {
+      "item": "remission:handheld_purifier"
+    },
+    "Q": {
+      "item": "remission:quarantine_pylon"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "pattern": [
+    "ILI",
+    "PQP",
+    "IRI"
+  ],
+  "result": {
+    "count": 1,
+    "id": "remission:reclaimer"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamemode creative @a",
+    "fill -40 -60 -30 -40 -56 -30 minecraft:oak_log",
+    "fill -42 -56 -32 -38 -55 -28 minecraft:oak_leaves[persistent=true]",
+    "fill 30 -60 40 30 -56 40 minecraft:oak_log",
+    "fill 28 -56 38 32 -55 42 minecraft:oak_leaves[persistent=true]",
+    "fill 56 -60 -12 56 -56 -12 minecraft:oak_log",
+    "fill 54 -56 -14 58 -55 -10 minecraft:oak_leaves[persistent=true]",
+    "fill -50 -60 60 -50 -56 60 minecraft:oak_log",
+    "fill -52 -56 58 -48 -55 62 minecraft:oak_leaves[persistent=true]",
+    "fill 24 -60 -24 24 -56 -24 minecraft:oak_log",
+    "fill 22 -56 -26 26 -55 -22 minecraft:oak_leaves[persistent=true]",
+    "fill -24 -60 22 -24 -56 22 minecraft:oak_log",
+    "fill -26 -56 20 -22 -55 24 minecraft:oak_leaves[persistent=true]",
+    "fill 40 -60 8 45 -58 13 minecraft:stone",
+    "fill -34 -60 -54 -29 -58 -49 minecraft:stone",
+    "fill -8 -60 40 -3 -59 45 minecraft:stone",
+    "harness fester -64 -60 -64 79 -60 79 60",
+    "setblock 72 -60 -40 remission:nidus",
+    "harness veins -64 -64 -64 79 0 79",
+    "setblock 8 -60 8 remission:reclaimer",
+    "setblock 9 -60 8 minecraft:comparator[facing=west]",
+    "setblock 10 -60 8 minecraft:redstone_lamp",
+    "data merge block 8 -60 8 {items:{Size:1,Items:[{Slot:0,id:\"remission:purifier_fuel\",count:40}]}}",
+    "harness reclaim 8 -60 8 169",
+    "harness resend -64 -64 -64 79 0 79"
+  ],
+  "shots": [
+    {
+      "name": "valley",
+      "camera": {"pos": [8.0, 20.0, 96.0], "yaw": 180.0, "pitch": 45.0},
+      "commands": [
+        "data merge block 8 -60 8 {energy:0}",
+        "tick step 4"
+      ]
+    },
+    {
+      "name": "reclaimer",
+      "camera": {"pos": [6.0, -57.5, 13.5], "yaw": 210.0, "pitch": 18.0},
+      "commands": [
+        "harness reclaim 8 -60 8 1",
+        "data merge block 8 -60 8 {energy:130000}"
+      ]
+    },
+    {
+      "name": "frontier",
+      "camera": {"pos": [8.5, -50.0, 60.0], "yaw": 180.0, "pitch": 20.0}
+    },
+    {
+      "name": "screen",
+      "camera": {"pos": [8.5, -59.0, 12.5], "yaw": 180.0, "pitch": 20.0},
+      "screen": true,
+      "commands": ["harness player use 8 -60 8"]
+    }
+  ]
+}

@@ -61,7 +61,7 @@ public final class RemissionRecipeProvider extends RecipeProvider {
                 .save(output);
     }
 
-    /** Purification tools from vanilla parts (P5.2): the purifier, a pylon built around one, and mendroot. */
+    /** Purification tools from vanilla parts (P5.2): the purifier, a pylon built around one, the reclaimer (P7.4) and mendroot. */
     private static void purification(RecipeOutput output) {
         ShapedRecipeBuilder.shaped(RecipeCategory.TOOLS, RemissionItems.HANDHELD_PURIFIER.get())
                 .pattern(" G ")
@@ -80,6 +80,18 @@ public final class RemissionRecipeProvider extends RecipeProvider {
                 .define('L', Items.LIGHTNING_ROD)
                 .define('P', RemissionItems.HANDHELD_PURIFIER.get())
                 .unlockedBy("has_handheld_purifier", has(RemissionItems.HANDHELD_PURIFIER.get()))
+                .save(output);
+        // Reclaimers (P7.4): a pylon's core in a powered frame. Packs gate it behind their tech tiers.
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, RemissionBlocks.RECLAIMER.get())
+                .pattern("ILI")
+                .pattern("PQP")
+                .pattern("IRI")
+                .define('I', Items.IRON_BLOCK)
+                .define('L', Items.LIGHTNING_ROD)
+                .define('P', RemissionItems.HANDHELD_PURIFIER.get())
+                .define('Q', RemissionBlocks.QUARANTINE_PYLON.get())
+                .define('R', Items.REDSTONE_BLOCK)
+                .unlockedBy("has_quarantine_pylon", has(RemissionBlocks.QUARANTINE_PYLON.get()))
                 .save(output);
         ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, RemissionBlocks.MENDROOT.get(), 2)
                 .requires(Items.WHEAT_SEEDS)

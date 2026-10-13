@@ -64,6 +64,9 @@ public final class RemissionBlockStateProvider extends BlockStateProvider {
         simpleBlockWithItem(RemissionBlocks.QUARANTINE_PYLON.get(), models().cubeColumn("quarantine_pylon",
                 modLoc("block/quarantine_pylon_side"), modLoc("block/quarantine_pylon_top")));
         simpleBlock(RemissionBlocks.MENDROOT.get(), models().cross("mendroot", modLoc("block/mendroot")).renderType("cutout"));
+        // Reclaimers (P7.4): its own sides and emitter top on the machine casing's base.
+        simpleBlockWithItem(RemissionBlocks.RECLAIMER.get(), models().cubeBottomTop("reclaimer",
+                modLoc("block/reclaimer_side"), modLoc("block/machine_top"), modLoc("block/reclaimer_top")));
         // Machines (P7.2): a shared casing with each machine's own front, facing the player who placed it.
         for (MachineKind kind : MachineKind.values()) {
             ModelFile model = models().orientable(kind.blockName(), modLoc("block/machine_side"),

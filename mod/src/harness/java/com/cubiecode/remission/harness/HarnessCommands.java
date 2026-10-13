@@ -10,6 +10,8 @@ import com.cubiecode.remission.corruption.CorruptionState;
 import com.cubiecode.remission.notice.HazardNoticeTracker;
 import com.cubiecode.remission.purification.Purification;
 import com.cubiecode.remission.purification.PurificationSettings;
+import com.cubiecode.remission.purification.ReclaimerBlockEntity;
+import com.cubiecode.remission.purification.ReclaimerSettings;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionItems;
 import com.cubiecode.remission.research.Bestiary;
@@ -84,6 +86,8 @@ final class HarnessCommands {
             new SimpleCommandExceptionType(Component.literal("None of the targets is a host"));
     private static final SimpleCommandExceptionType NO_NIDUS =
             new SimpleCommandExceptionType(Component.literal("No nidus there"));
+    private static final SimpleCommandExceptionType NO_RECLAIMER =
+            new SimpleCommandExceptionType(Component.literal("No reclaimer there"));
     private static final SimpleCommandExceptionType NO_SPOT =
             new SimpleCommandExceptionType(Component.literal("No festering spot nearby"));
 
@@ -174,6 +178,11 @@ final class HarnessCommands {
                                                 IntegerArgumentType.getInteger(context, "level")))))))
                 .then(Commands.literal("purify").executes(context -> Purification.engine(context.getSource().getLevel())
                         .settleNow(PurificationSettings.fromConfig())))
+                .then(Commands.literal("reclaim").then(Commands.argument("pos", BlockPosArgument.blockPos())
+                        .then(Commands.argument("operations", IntegerArgumentType.integer(1, 100_000))
+                                .executes(context -> reclaim(context.getSource().getLevel(),
+                                        BlockPosArgument.getLoadedBlockPos(context, "pos"),
+                                        IntegerArgumentType.getInteger(context, "operations"))))))
                 .then(Commands.literal("veins").then(Commands.argument("from", BlockPosArgument.blockPos())
                         .then(Commands.argument("to", BlockPosArgument.blockPos())
                                 .executes(context -> veins(context.getSource().getLevel(),
@@ -349,6 +358,31 @@ final class HarnessCommands {
             }
         }
         return chunks;
+    }
+
+    /**
+     * Runs up to {@code operations} operations of the reclaimer at {@code pos} at once with the configured settings (P7.4),
+     * stopping when one drains nothing, as its ticker would over that many intervals with a generator topping its energy
+     * up between them (its fuel is used as usual), then finishes every queued chunk cleanse. Returns the operations that
+     * drained a chunk; fails without a reclaimer there.
+     */
+    private static int reclaim(ServerLevel level, BlockPos pos, int operations) throws CommandSyntaxException {
+        if (!(level.getBlockEntity(pos) instanceof ReclaimerBlockEntity reclaimer)) {
+            throw NO_RECLAIMER.create();
+        }
+        ReclaimerSettings settings = ReclaimerSettings.fromConfig();
+        int ran = 0;
+        while (ran < operations) {
+            while (reclaimer.energy().receiveEnergy(Integer.MAX_VALUE, false) > 0) {
+                // a generator between operations
+            }
+            if (reclaimer.operate(level, settings) != ReclaimerBlockEntity.Status.RUNNING) {
+                break;
+            }
+            ran++;
+        }
+        Purification.engine(level).tick(Integer.MAX_VALUE);
+        return ran;
     }
 
     /**

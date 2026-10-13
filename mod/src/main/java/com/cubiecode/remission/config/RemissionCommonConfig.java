@@ -1,6 +1,7 @@
 package com.cubiecode.remission.config;
 
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.purification.ReclaimerSettings;
 import com.cubiecode.remission.serum.SerumSettings;
 import com.cubiecode.remission.countermeasure.BlockHazardMode;
 import com.cubiecode.remission.viralload.ViralLoadSettings;
@@ -93,6 +94,14 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.IntValue PROTOTYPE_STEP;
     public static final ModConfigSpec.DoubleValue PROTOTYPE_BACKFIRE_CHANCE;
     public static final ModConfigSpec.DoubleValue PROTOTYPE_BACKFIRE_VIRAL_LOAD;
+    public static final ModConfigSpec.IntValue RECLAIMER_RADIUS;
+    public static final ModConfigSpec.IntValue RECLAIMER_INTERVAL_TICKS;
+    public static final ModConfigSpec.IntValue RECLAIMER_DRAIN_STEP;
+    public static final ModConfigSpec.IntValue RECLAIMER_ENERGY_PER_OPERATION;
+    public static final ModConfigSpec.IntValue RECLAIMER_ENERGY_CAPACITY;
+    public static final ModConfigSpec.IntValue RECLAIMER_MAX_ENERGY_INPUT;
+    public static final ModConfigSpec.IntValue RECLAIMER_FUEL_PER_ITEM;
+    public static final ModConfigSpec.IntValue RECLAIMER_FUEL_PER_BUCKET;
 
     static {
         BUILDER.push("hosts");
@@ -417,6 +426,35 @@ public final class RemissionCommonConfig {
         PROTOTYPE_BACKFIRE_VIRAL_LOAD = BUILDER
                 .comment("Viral load a backfiring prototype gives at once to every player within radius blocks of where it lands.")
                 .defineInRange("backfireViralLoad", 20.0, 0.0, 100.0);
+        BUILDER.pop();
+
+        BUILDER.push("reclaimers");
+        RECLAIMER_RADIUS = BUILDER
+                .comment("Chunks a reclaimer drains around its own, in a square (4 = 9 by 9 chunks). It does not ward: a live nidus",
+                        "in reach keeps spreading against it, and a chunk holding a live nidus is never drained.")
+                .defineInRange("radius", 4, 0, ReclaimerSettings.MAX_RADIUS);
+        RECLAIMER_INTERVAL_TICKS = BUILDER
+                .comment("Game ticks between a reclaimer's operations. Each operation drains the nearest festering chunk in reach.")
+                .defineInRange("intervalTicks", 20, 1, 72000);
+        RECLAIMER_DRAIN_STEP = BUILDER
+                .comment("Strain level the chunk an operation drains loses. A chunk that reaches 0 enters remission.")
+                .defineInRange("drainStep", 10, 1, CorruptionState.MAX_LEVEL);
+        RECLAIMER_ENERGY_PER_OPERATION = BUILDER
+                .comment("Energy (FE) one operation uses. Without it the reclaimer stops.")
+                .defineInRange("energyPerOperation", 4000, 0, 10_000_000);
+        RECLAIMER_ENERGY_CAPACITY = BUILDER
+                .comment("Energy (FE) a reclaimer stores.")
+                .defineInRange("energyCapacity", 200_000, 1, 100_000_000);
+        RECLAIMER_MAX_ENERGY_INPUT = BUILDER
+                .comment("Energy (FE) a reclaimer accepts per insert (cables usually insert once a tick).")
+                .defineInRange("maxEnergyInput", 2000, 1, 10_000_000);
+        RECLAIMER_FUEL_PER_ITEM = BUILDER
+                .comment("Operations one item of #remission:purifier_fuel runs. Without fuel the reclaimer stops.")
+                .defineInRange("fuelPerItem", 16, 1, 100_000);
+        RECLAIMER_FUEL_PER_BUCKET = BUILDER
+                .comment("Operations 1000 mB of a fluid in #remission:purifier_fuel (empty by default; packs fill it) runs.",
+                        "0 refuses fluid fuel.")
+                .defineInRange("fuelPerBucket", 16, 0, 100_000);
         BUILDER.pop();
     }
 

@@ -47,6 +47,8 @@ public final class RemissionBlockTagsProvider extends BlockTagsProvider {
         // Machines (P7.2): any pickaxe.
         tag(BlockTags.MINEABLE_WITH_PICKAXE).add(RemissionBlocks.ANALYZER.get(), RemissionBlocks.SEQUENCER.get(),
                 RemissionBlocks.SYNTHESIZER.get());
+        // Reclaimers (P7.4): any pickaxe.
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(RemissionBlocks.RECLAIMER.get());
         // Nidus encounters (P4.10): a nidus is fought, so the wither and the ender dragon never break it either.
         tag(BlockTags.WITHER_IMMUNE).add(RemissionBlocks.NIDUS.get());
         tag(BlockTags.DRAGON_IMMUNE).add(RemissionBlocks.NIDUS.get());
