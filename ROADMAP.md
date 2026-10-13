@@ -564,7 +564,7 @@ Goals: knowledge is gathered from the world and recorded.
 
 - Status: `review`
 - Owner: `feat/p6.4-team-shared-research`
-- PR:
+- PR: https://github.com/CubieCode/counterstrain/pull/104
 - Depends on: P6.2, P4.12
 - Scope: Research belongs to the team (DESIGN "Teams and multiplayer"). The bestiary lists and counts the union of the team's progress through the team query (each host type at the highest stage any member scanned), synced to each member and updated when a member scans or a player joins or leaves a team. Each player's own record is kept, so a player leaving a team keeps what they scanned. `remission:host_scanned` still fires for the scanning player; a team-level bestiary query lets quests and scripts read the team total. Documented in remission-data-formats.
 - Acceptance: Gametests: a scan by one teammate appears in the other's bestiary and total; players on different teams share nothing; a player leaving a team keeps only their own scans; with nothing answering the team query, behaviour is unchanged from P6.2. The `research/bestiary` reference is unchanged for a solo player.
