@@ -826,8 +826,25 @@ Config `config/remission-common.toml` (read when each pass, use or bonus runs):
 | `[remission_zones]` | `spawnSafety` | bool | true | Natural monster spawns fail in chunks in remission. |
 | `[remission_zones]` | `growthChance` | number 0–1 | 0.25 | Chance a failing crop growth attempt succeeds there. |
 | `[remission_zones]` | `yieldChance` | number 0–1 | 0.25 | Chance a `#remission:remission_yields` block broken there drops one more of each item. |
+| `[remission_zones]` | `regrowth` | bool | true | Cleansed surfaces in chunks in remission regrow their biome's plants (P5.5). |
+| `[remission_zones]` | `regrowthTicks` | int 200–2400000 | 24000 | Game ticks from entering remission until regrowth has reached every column of a chunk. |
+| `[remission_zones]` | `regrowthDensity` | number 0–1 | 0.3 | Share of a chunk's columns that regrow a plant. |
+| `[remission_zones]` | `saplingChance` | number 0–1 | 0.04 | Share of regrowing columns that get a sapling of the biome's trees instead of a ground plant. |
+| `[remission_zones]` | `wildlife` | bool | true | Passive animals from the biome's creature spawn list return to chunks in remission (P5.5; needs `doMobSpawning`). |
+| `[remission_zones]` | `wildlifeIntervalTicks` | int 20–72000 | 2400 | Game ticks between wildlife attempts in each loaded chunk in remission (one group per attempt). |
+| `[remission_zones]` | `wildlifeCap` | int 0–64 | 4 | Creature-category mobs a chunk in remission holds before no more return. |
+| `[remission_zones]` | `budget` | int 1–4096 | 32 | Zone work units per tick and level: one per chunk visited, column regrown or wildlife attempt. |
 
 With the defaults a pylon brings a stage 4 chunk (level 100) into remission in 20 passes (about 3 minutes 20 seconds), a handheld purifier needs 100 uses for the same chunk, and one mendroot about 50 minutes. Lang keys: `item.remission.handheld_purifier` (and `.desc`), `block.remission.quarantine_pylon`, `block.remission.mendroot`, `stat.remission.chunks_cleansed`. Gametests: `PurificationTests`.
+
+**Remission zones come back to life** (built, P5.5; chunks in remission, loaded, server side; no new registry entries, events, payloads or lang keys).
+
+**Regrowth:** each column of a chunk in remission comes due in a fixed per-chunk order spread evenly over `regrowthTicks` from the game time the chunk entered remission (`remission:chunk_remission`); a due column whose surface (`WORLD_SURFACE` heightmap) is free, dry and no longer festered (nothing `remission:cleanses_into` would change) may get one plant. Whether it does, and which, depends only on the column's position and the world seed: it is picked with chance `regrowthDensity`, then a sapling with chance `saplingChance` (if the biome has trees), else a ground plant. The plants are the biome's own, read from its vegetal decoration features (biome modifiers included) for the noise biome cell of that block: every `minecraft:simple_block` feature, also inside random patches (grass, ferns, flowers, bushes), and every tree feature's foliage, turned into its sapling by name (`<wood>_leaves` to `<wood>_sapling`, `<wood>_propagule` or `<wood>`). Only bush blocks that can survive there are placed (two-block plants need room); otherwise the column stays bare.
+ A pack changes what regrows by changing the biome's features. Nothing is saved: after a reload the due columns are walked again, which replants only bare columns, with the same plants.
+
+**Wildlife:** every `wildlifeIntervalTicks` (the first one interval after the chunk entered remission, or at once after a reload) a chunk holding fewer than `wildlifeCap` living creature-category mobs gets one attempt: a creature from its biome's `creature` spawn list (weighted, at a random column), one group of its size up to the cap, placed as natural spawning would (spawn placement and spawn rules, `MobSpawnEvent.PositionCheck` and `FinalizeSpawnEvent` with spawn type `NATURAL`). Only chunks whose entities are ticking get attempts; the cap counts mobs standing in the chunk. Returned animals are new, clean mobs, never hosts; they persist as creatures do.
+
+Both passes share `budget` per tick and level (at most 2 wildlife attempts a tick), visit loaded chunks in remission round-robin, and skip frozen ticks; wildlife also waits for `doMobSpawning`. Gametests: `RemissionZoneTests`; cost: docs/ARCHITECTURE.md (Purification and remission zones).
 
 ## Reclaimers (built, P7.4)
 

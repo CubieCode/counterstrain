@@ -67,6 +67,14 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.BooleanValue REMISSION_SPAWN_SAFETY;
     public static final ModConfigSpec.DoubleValue REMISSION_GROWTH_CHANCE;
     public static final ModConfigSpec.DoubleValue REMISSION_YIELD_CHANCE;
+    public static final ModConfigSpec.BooleanValue REMISSION_REGROWTH;
+    public static final ModConfigSpec.IntValue REMISSION_REGROWTH_TICKS;
+    public static final ModConfigSpec.DoubleValue REMISSION_REGROWTH_DENSITY;
+    public static final ModConfigSpec.DoubleValue REMISSION_SAPLING_CHANCE;
+    public static final ModConfigSpec.BooleanValue REMISSION_WILDLIFE;
+    public static final ModConfigSpec.IntValue REMISSION_WILDLIFE_INTERVAL_TICKS;
+    public static final ModConfigSpec.IntValue REMISSION_WILDLIFE_CAP;
+    public static final ModConfigSpec.IntValue REMISSION_ZONE_BUDGET;
     public static final ModConfigSpec.IntValue REVENANT_PICKUP_TIMEOUT_TICKS;
     public static final ModConfigSpec.EnumValue<BlockHazardMode> COUNTERMEASURES_BLOCK_HAZARDS;
     public static final ModConfigSpec.DoubleValue NIDUS_VITALITY;
@@ -315,6 +323,33 @@ public final class RemissionCommonConfig {
         REMISSION_YIELD_CHANCE = BUILDER
                 .comment("Chance that a block in #remission:remission_yields broken in a chunk in remission drops one more of each item.")
                 .defineInRange("yieldChance", 0.25, 0.0, 1.0);
+        REMISSION_REGROWTH = BUILDER
+                .comment("Whether cleansed surfaces in chunks in remission gradually regrow the plants of their biome",
+                        "(its grass, ferns, flowers and other ground plants, and saplings of its trees).")
+                .define("regrowth", true);
+        REMISSION_REGROWTH_TICKS = BUILDER
+                .comment("Game ticks from a chunk entering remission until regrowth has reached every column of it.")
+                .defineInRange("regrowthTicks", 24000, 200, 2400000);
+        REMISSION_REGROWTH_DENSITY = BUILDER
+                .comment("Share of a chunk's columns that regrow a plant. Which columns, and which plant, depend only on the",
+                        "position and the world seed.")
+                .defineInRange("regrowthDensity", 0.3, 0.0, 1.0);
+        REMISSION_SAPLING_CHANCE = BUILDER
+                .comment("Share of regrowing columns that get a sapling of the biome's trees instead of a ground plant.")
+                .defineInRange("saplingChance", 0.04, 0.0, 1.0);
+        REMISSION_WILDLIFE = BUILDER
+                .comment("Whether passive animals from the biome's creature spawn list return to chunks in remission",
+                        "(vanilla only spawns them when a chunk is generated). Needs the doMobSpawning game rule.")
+                .define("wildlife", true);
+        REMISSION_WILDLIFE_INTERVAL_TICKS = BUILDER
+                .comment("Game ticks between wildlife attempts in each loaded chunk in remission. An attempt spawns one group.")
+                .defineInRange("wildlifeIntervalTicks", 2400, 20, 72000);
+        REMISSION_WILDLIFE_CAP = BUILDER
+                .comment("Passive animals (creature category) a chunk in remission holds before no more return to it.")
+                .defineInRange("wildlifeCap", 4, 0, 64);
+        REMISSION_ZONE_BUDGET = BUILDER
+                .comment("Remission zone work per tick and level: one unit per chunk visited, column regrown or wildlife attempt.")
+                .defineInRange("budget", 32, 1, 4096);
         BUILDER.pop();
 
         BUILDER.push("revenants");
