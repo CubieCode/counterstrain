@@ -74,3 +74,11 @@ description='''${mod_description}'''
     versionRange="[1.21.1-6.0,)"
     ordering="NONE"
     side="CLIENT"
+
+# The RemissionEvents bindings (integration/kubejs/, P8.3) are a plugin built against the KubeJS 2101.7 plugin API.
+[[dependencies.${mod_id}]]
+    modId="kubejs"
+    type="optional"
+    versionRange="[2101.7,)"
+    ordering="NONE"
+    side="BOTH"
