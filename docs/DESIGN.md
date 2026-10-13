@@ -297,7 +297,7 @@ All AI-generated **player-facing content** is documented and replaceable in a la
 - **Scope:** textures, models, GUI art, particles, sounds, icons and logos, lang strings and item/block descriptions, quest titles and text, lore and field journal entries, in-world signs or books, and store page copy (Modrinth/CurseForge summaries, descriptions, gallery images). Code, build files and internal docs are out of scope.
 - **Ledger:** every PR that adds or changes player-facing content adds or updates its rows in the same PR. Replacements change a row's origin and status instead of deleting it.
 - **Placeholder images are obviously placeholders:** block, item and entity textures carry a 2×2 magenta (`#FF00FF`) square in the top-left corner (scaled for larger textures); GUI art, icons, logos, gallery and promo images carry a visible "PLACEHOLDER" label. Placeholder sounds are recorded in the ledger only. Final art never carries the marker.
-- **AI-written text** is listed in the ledger with status `draft`; in-game text carries no visible marker.
+- **Lang text starts as its key.** Agents never write player-facing English lang strings (mod and quest lang alike). A new key's value is the key itself, plus ` %1$s %2$s …` when it takes arguments, so the placeholder is visible in game and still shows live values. Its ledger row (status `placeholder`) carries a description of what the string is for, which the content editor shows to the human who writes it; the provenance check fails a `placeholder` row whose value is not the key, and a `draft` or `final` row whose value still is. Existing AI-written strings were converted to key placeholders on 2026-10-13, so writers start from the brief, not from AI wording.
 
 ## Out of scope (for now)
 

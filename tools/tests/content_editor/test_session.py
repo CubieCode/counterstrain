@@ -76,9 +76,9 @@ class SessionTest(unittest.TestCase):
         self.assertTrue(staged["ok"], staged["checks"])
         editor.write_upload(staged["id"], "draft", note="Replaced in a scripted session.")
 
-        # Replace one string of a shared row (adds an exact-key row) and accept another key as final.
+        # Write two key placeholders: one as a draft, one as final (en_us.json values start as their keys).
         editor.lang_save(LANG, "event.remission.surge.bar.warning", "The Strain gathers")
-        editor.lang_accept(LANG, key="event.remission.surge.warning.title")
+        editor.lang_save(LANG, "event.remission.surge.warning.title", "The Strain stirs", status="final")
         ledger = editor.ledger()
         self.assertIsNotNone(ledger.find(f"{LANG}:event.remission.surge.bar.warning"))
         self.assertEqual(ledger.find(f"{LANG}:event.remission.surge.warning.title").status, "final")

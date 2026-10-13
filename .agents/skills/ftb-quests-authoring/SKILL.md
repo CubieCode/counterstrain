@@ -11,7 +11,7 @@ Workflow: run a playtest instance (playtesting skill) with the current `pack/` a
 
 Chapter layout follows DESIGN: one group per region, each chapter structured locate the nidus → research → gear up → destroy the nidus → purify → next region; the last group is the Counterstrain. Keep ids readable (`chapter: region1_nidus`), put lore in descriptions sparingly (docs/LORE.md is the source), and use dependencies so the map reads left to right. Quest titles, descriptions and IDs use the DESIGN glossary (the Strain, nidus/nidi, hosts, festering, viral load, remission zones, the Counterstrain).
 
-Quest text is player-facing content: add its lang keys to docs/CONTENT-PROVENANCE.md (status `draft` for AI-written text) in the same PR, per the content-provenance skill.
+Quest text is player-facing content: add its lang keys with key placeholder values (the value is the key) and one docs/CONTENT-PROVENANCE.md row per key (status `placeholder`, notes describing the text) in the same PR, per the content-provenance skill. Agents never write the quest text itself.
 
 Gating on Remission (formats in remission-data-formats, built in P8):
 - Advancement tasks (`type: "advancement"`) on advancements whose criteria use Remission triggers: `remission:nidus_destroyed`, `remission:host_scanned` (`entity`, `stage`, `bestiary_types`) and `remission:block_scanned` (`location`, e.g. a scanned nidus for "locate the nidus"); schemas in remission-data-formats. The pack defines those advancements in `kubejs/data/counterstrain/advancement/`; the mod only provides triggers.

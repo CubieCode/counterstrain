@@ -1,0 +1,7 @@
+{
+  "item.remission.scanner": "item.remission.scanner",
+  "commands.remission.infect.success.single": "commands.remission.infect.success.single %1$s %2$s %3$s",
+  "event.remission.surge.warning": "event.remission.surge.warning",
+  "event.remission.surge.ended": "The surge ends.",
+  "block.remission.nidus": "Nidus"
+}

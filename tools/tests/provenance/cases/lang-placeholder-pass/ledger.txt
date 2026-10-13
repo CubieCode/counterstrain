@@ -1,0 +1,9 @@
+# Test ledger for the lang-placeholder-pass case (tools/check-provenance.py --self-test).
+
+| Path / ID | Type | Origin | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.scanner` | lang | procedural (key as value) | placeholder | Bare key. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:commands.remission.infect.success.single` | lang | procedural (key as value) | placeholder | Key plus positional arguments. Args: %1$s target, %2$s level, %3$s stage. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.*` | lang | procedural (key as value) | placeholder | Shared row covering a key placeholder. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:event.remission.surge.ended` | lang | human (fixture) | final | Exact row overriding the shared placeholder row. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.nidus` | lang | human (fixture) | draft | Written text. |

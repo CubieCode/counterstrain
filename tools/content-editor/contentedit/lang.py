@@ -50,6 +50,22 @@ def describe(args):
     return ", ".join(f"%{i}${c}" for i, c in sorted(args.items())) or "none"
 
 
+def placeholder(key, args=None):
+    """The value a key holds until someone writes it: the key itself, then ` %1$s %2$s …` for its arguments."""
+    return key + "".join(f" %{i}${c}" for i, c in sorted((args or {}).items()))
+
+
+def is_placeholder(key, value):
+    """True when `value` is `key`'s placeholder: the key, then only arguments (` %1$s %2$s`, or ` %s %s`)."""
+    return value.startswith(key) and re.fullmatch(r"(?: %(?:\d+\$)?[A-Za-z])*", value[len(key):]) is not None
+
+
+def needs(value):
+    """The arguments a replacement must use, e.g. "%1$s, %2$s", or "" when it takes none."""
+    args = format_args(value)
+    return describe(args) if args else ""
+
+
 def _pairs(text):
     seen = []
 

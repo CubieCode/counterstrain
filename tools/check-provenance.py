@@ -16,7 +16,13 @@ with zlib). Fails when:
   with that prefix for a `*` row);
 - a row has an unknown status, or two rows name the same file or the same text ID
   (an exact `file:key` row overriding a `file:prefix*` row is fine: the most
-  specific row wins).
+  specific row wins);
+- a key in a lang file (`assets/<namespace>/lang/*.json`) has no row, exact or
+  `*`;
+- a `lang` row's value disagrees with its status: a lang placeholder is the key
+  itself, plus ` %1$s %2$s ...` when the string takes arguments, so a
+  `placeholder` row whose value is anything else fails, and so does a `draft` or
+  `final` row whose value is still the key.
 
 Scanned trees: mod/src/main/resources/assets/, mod/src/generated/resources/assets/
 and pack/ (except pack/mods/, packwiz metadata). Gitignored files are skipped.
@@ -47,6 +53,9 @@ MODEL_DIR = re.compile(r"(^|/)assets/[^/]+/models/.+\.json$")
 REPO_PATH_ROOTS = ("mod/", "pack/", "docs/")
 STATUSES = ("placeholder", "draft", "final", "removed")
 MAGENTA = (255, 0, 255, 255)
+LANG_FILE = re.compile(r"(^|/)assets/[^/]+/lang/[^/]+\.json$")
+# The arguments a lang placeholder may carry after its key: ` %1$s %2$s ...`.
+PLACEHOLDER_ARGS = re.compile(r"(?: %(\d+)\$[A-Za-z])*")
 
 
 def kind(rel):
@@ -254,6 +263,46 @@ def has_text_key(path, key):
     return key in data
 
 
+def is_lang_placeholder(key, value):
+    """Whether a lang value is the key placeholder: the key, then positional arguments in ascending order.
+
+    Usually %1$s..%n$s; a gap is kept when the code passes an argument the text never used (%1$s %3$s)."""
+    if not value.startswith(key):
+        return False
+    rest = value[len(key):]
+    if not PLACEHOLDER_ARGS.fullmatch(rest):
+        return False
+    positions = [int(n) for n in re.findall(r"%(\d+)\$", rest)]
+    return positions == sorted(set(positions)) and all(p >= 1 for p in positions)
+
+
+def lang_values(path):
+    """The key-value pairs of a lang JSON file, or None if it is not a JSON object of strings."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    return {k: v for k, v in data.items() if isinstance(v, str)}
+
+
+def governing_row(text_rows, file_part, key):
+    """The row for one key: its exact row, else the `*` row with the longest matching prefix."""
+    exact = text_rows.get(f"{file_part}:{key}")
+    if exact:
+        return exact
+    best = None
+    for path_id, row in text_rows.items():
+        if not path_id.endswith("*"):
+            continue
+        row_file, _, prefix = path_id[:-1].partition(":")
+        if row_file == file_part and key.startswith(prefix) and (best is None or len(prefix) > best[0]):
+            best = (len(prefix), row)
+    return best[1] if best else None
+
+
 def check(root, ledger):
     failures = []
     ledger_rel = os.path.relpath(ledger, root) if ledger.startswith(root + os.sep) else ledger
@@ -261,7 +310,7 @@ def check(root, ledger):
     def fail(where, message):
         failures.append(f"{where}: {message}")
 
-    rows, text_rows = {}, {}
+    rows, text_rows, text_row_info = {}, {}, {}
     for line_no, path_id, ctype, status in parse_ledger(ledger):
         where = f"{ledger_rel}:{line_no}"
         if status not in STATUSES:
@@ -287,6 +336,7 @@ def check(root, ledger):
             if path_id in text_rows:
                 fail(where, f"`{path_id}` already has a row at line {text_rows[path_id]}; edit that row instead")
             text_rows.setdefault(path_id, line_no)
+            text_row_info.setdefault(path_id, (line_no, ctype, status))
             continue
         if path_id in rows:
             fail(where, f"`{path_id}` already has a row at line {rows[path_id][0]}; edit that row instead")
@@ -315,6 +365,29 @@ def check(root, ledger):
         elif status == "placeholder" and not marked:
             fail(where, f"status placeholder but the {size}x{size} #FF00FF placeholder marker is missing "
                         "from the top-left corner; add it or update the row")
+
+    for rel in sorted(p for p in candidate_files(root)
+                      if p.startswith(SCAN_ROOTS) and not p.startswith(SKIP_PREFIXES) and LANG_FILE.search(p)):
+        values = lang_values(os.path.join(root, rel))
+        if values is None:
+            continue
+        for key, value in values.items():
+            row = governing_row(text_row_info, rel, key)
+            if row is None:
+                fail(f"{rel}:{key}", f"lang key has no row in {ledger_rel}; add an exact row whose notes "
+                                     "describe the string (content-provenance skill)")
+                continue
+            line_no, ctype, status = row
+            if ctype != "lang" or status not in ("placeholder", "draft", "final"):
+                continue
+            where = f"{rel}:{key} ({ledger_rel}:{line_no})"
+            placeholder = is_lang_placeholder(key, value)
+            if status == "placeholder" and not placeholder:
+                fail(where, "status placeholder but the value is not the key placeholder (the key, plus "
+                            "` %1$s %2$s ...` for arguments); set the row's real origin and status")
+            elif status != "placeholder" and placeholder:
+                fail(where, f"status {status} but the value is still the key placeholder; "
+                            "write the string or set the row back to placeholder")
     return failures
 
 
