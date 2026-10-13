@@ -27,6 +27,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.MultifaceBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -185,6 +186,32 @@ public final class CaveFesteringTests {
             helper.assertValueEqual(events.size(), changed, "one event per replaced block");
             helper.assertValueEqual(festerCube(level, chunk, 3, CaveFesteringTests::shipped), 0, "blocks changed by a repeated pass");
         } finally {
+            releaseFarChunk(level, chunk);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A wall behind festering veins is still exposed (P4.16): veins fill cave air from stage 1, so a stone block with a
+     * vein in every neighbouring cell festers in the cave pass like a bare one.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void veinCoveredBlocksFester(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        LevelChunk chunk = farChunk(helper, 5);
+        BlockPos stone = at(chunk, 8, CUBE_Y + 4, 8);
+        try {
+            fill(level, stone.offset(-1, -1, -1), stone.offset(1, 1, 1), Blocks.AIR.defaultBlockState());
+            level.setBlock(stone, Blocks.STONE.defaultBlockState(), 2);
+            for (Direction direction : Direction.values()) {
+                // The vein in the cell on this side covers the stone's face, toward the stone.
+                level.setBlock(stone.relative(direction), RemissionBlocks.FESTERING_VEIN.get().defaultBlockState()
+                        .setValue(MultifaceBlock.getFaceProperty(direction.getOpposite()), true), 2);
+            }
+            helper.assertValueEqual(FesteringStages.festerCaves(level, chunk, stone.getY(), 3), 1, "blocks changed");
+            helper.assertTrue(level.getBlockState(stone).is(RemissionBlocks.FESTERED_STONE.get()), "vein-covered stone festered");
+        } finally {
+            fill(level, stone.offset(-1, -1, -1), stone.offset(1, 1, 1), Blocks.AIR.defaultBlockState());
             releaseFarChunk(level, chunk);
         }
         helper.succeed();

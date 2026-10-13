@@ -6,6 +6,7 @@ import com.cubiecode.remission.api.ChunkStageChangedEvent;
 import com.cubiecode.remission.api.CorruptionQueries;
 import com.cubiecode.remission.purification.Purification;
 import com.cubiecode.remission.registry.RemissionAttachments;
+import com.cubiecode.remission.registry.RemissionBlocks;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
@@ -370,7 +371,10 @@ public final class FesteringStages {
         });
     }
 
-    /** Whether any side of {@code pos} is air; a side in a chunk that is not loaded counts as solid. */
+    /**
+     * Whether any side of {@code pos} is air or a festering vein (veins fill cave air from stage 1 since P4.16, and the
+     * wall behind them is still exposed); a side in a chunk that is not loaded counts as solid.
+     */
     private static boolean facesAir(ServerLevel level, LevelChunk chunk, BlockPos pos, BlockPos.MutableBlockPos side) {
         ChunkPos chunkPos = chunk.getPos();
         for (Direction direction : DIRECTIONS) {
@@ -387,7 +391,8 @@ public final class FesteringStages {
                     continue;
                 }
             }
-            if (holder.getBlockState(side).isAir()) {
+            BlockState neighbour = holder.getBlockState(side);
+            if (neighbour.isAir() || neighbour.is(RemissionBlocks.FESTERING_VEIN.get())) {
                 return true;
             }
         }
