@@ -43,7 +43,8 @@ import org.jetbrains.annotations.Nullable;
  * {@code maxHosts} of its hosts are alive and loaded). Players in the area while it runs are caught in it; one who dies drops out for
  * good. At the end every caught player still online earns {@code remission:surge_survived}, then
  * {@link SurgeEndedEvent} is posted. Destroying the origin nidus ends it at once; a surge stopped or destroyed during
- * its warning never started and posts nothing.
+ * its warning never started and posts nothing. A nidus under attack starts its surges with no warning
+ * ({@link #startNow}), replacing any surge in the level.
  */
 public final class SurgeController {
     /** Ticks between host waves while a surge runs; the first wave comes when it starts. */
@@ -168,6 +169,32 @@ public final class SurgeController {
         List<ServerPlayer> inArea = inArea(origin);
         warnings.warn(inArea);
         warnings.update(inArea, 1.0F);
+        return true;
+    }
+
+    /**
+     * Starts a surge from {@code origin} (an indexed nidus) now, with no warning: a nidus under attack fighting back
+     * (P4.10). A surge already warning or running in this level ends first ({@link SurgeEndedEvent.Reason#SUPERSEDED}).
+     * One from another nidus awards its survivors as any ended surge does; one from the same nidus (the fight's last
+     * threshold) awards nothing and hands its caught and fallen players and its hosts to the new surge, so a fight awards
+     * {@code surge_survived} once, when its last surge ends. Returns false, changing nothing, if {@code origin} is not an
+     * indexed nidus.
+     */
+    public boolean startNow(BlockPos origin, int intensity, long now) {
+        if (!NidusIndex.get(level).contains(origin)) {
+            return false;
+        }
+        Surge current = data.current();
+        boolean same = current != null && current.origin().equals(origin);
+        if (current != null) {
+            end(current, SurgeEndedEvent.Reason.SUPERSEDED, now, !same);
+        }
+        Surge surge = Surge.warn(origin, Math.clamp(intensity, 1, Surge.MAX_INTENSITY), now, 0, settings.get().durationTicks());
+        if (same) {
+            surge.inherit(current);
+        }
+        data.setCurrent(surge);
+        begin(surge, now);
         return true;
     }
 
@@ -302,6 +329,11 @@ public final class SurgeController {
     }
 
     private void end(Surge surge, SurgeEndedEvent.Reason reason, long now) {
+        end(surge, reason, now, true);
+    }
+
+    /** Ends {@code surge}; with {@code award} false its caught players earn nothing (the event lists no survivors). */
+    private void end(Surge surge, SurgeEndedEvent.Reason reason, long now, boolean award) {
         pendingHosts.clear();
         data.setCurrent(null);
         data.setNextDue(now + settings.get().intervalTicks());
@@ -310,7 +342,7 @@ public final class SurgeController {
             return;
         }
         List<ServerPlayer> survivors = new ArrayList<>();
-        for (UUID id : surge.participants()) {
+        for (UUID id : award ? surge.participants() : List.<UUID>of()) {
             ServerPlayer player = players.byId(id);
             if (player != null && player.isAlive() && !(player instanceof FakePlayer)) {
                 QuestProgress.surgeSurvived(player, surge.intensity());

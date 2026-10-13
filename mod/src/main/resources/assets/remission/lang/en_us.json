@@ -127,5 +127,7 @@
   "subtitles.remission.ambient.fester.additions": "Something squelches",
   "remission.configuration.atmosphere": "Atmosphere",
   "remission.configuration.festerFog": "Festering fog",
-  "remission.configuration.festerFog.tooltip": "How much the fog thickens in festering land as its stage rises, from 0 (off) to 1 (full). Changes only what you see."
+  "remission.configuration.festerFog.tooltip": "How much the fog thickens in festering land as its stage rises, from 0 (off) to 1 (full). Changes only what you see.",
+  "event.remission.nidus.bar": "Nidus vitality",
+  "event.remission.nidus.lash": "The nidus lashes out"
 }

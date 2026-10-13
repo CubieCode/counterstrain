@@ -20,13 +20,16 @@ public final class QuestProgress {
     private QuestProgress() {
     }
 
-    /** The player broke the nidus at {@code pos}; it is already removed. */
-    public static void nidusDestroyed(ServerPlayer player, BlockPos pos) {
+    /**
+     * The player shares the credit for destroying the nidus at {@code pos} in {@code level} (P4.10: the player who
+     * destroyed it and every contributor); it is already removed. The player may be in another level.
+     */
+    public static void nidusDestroyed(ServerPlayer player, ServerLevel level, BlockPos pos) {
         if (player instanceof FakePlayer) {
             return;
         }
         player.awardStat(RemissionStats.NIDI_DESTROYED.get());
-        RemissionTriggers.NIDUS_DESTROYED.get().trigger(player, pos);
+        RemissionTriggers.NIDUS_DESTROYED.get().trigger(player, level, pos);
     }
 
     /** The player took a host scan of {@code host} at {@code stage}; the bestiary already holds it. */

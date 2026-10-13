@@ -85,10 +85,17 @@ public final class FesteringVeins {
         return coverage(CorruptionQueries.chunkStage(level, chunk), VeinSettings.fromConfig().minStage());
     }
 
+    /** Picks the vein faces to grow: {@link #selected} at a coverage, or every face (tests). */
+    @FunctionalInterface
+    public interface FaceSelector {
+        boolean test(BlockPos pos, Direction side);
+    }
+
     /**
      * Whether the vein face on side {@code side} of the air block at {@code pos} is grown at {@code coverage}. The face's
-     * own hash is compared against the coverage scaled by its patch (a 4-block cell, weight 0 to 2 by its hash), so the
-     * mean share is {@code coverage} percent, some patches stay bare and others are dense.
+     * own hash is compared against the coverage scaled by its patch (a 4-block cell, weight 0 to 2 in steps of 0.5 by
+     * its hash), so the mean share is {@code coverage} percent, a fifth of the patches stay bare at any coverage and
+     * others are dense.
      */
     public static boolean selected(BlockPos pos, Direction side, int coverage) {
         if (coverage <= 0) {
@@ -107,9 +114,14 @@ public final class FesteringVeins {
 
     /** {@link #growNow(ServerLevel, LevelChunk)} at {@code coverage}, with {@code resistant} in place of the tag (tests). */
     public static int growNow(ServerLevel level, LevelChunk chunk, int coverage, Predicate<BlockState> resistant) {
+        return coverage <= 0 ? 0 : growNow(level, chunk, (pos, side) -> selected(pos, side, coverage), resistant);
+    }
+
+    /** {@link #growNow(ServerLevel, LevelChunk)} growing the faces {@code pick} picks (tests). */
+    public static int growNow(ServerLevel level, LevelChunk chunk, FaceSelector pick, Predicate<BlockState> resistant) {
         int changed = 0;
         for (int y = chunk.getMinBuildHeight(); y < chunk.getMaxBuildHeight(); y++) {
-            changed += growLayer(level, chunk, y, coverage, resistant);
+            changed += growLayer(level, chunk, y, pick, resistant);
         }
         return changed;
     }
@@ -121,11 +133,17 @@ public final class FesteringVeins {
 
     /**
      * Grows the veins of one block layer: every air block (or vein) at height {@code y} gets each face that
-     * {@link #selected} picks and whose neighbour holds a vein and is not {@code resistant}; a neighbour in a chunk that
-     * is not loaded is left for a later visit. One {@link BlockFesteredEvent} per block changed. Returns that number.
+     * {@link #selected} picks at {@code coverage} and whose neighbour holds a vein and is not {@code resistant}; a
+     * neighbour in a chunk that is not loaded is left for a later visit. One {@link BlockFesteredEvent} per block
+     * changed. Returns that number.
      */
     public static int growLayer(ServerLevel level, LevelChunk chunk, int y, int coverage, Predicate<BlockState> resistant) {
-        if (coverage <= 0 || y < chunk.getMinBuildHeight() || y >= chunk.getMaxBuildHeight()) {
+        return coverage <= 0 ? 0 : growLayer(level, chunk, y, (pos, side) -> selected(pos, side, coverage), resistant);
+    }
+
+    private static int growLayer(ServerLevel level, LevelChunk chunk, int y, FaceSelector pick,
+                                 Predicate<BlockState> resistant) {
+        if (y < chunk.getMinBuildHeight() || y >= chunk.getMaxBuildHeight()) {
             return 0;
         }
         LevelChunkSection section = chunk.getSection(chunk.getSectionIndex(y));
@@ -143,7 +161,7 @@ public final class FesteringVeins {
                 pos.set(chunkPos.getBlockX(localX), y, chunkPos.getBlockZ(localZ));
                 BlockState grown = state;
                 for (Direction direction : DIRECTIONS) {
-                    if (MultifaceBlock.hasFace(grown, direction) || !selected(pos, direction, coverage)) {
+                    if (MultifaceBlock.hasFace(grown, direction) || !pick.test(pos, direction)) {
                         continue;
                     }
                     side.setWithOffset(pos, direction);

@@ -58,6 +58,11 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          # With caching on, the post step stops every Gradle daemon, which
+          # on foundry kills other jobs' and Orca lanes' builds (they share
+          # ~/.gradle). Self-hosted runners keep ~/.gradle anyway.
+          cache-disabled: ${{ runner.environment == 'self-hosted' }}
       - run: ./gradlew build --console=plain
       - run: ./gradlew runData --console=plain
       - name: Check generated resources are committed

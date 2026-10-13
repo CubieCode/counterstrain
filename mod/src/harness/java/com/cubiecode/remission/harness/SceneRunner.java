@@ -208,6 +208,9 @@ final class SceneRunner {
         taken.add(shot.name());
         RemissionHarness.LOGGER.info("Scene {}: saved {}", sceneId, file.toAbsolutePath());
         captureRequested = false;
+        if (shot.hud()) {
+            pinJourneyMapMinimap(true, true);
+        }
         if (shotIndex + 1 < scene.shots().size()) {
             startShot(mc, shotIndex + 1);
         } else {
@@ -236,22 +239,33 @@ final class SceneRunner {
     }
 
     /**
-     * Turns JourneyMap's minimap off in memory (never saved to its config), when that dev-runtime mod is loaded: it maps
-     * chunks in the background, so its picture would differ between runs of a HUD shot.
+     * Pins JourneyMap's minimap, when that dev-runtime mod is loaded: off for a HUD shot (it maps chunks in the
+     * background, so its picture would differ between runs) and on for every other shot (screens such as the machine
+     * menus show it behind them, as the references do). With {@code save}, the setting is also written to JourneyMap's
+     * config. JourneyMap can save its properties while a HUD shot runs (P4.10's {@code world/nidus_fight} made it) and the
+     * run directory persists, so after each HUD shot the minimap is turned back on and saved: no scene depends on what
+     * an earlier one left in the config.
      */
-    private static void hideJourneyMapMinimap() {
+    private static void pinJourneyMapMinimap(boolean enabled, boolean save) {
         if (!ModList.get().isLoaded("journeymap")) {
             return;
         }
         try {
-            Class<?> manager = Class.forName("journeymap.client.ui.UIManager");
-            Object minimap = manager.getMethod("getMiniMap").invoke(manager.getField("INSTANCE").get(null));
-            Object properties = minimap.getClass().getMethod("getCurrentMinimapProperties").invoke(minimap);
-            Object enabled = properties.getClass().getField("enabled").get(properties);
-            enabled.getClass().getMethod("set", Boolean.class).invoke(enabled, Boolean.FALSE);
+            Object properties = journeyMapMinimapProperties();
+            Object field = properties.getClass().getField("enabled").get(properties);
+            field.getClass().getMethod("set", Boolean.class).invoke(field, enabled);
+            if (save) {
+                properties.getClass().getMethod("save").invoke(properties);
+            }
         } catch (ReflectiveOperationException | LinkageError e) {
-            throw new IllegalStateException("cannot hide the JourneyMap minimap for a HUD shot", e);
+            throw new IllegalStateException("cannot pin the JourneyMap minimap", e);
         }
+    }
+
+    private static Object journeyMapMinimapProperties() throws ReflectiveOperationException {
+        Class<?> manager = Class.forName("journeymap.client.ui.UIManager");
+        Object minimap = manager.getMethod("getMiniMap").invoke(manager.getField("INSTANCE").get(null));
+        return minimap.getClass().getMethod("getCurrentMinimapProperties").invoke(minimap);
     }
 
     /** Recreates the fixed world every run so no state carries over between runs. */
@@ -414,9 +428,7 @@ final class SceneRunner {
         Scene.Camera camera = shot.camera();
         mc.options.setCameraType(shot.view());
         mc.options.hideGui = !shot.hud();
-        if (shot.hud()) {
-            hideJourneyMapMinimap();
-        }
+        pinJourneyMapMinimap(!shot.hud(), false);
         if (mc.options.guiScale().get() != shot.guiScale()) {
             mc.options.guiScale().set(shot.guiScale());
             mc.resizeDisplay();

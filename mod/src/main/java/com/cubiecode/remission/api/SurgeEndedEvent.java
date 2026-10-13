@@ -18,7 +18,9 @@ public class SurgeEndedEvent extends FesteringLandEvent {
         /** Its nidus was destroyed. */
         NIDUS_DESTROYED,
         /** {@code /remission surge stop} or another caller stopped it. */
-        STOPPED
+        STOPPED,
+        /** Another surge took its place: a nidus under attack surged at once (P4.10). */
+        SUPERSEDED
     }
 
     private final BlockPos origin;
