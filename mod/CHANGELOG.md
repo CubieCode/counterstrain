@@ -4,11 +4,12 @@ Versions follow `mod_version` in `gradle.properties`; tags are `mod-v<version>`.
 
 ## Unreleased
 
+- Every lang string is now a placeholder equal to its key (plus its arguments), until the writing pass replaces it with human-written text. Item, block, config, command and screen text shows the translation key in game.
 - Project scaffold (P0.1).
 - Entity corruption state: the `remission:corruption` attachment (Strain level 0–100 and host stage), saved with the entity and synced to tracking clients, plus the common config `hosts.stageThresholds` (P2.1).
 - Debug commands `/remission infect <targets> <level>`, `/remission cleanse <targets>` and `/remission inspect <target>` (permission level 2) to set, clear and read host state (P2.3).
 - Scanner (`remission:scanner`): use it on a host for a host scan or on a block for a block scan, data items whose `remission:scan_data` component records the entity type and host stage or the block (P6.1). Placeholder textures.
-- Bestiary (P6.2): every living, non-immune entity type of every installed mod is a host type; host scans record the highest host stage scanned per type for each player (`remission:bestiary` player attachment, kept on death; updates sync to that player, and clients tracking the player also get it on first sight); scans of types the bestiary does not list record nothing; the key M ("Open Bestiary") shows the list and "X of N host types scanned".
+- Bestiary (P6.2): every living, non-immune entity type of every installed mod is a host type; host scans record the highest host stage scanned per type for each player (`remission:bestiary` player attachment, kept on death; updates sync to that player, and clients tracking the player also get it on first sight); scans of types the bestiary does not list record nothing; the key M shows the list and how many host types are scanned out of the total.
 - Hidden bestiary types (P6.3): entity type tag `#remission:bestiary_hidden` (giant, illusioner and armour stand by default) keeps types players cannot normally meet as hosts out of the bestiary list and total; packs extend or replace it.
 - Festering land groundwork (P4.1): the `remission:nidus` block (placeholder texture), a per-chunk Strain level (`remission:chunk_corruption` attachment) and a tick-budgeted spread engine that festers chunks outward from each nidus and catches unloaded land up when it loads, with a `[spread]` common config section for rates and budgets. Breaking a nidus stops its spread.
 - Public API (P4.4): `com.cubiecode.remission.api` posts host corrupted and cleansed, chunk stage changed, nidus destroyed and cancellable Strain spread attempt events, and `CorruptionQueries` answers stage and host queries.

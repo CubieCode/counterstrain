@@ -26,6 +26,8 @@ Remission never depends on Counterstrain. It ships generic defaults that work wi
 
 All AI-generated player-facing content (textures, models, GUI art, particles, sounds, icons, lang, quest text, lore, journal entries, store copy) is recorded in docs/CONTENT-PROVENANCE.md in the same PR that adds or changes it, and placeholder art is visibly marked (magenta 2×2 corner on textures, "PLACEHOLDER" label on GUI/promo images). Follow the [content-provenance](.agents/skills/content-provenance/SKILL.md) skill; `tools/content-editor.sh` replaces content and updates rows from a `content/<date>-<slug>` branch. Code, build files and internal docs are out of scope.
 
+Lang strings are never written by agents: a new lang key's value is the key itself (plus ` %1$s %2$s …` for arguments), and its own ledger row (status `placeholder`) describes what the string is for, where it shows and its arguments, without suggesting wording. A human writes the text in the content editor.
+
 ## Coding and data
 
 Java 21, NeoForge 1.21.1 APIs only. Check APIs against the NeoForge 21.1 sources in `mod/build/moddev/artifacts/*-sources.jar` or docs.neoforged.net/docs/1.21.1, never against newer-version tutorials (1.21.2+ changed recipes, item models, datagen and more). Register through `DeferredRegister` classes in `registry/`; keep client-only code under `client/` and reach it only from `Dist.CLIENT` entrypoints or subscribers. Server state is authoritative; clients receive synced state. Datapack and resource paths use 1.21.1 singular folder names. Avoid speculative registries, config options, dependencies and placeholder content for unbuilt features.

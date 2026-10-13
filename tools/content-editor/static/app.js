@@ -281,7 +281,7 @@ function queueView() {
   function renderTable() {
     const visible = ROWS.filter(matches);
     const table = h('div', { class: 'table', role: 'table', 'aria-label': 'Ledger rows' },
-      h('div', { class: 'tr th', role: 'row' }, ['', 'Path / ID', 'Item', 'Origin', 'Status', 'Notes (art direction)', ''].map((t) => h('span', { role: 'columnheader' }, t))));
+      h('div', { class: 'tr th', role: 'row' }, ['', 'Path / ID', 'Item', 'Origin', 'Status', 'Notes · description', ''].map((t) => h('span', { role: 'columnheader' }, t))));
     for (const type of types) {
       const rows = visible.filter((r) => r.type === type);
       if (!rows.length) continue;
@@ -291,7 +291,7 @@ function queueView() {
       } }, h('span', { class: 'tiny muted' }, closed ? '▶' : '▼'), h('b', {}, type), h('span', { class: 'mono tiny muted' }, rows.length),
         type === 'texture' ? h('span', { class: 'small muted' }, '2×2 #FF00FF marker on placeholders') :
         type === 'model' ? h('span', { class: 'small muted' }, 'datagen output is read-only here') :
-        type === 'lang' ? h('span', { class: 'small muted' }, 'rows ending in * cover every matching key; an exact-key row overrides them') : null));
+        type === 'lang' ? h('span', { class: 'small muted' }, 'notes describe each string; “not written” keys still hold their key placeholder; rows ending in * cover every matching key') : null));
       if (closed) continue;
       for (const r of rows) table.append(rowLine(r));
     }
@@ -359,6 +359,7 @@ function rowLine(r) {
   if (r.generated) mark = h('span', { class: 'mark lock' }, 'read-only');
   else if (r.new) mark = h('span', { class: 'mark' }, '● new row');
   else if (r.pending) mark = h('span', { class: 'mark' }, '● edited');
+  else if (r.placeholders) mark = h('span', { class: 'mark', style: 'color:var(--phf)', title: 'keys that still hold their key placeholder' }, r.wildcard ? `${r.placeholders} not written` : 'not written');
   else if (r.wildcard && r.overridden) mark = h('span', { class: 'mark lock', title: 'keys with their own exact-key row' }, `${r.overridden}/${r.keyCount ?? '?'} split out`);
   else if (r.wildcard && r.keyCount !== null) mark = h('span', { class: 'mark lock' }, `${r.keyCount} keys`);
   return h('a', { class: 'tr', role: 'row', href: rowHref(r.id) },
@@ -368,7 +369,7 @@ function rowLine(r) {
     h('span', { class: 'mono small dim' }, r.items[0] || ''),
     h('span', { class: 'ellipsis small dim', title: r.origin }, r.origin),
     h('span', {}, chip(r.status)),
-    h('span', { class: 'ellipsis small dim', title: r.notes }, r.notes),
+    h('span', { class: r.kind === 'lang' ? 'ellipsis small' : 'ellipsis small dim', title: r.notes }, r.notes),
     mark || h('span'));
 }
 
@@ -447,6 +448,7 @@ async function langView(detail, params) {
       }
       let mark = null;
       if (sk.ownerStatus === 'final') mark = h('span', { class: 'tiny', style: 'color:var(--okf)' }, '✓ final');
+      else if (sk.placeholder) mark = h('span', { class: 'tiny', style: 'color:var(--phf)' }, 'not written');
       else if (sk.base !== null && sk.base !== sk.value) mark = h('span', { class: 'tiny', style: 'color:var(--ac)' }, '● edited');
       else if (sk.owner && sk.owner !== s.row.id) mark = h('span', { class: 'tiny', style: 'color:var(--ac)' }, '● own row');
       list.append(h('a', { href: rowHref(s.row.id, { key: sk.key }), 'aria-current': s.row.id === r.id && sk.key === k?.key ? 'true' : null },
@@ -461,12 +463,16 @@ async function langView(detail, params) {
   }
 
   const currentArgs = formatArgs(k.value);
+  // A key placeholder (the key plus its %n$s arguments) is not text to keep: start empty and show the description.
+  const unwritten = !!k.placeholder;
+  const description = k.description || r.notes;
   const langVocab = vocabPanel(k.owner || r.id, () => edit.value);
   const ownerIsRow = k.owner === r.id;
   const sharedOthers = r.wildcard && ownerIsRow ? detail.keys.filter((x) => x.owner === r.id && x.key !== k.key).length : 0;
   const status = h('select', { id: 'st', 'aria-label': 'Status after replacing' }, h('option', { value: 'draft' }, 'draft'), h('option', { value: 'final' }, 'final'));
   const edit = h('textarea', { id: 'edit', rows: 3, style: 'font-size:14px;line-height:1.6' });
-  edit.value = k.value;
+  edit.value = unwritten ? '' : k.value;
+  if (unwritten) edit.placeholder = k.needs ? `Write the string; it needs ${k.needs}` : 'Write the string';
   const argNote = h('span', { class: 'small dim' });
   const problem = h('div', { class: 'callout error hidden', role: 'alert' });
   const preview = h('div', { class: 'preview-line' });
@@ -483,8 +489,10 @@ async function langView(detail, params) {
     problem.classList.toggle('hidden', ok);
     if (!ok) {
       problem.replaceChildren(icon(['M8 1.75 15 14.25H1L8 1.75Z', 'M8 6.5v3.5M8 12v.25'], 16), h('div', { class: 'stack', style: 'gap:4px' },
-        h('strong', {}, `Arguments changed: ${currentArgs.size} %s in the current string, ${args.size} in the replacement`),
-        h('span', {}, 'Minecraft fills %s in order, so values would print in the wrong place. Replace is blocked until they match. %1$s-style positions can reorder them.')));
+        unwritten ? h('strong', {}, `This string needs ${k.needs || 'no arguments'}; yours has ${args.size}`)
+          : h('strong', {}, `Arguments changed: ${currentArgs.size} %s in the current string, ${args.size} in the replacement`),
+        unwritten ? h('span', {}, 'What each one holds is in the description above. Replace is blocked until they match; plain %s fills them in order.')
+          : h('span', {}, 'Minecraft fills %s in order, so values would print in the wrong place. Replace is blocked until they match. %1$s-style positions can reorder them.')));
     }
     const filled = fill(value);
     preview.replaceChildren(h('div', { class: 'eyebrow' }, `Preview with sample values ${SAMPLES.slice(0, Math.max(currentArgs.size, 1)).join(', ')}`), filled);
@@ -517,12 +525,12 @@ async function langView(detail, params) {
     route();
   }));
   const isFinal = (k.ownerStatus || r.status) === 'final';
-  const accept = h('button', { type: 'button', class: 'btn lg ok', disabled: !STATE.batch || isFinal, onclick: () => guard(async () => {
+  const accept = h('button', { type: 'button', class: 'btn lg ok', disabled: !STATE.batch || isFinal || unwritten, title: unwritten ? 'Not written yet: there is no text to accept' : null, onclick: () => guard(async () => {
     await api('/api/lang/accept', { body: { file: r.file, key: k.key } });
     toast(`Accepted ${k.key} as final`);
     await refresh(); route();
-  }) }, icon(CHECK), isFinal ? 'Already final' : 'Accept as final');
-  const acceptAll = r.wildcard ? h('button', { type: 'button', class: 'btn', disabled: !STATE.batch || r.status === 'final', onclick: () => guard(async () => {
+  }) }, icon(CHECK), isFinal ? 'Already final' : unwritten ? 'Nothing to accept' : 'Accept as final');
+  const acceptAll = r.wildcard ? h('button', { type: 'button', class: 'btn', disabled: !STATE.batch || r.status === 'final' || detail.keys.some((x) => x.owner === r.id && x.placeholder), onclick: () => guard(async () => {
     await api('/api/lang/accept', { body: { row: r.id } });
     toast(`Accepted every key of ${r.key} as final`);
     await refresh(); route();
@@ -541,12 +549,16 @@ async function langView(detail, params) {
         h('h1', { class: 'path' }, k.key),
         h('div', { class: 'row-flex small dim', style: 'gap:6px 14px' }, chip(k.ownerStatus || r.status), h('span', {}, k.ownerOrigin || r.origin),
           r.items.map((i) => h('span', { class: 'mono' }, i)), h('span', { class: 'mono muted' }, `${r.file.split('/').pop()}:${k.line}`), ownerChip)),
-      h('section', { class: 'guidance' }, h('div', { class: 'eyebrow' }, 'Guidance · ledger row notes'), h('p', {}, r.notes),
-        r.wildcard ? h('p', { class: 'small dim', style: 'margin-top:6px' }, `Row ${r.key} covers ${detail.keys.length} keys; replacing or accepting one key while others share the row adds an exact-key row for it.`) : null),
+      r.wildcard ? h('p', { class: 'small dim' }, `Row ${r.key} covers ${detail.keys.length} keys; replacing or accepting one key while others share the row adds an exact-key row for it.`) : null,
+      unwritten ? h('div', { class: 'callout neutral' }, h('p', {}, h('strong', {}, 'Placeholder: not written yet. '),
+        'The game shows the key', k.needs ? ' and its arguments' : '', ' until you write this string; there is no earlier text to keep.')) : null,
       h('div', { class: 'stack' }, h('div', { class: 'row-flex' }, h('h2', { class: 'label' }, 'Current string'), h('span', { class: 'small muted' }, `${currentArgs.size} arguments`)),
-        h('div', { class: 'string' }, tokens(k.value)),
+        unwritten ? h('div', { class: 'string muted' }, h('span', { class: 'mono' }, k.value)) : h('div', { class: 'string' }, tokens(k.value)),
         k.base !== null && k.base !== k.value ? h('span', { class: 'small dim' }, 'On main: ', h('span', { class: 'mono' }, k.base)) : null),
-      h('div', { class: 'stack' }, h('div', { class: 'row-flex' }, h('label', { for: 'edit', class: 'small', style: 'font-weight:600;color:var(--f2)' }, 'Replacement'), argNote,
+      h('div', { class: 'stack' },
+        h('section', { class: 'guidance', 'aria-label': 'Description' }, h('div', { class: 'eyebrow' }, 'Description'), h('p', {}, description || 'No description.'),
+          k.needs ? h('p', { class: 'small dim', style: 'margin-top:6px' }, `Needs ${k.needs}`) : null),
+        h('div', { class: 'row-flex' }, h('label', { for: 'edit', class: 'small', style: 'font-weight:600;color:var(--f2)' }, unwritten ? 'String' : 'Replacement'), argNote,
         h('span', { class: 'grow' }), h('label', { for: 'st', class: 'small dim' }, 'status'), status),
         edit, problem, preview, langVocab.el),
       h('div', { class: 'stack', style: 'gap:6px' }, h('h2', { class: 'label' }, 'On save'), onSave),

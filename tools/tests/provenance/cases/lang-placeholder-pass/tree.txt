@@ -1,0 +1,2 @@
+# Key placeholders on placeholder rows, written text on draft and final rows: no failures.
+mod/src/main/resources/assets/remission/lang/en_us.json <- lang_placeholders_ok.json

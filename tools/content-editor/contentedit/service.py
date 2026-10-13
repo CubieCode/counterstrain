@@ -176,10 +176,10 @@ class Editor:
         ledger, base = self.ledger(), self.base_ledger()
         out, keys_by_file = [], {}
 
-        def file_keys(rel):  # parse each lang file once per listing, not once per `*` row
+        def file_values(rel):  # parse each lang file once per listing, not once per `*` row
             if rel not in keys_by_file:
                 try:
-                    keys_by_file[rel] = lang.LangFile.load(self.path(rel)).keys()
+                    keys_by_file[rel] = lang.LangFile.load(self.path(rel)).values
                 except (OSError, lang.LangError):
                     keys_by_file[rel] = None
             return keys_by_file[rel]
@@ -196,8 +196,14 @@ class Editor:
             item["new"] = before is None
             if row.wildcard:
                 item["overridden"] = sum(1 for r in exact if r.file == row.file and row.covers(r.key))
-                keys = file_keys(row.file)
-                item["keyCount"] = len(ledger.keys(row, keys)) if keys is not None else None
+                values = file_values(row.file) if item["kind"] == "lang" else None
+                item["keyCount"] = len(ledger.keys(row, list(values))) if values is not None else None
+            if item["kind"] == "lang" and row.status != "removed":
+                # Keys this row governs that still hold their key placeholder (not written yet).
+                values = file_values(row.file)
+                governed = [k for k in ledger.keys(row, list(values)) if ledger.owner(row.file, k) is row] \
+                    if values is not None and row.key is not None else []
+                item["placeholders"] = sum(1 for k in governed if lang.is_placeholder(k, values[k]))
             item["host"] = host.is_host_pattern(row.file)
             out.append(item)
         return out
@@ -274,6 +280,8 @@ class Editor:
                          "args": len(lang.format_args(value)), "owner": owner.path_id if owner else None,
                          "ownerStatus": owner.status if owner else None,
                          "ownerOrigin": owner.origin if owner else None,
+                         "description": owner.notes if owner else row.notes,
+                         "placeholder": lang.is_placeholder(key, value), "needs": lang.needs(value),
                          "line": line_of.get(key)})
         return keys
 
@@ -362,9 +370,16 @@ class Editor:
             raise EditorError(f"no ledger row covers `{file}:{key}`; add one first")
         self._live(owner)
         current = lang.LangFile.load(self.path(file))
+        unwritten = lang.is_placeholder(key, current.get(key))
+        if unwritten and isinstance(value, str) and lang.is_placeholder(key, value):
+            raise EditorError(f"`{key}` still holds its key placeholder; write the string first")
         try:
             edited = current.with_value(key, value)
         except lang.LangError as e:
+            if unwritten and lang.args_problem(current.get(key), value or ""):
+                needed = lang.needs(current.get(key))
+                raise EditorError(f"This string needs {needed or 'no arguments'} (got "
+                                  f"{lang.describe(lang.format_args(value))}). Description: {owner.notes}")
             raise EditorError(str(e))
         if edited.values[key] == current.values[key]:
             # Saving the AI text unchanged would record it as human-written; Accept as final is that path.
@@ -377,6 +392,17 @@ class Editor:
         edited.save(target)
         self._save_ledger(ledger)
         return ledger.find(f"{file}:{key}") or ledger.find(owner.path_id)
+
+    def _refuse_placeholders(self, ledger, row):
+        """Accepting keeps the text, so a row whose keys still hold their key placeholders has nothing to accept."""
+        if kind_of(row) != "lang" or row.key is None:
+            return
+        current = lang.LangFile.load(self.path(row.file))
+        unwritten = [k for k in ledger.keys(row, current.keys())
+                     if ledger.owner(row.file, k) is row and lang.is_placeholder(k, current.get(k))]
+        if unwritten:
+            raise EditorError(f"{len(unwritten)} key(s) of `{row.key}` are not written yet "
+                              f"({', '.join(unwritten[:3])}{'…' if len(unwritten) > 3 else ''}); write them before accepting")
 
     def _row_for_key(self, ledger, owner, file, key, all_keys, origin, status, notes=None):
         """The row a one-key change is recorded on: the owner itself unless it is a `*` row governing other keys."""
@@ -392,6 +418,8 @@ class Editor:
         """Accept a string (or every string of a row) unchanged as final, recording the reviewer and date."""
         ledger = self.ledger()
         note = self.accepted_note()
+        if row_id is not None:
+            self._refuse_placeholders(ledger, ledger.require(row_id))
         if row_id is not None:
             row = ledger.require(row_id)
             self._live(row)
@@ -410,9 +438,12 @@ class Editor:
         if owner.status == "final":
             raise EditorError(f"`{key}` is already final (row `{owner.key}`)")
         self._target(file, ledger)
-        all_keys = lang.LangFile.load(self.path(file)).keys()
+        current = lang.LangFile.load(self.path(file))
+        all_keys = current.keys()
         if key not in all_keys:
             raise EditorError(f"no key '{key}' in {file}")
+        if lang.is_placeholder(key, current.get(key)):
+            raise EditorError(f"`{key}` is not written yet (it holds its key placeholder); there is nothing to accept")
         row = self._row_for_key(ledger, owner, file, key, all_keys, owner.origin, "final",
                                 append_note(owner.notes, note))
         if row.path_id == owner.path_id:
@@ -455,6 +486,8 @@ class Editor:
         self._live(row)
         if kind_of(row) not in ("lang", "markdown", "properties"):
             raise EditorError(f"`{row_id}` is accepted through its upload page, not as text")
+        if kind_of(row) == "lang":
+            self._refuse_placeholders(ledger, row)
         if row.status == "final":
             raise EditorError(f"`{row.key or row.file}` is already final")
         self._target(row.file, ledger)
@@ -519,6 +552,8 @@ class Editor:
     def review(self, row_id, text):
         """Problems a local model points out in `text` (advisory; it never writes text)."""
         row = self.ledger().require(row_id)
+        if kind_of(row) == "lang" and row.key and not row.wildcard and lang.is_placeholder(row.key, text or ""):
+            raise EditorError("nothing to review: this is the key placeholder, not written text")
         try:
             return {"issues": self.llm.review(text, row.type, row.notes, glossary.section(self._design())),
                     "model": self.llm.model}

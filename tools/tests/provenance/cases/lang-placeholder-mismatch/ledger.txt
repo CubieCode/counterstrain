@@ -1,0 +1,7 @@
+# Test ledger for the lang-placeholder-mismatch case (tools/check-provenance.py --self-test).
+
+| Path / ID | Type | Origin | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.host_scan` | lang | procedural (key as value) | placeholder | English text on a placeholder row. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:block.remission.nidus` | lang | human (fixture) | final | Key placeholder accepted as final. |
+| `mod/src/main/resources/assets/remission/lang/en_us.json:item.remission.serum` | lang | procedural (key as value) | placeholder | Arguments out of order. |

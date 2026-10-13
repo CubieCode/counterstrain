@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Fail if an image, sound or model lacks a row in docs/CONTENT-PROVENANCE.md, or
-# a texture's placeholder marker disagrees with its row (content-provenance skill).
+# Fail if an image, sound, model or lang key lacks a row in docs/CONTENT-PROVENANCE.md, or
+# a texture's marker or a lang value disagrees with its row's status (content-provenance skill).
 # Usage: tools/check-provenance.sh [--verbose]
 #        tools/check-provenance.sh --self-test   # fixtures in tools/tests/provenance/
 #        tools/check-provenance.sh --help
