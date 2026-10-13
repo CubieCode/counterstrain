@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
+import net.minecraft.Util;
 import net.minecraft.client.CloudStatus;
 import net.minecraft.client.GraphicsStatus;
 import net.minecraft.client.KeyMapping;
@@ -52,8 +53,10 @@ import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ChunkTrackingView;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.util.TimeSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -88,6 +91,11 @@ final class SceneRunner {
     static final int RENDER_DISTANCE = 8;
     /** Client ticks the world must stay loaded and compiled before a shot (2 s). */
     static final int SETTLE_TICKS = 40;
+    /**
+     * Settled client ticks before a {@code map} shot (5 s): JourneyMap maps the loaded chunks on its own thread every 2 s
+     * ({@code autoMapPoll}), so this spans two of its passes after the last chunk arrived.
+     */
+    static final int MAP_SETTLE_TICKS = 100;
     static final String RESULT_FILE = "harness-result.txt";
     /** JourneyMap full-screen zoom for {@code map} shots: four times its default (512), so the land near the camera fills the screen. */
     static final int MAP_ZOOM = 2048;
@@ -103,6 +111,14 @@ final class SceneRunner {
      */
     private static final Map<Object, Object> JOURNEYMAP_ORIGINALS = new IdentityHashMap<>();
     private static final Set<Object> JOURNEYMAP_PROPERTIES = Collections.newSetFromMap(new IdentityHashMap<>());
+
+    /**
+     * Whether {@link Util}'s clock reads {@link #SCREEN_NANOS}: only while one of Remission's screens renders in a shot.
+     * A label wider than its button scrolls with that clock (lang values are their keys until the writing pass), so a
+     * shot would otherwise catch it at a different offset in every run.
+     */
+    private static volatile boolean screenClockFrozen;
+    private static final long SCREEN_NANOS = 0L;
 
     private enum Phase { WAIT_TITLE, LOADING, SETUP, SHOOTING, LEAVING, DONE }
 
@@ -135,6 +151,8 @@ final class SceneRunner {
         this.sceneIds = List.copyOf(sceneIds);
         this.outputRoot = outputRoot;
         this.timeoutNanos = TimeUnit.SECONDS.toNanos(timeoutSeconds);
+        TimeSource.NanoTimeSource clock = Util.timeSource;
+        Util.timeSource = () -> screenClockFrozen ? SCREEN_NANOS : clock.getAsLong();
         beginScene(0);
         Thread watchdog = new Thread(() -> {
             while (phase != Phase.DONE) {
@@ -254,7 +272,7 @@ final class SceneRunner {
                 openMap(mc);
                 openInventory(mc);
                 stableTicks = isSettled(mc) ? stableTicks + 1 : 0;
-                if (stableTicks >= SETTLE_TICKS) {
+                if (stableTicks >= (scene.shots().get(shotIndex).map() ? MAP_SETTLE_TICKS : SETTLE_TICKS)) {
                     captureRequested = true;
                 }
             }
@@ -549,7 +567,9 @@ final class SceneRunner {
 
     /**
      * Camera in place, every chunk in view loaded, no section compiles queued, and no {@code tick step} still running on
-     * the server or the client (a shot command may step the frozen world; the shot shows where the steps end).
+     * the server or the client (a shot command may step the frozen world; the shot shows where the steps end). A
+     * {@code map} shot also waits for every chunk the server sends the player, out to the edge of the view distance:
+     * JourneyMap maps each loaded chunk, so one still on its way would leave a gap at the map's edge.
      */
     private boolean isSettled(Minecraft mc) {
         boolean wantsScreen = scene.shots().get(shotIndex).wantsScreen();
@@ -576,6 +596,17 @@ final class SceneRunner {
                         && !mc.level.getChunkSource().hasChunk(center.x + dx, center.z + dz)) {
                     return false;
                 }
+            }
+        }
+        if (scene.shots().get(shotIndex).map()) {
+            int[] missing = {0};
+            ChunkTrackingView.of(center, RENDER_DISTANCE).forEach(chunk -> {
+                if (!mc.level.getChunkSource().hasChunk(chunk.x, chunk.z)) {
+                    missing[0]++;
+                }
+            });
+            if (missing[0] > 0) {
+                return false;
             }
         }
         return mc.levelRenderer.hasRenderedAllSections();
@@ -683,6 +714,24 @@ final class SceneRunner {
         mc.setScreen(new InventoryScreen(mc.player));
         inventoryOpened = true;
         RemissionHarness.LOGGER.info("Scene {}: opened the inventory for the tooltip of slot {}", sceneId, shot.tooltip().get());
+    }
+
+    /** Freezes {@link Util}'s clock while one of Remission's screens renders in a shot ({@link #screenClockFrozen}). */
+    @SubscribeEvent
+    public void onScreenRenderPre(ScreenEvent.Render.Pre event) {
+        screenClockFrozen = phase == Phase.SHOOTING
+                && event.getScreen().getClass().getName().startsWith("com.cubiecode.remission.");
+    }
+
+    @SubscribeEvent
+    public void onScreenRenderPost(ScreenEvent.Render.Post event) {
+        screenClockFrozen = false;
+    }
+
+    /** Never leaves the clock frozen past a frame, should a screen's render throw between Pre and Post. */
+    @SubscribeEvent
+    public void onRenderFramePre(RenderFrameEvent.Pre event) {
+        screenClockFrozen = false;
     }
 
     /**
