@@ -1,14 +1,17 @@
 package com.cubiecode.remission.purification;
 
+import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.api.CorruptionCause;
 import com.cubiecode.remission.corruption.Corruption;
 import java.util.List;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,7 +24,7 @@ import net.minecraft.world.item.context.UseOnContext;
 /**
  * {@code remission:handheld_purifier}: used on a block, cleanses the festered blocks and veins around it and lowers its
  * chunk's Strain level ({@link Purification#purify}); used on a host, lowers the host's Strain level. Each use that
- * changes something costs one durability; every use starts a short cooldown.
+ * changes something costs one durability; every use starts a short cooldown. Purifier fuel repairs it in an anvil (P7.3).
  */
 public class HandheldPurifierItem extends Item {
     /** Uses before it breaks. */
@@ -29,8 +32,16 @@ public class HandheldPurifierItem extends Item {
     /** Ticks between uses. */
     public static final int COOLDOWN_TICKS = 10;
 
+    /** Item tag {@code #remission:purifier_fuel}: repairs a handheld purifier in an anvil, and fuels the reclaimer (P7.4). */
+    public static final TagKey<Item> FUEL = TagKey.create(Registries.ITEM, Remission.id("purifier_fuel"));
+
     public HandheldPurifierItem(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public boolean isValidRepairItem(ItemStack stack, ItemStack repair) {
+        return repair.is(FUEL);
     }
 
     @Override

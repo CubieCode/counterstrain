@@ -18,6 +18,7 @@ import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.data.recipes.ShapelessRecipeBuilder;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
@@ -37,6 +38,7 @@ public final class RemissionRecipeProvider extends RecipeProvider {
         sequencing(output);
         synthesizing(output);
         countermeasureProtocols(output);
+        products(output);
     }
 
     /** The machines themselves, from vanilla parts, so they work in any pack (P7.2). */
@@ -115,7 +117,7 @@ public final class RemissionRecipeProvider extends RecipeProvider {
                 .save(output, "strain_sequence");
     }
 
-    /** Placeholder default until serums (P7.3): a strain sequence cultures host tissue in miasma. */
+    /** A strain sequence cultures host tissue in miasma; kept beside the synthesizer's products (P7.3). */
     private static void synthesizing(RecipeOutput output) {
         MachineRecipeBuilder.of(MachineKind.SYNTHESIZER, 4000, 200)
                 .ingredient(RemissionItems.STRAIN_SEQUENCE.get())
@@ -141,6 +143,29 @@ public final class RemissionRecipeProvider extends RecipeProvider {
                 .fluid(RemissionFluids.MIASMA.get(), 1000)
                 .result(CountermeasureProtocolItem.of(RemissionItems.COUNTERMEASURE_PROTOCOL.get(), hazard))
                 .save(output, "countermeasure_protocol_" + hazard.getPath());
+    }
+
+    /** The synthesizer's products (P7.3): serums, purifier fuel and unstable Counterstrain prototypes, each from a strain sequence. */
+    private static void products(RecipeOutput output) {
+        MachineRecipeBuilder.of(MachineKind.SYNTHESIZER, 4000, 200)
+                .ingredient(RemissionItems.STRAIN_SEQUENCE.get())
+                .ingredient(Items.GLASS_BOTTLE, 2)
+                .fluid(RemissionFluids.MIASMA.get(), 250)
+                .result(new ItemStack(RemissionItems.SERUM.get(), 2))
+                .save(output, "serum");
+        MachineRecipeBuilder.of(MachineKind.SYNTHESIZER, 4000, 200)
+                .ingredient(RemissionItems.STRAIN_SEQUENCE.get())
+                .ingredient(ItemTags.COALS, 4)
+                .fluid(RemissionFluids.MIASMA.get(), 250)
+                .result(new ItemStack(RemissionItems.PURIFIER_FUEL.get(), 4))
+                .save(output, "purifier_fuel");
+        MachineRecipeBuilder.of(MachineKind.SYNTHESIZER, 12000, 400)
+                .ingredient(RemissionItems.STRAIN_SEQUENCE.get())
+                .ingredient(RemissionItems.NIDUS_CORE.get())
+                .ingredient(Items.GLASS_BOTTLE)
+                .fluid(RemissionFluids.MIASMA.get(), 1000)
+                .result(new ItemStack(RemissionItems.COUNTERSTRAIN_PROTOTYPE.get()))
+                .save(output, "counterstrain_prototype");
     }
 
     private static ItemStack blockScan(Block block) {

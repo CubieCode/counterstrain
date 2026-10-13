@@ -1,6 +1,7 @@
 package com.cubiecode.remission.config;
 
 import com.cubiecode.remission.corruption.CorruptionState;
+import com.cubiecode.remission.serum.SerumSettings;
 import com.cubiecode.remission.countermeasure.BlockHazardMode;
 import com.cubiecode.remission.viralload.ViralLoadSettings;
 import com.cubiecode.remission.viralload.ViralLoadState;
@@ -85,6 +86,13 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.DoubleValue NIDUS_LASH_VIRAL_LOAD;
     public static final ModConfigSpec.DoubleValue NIDUS_LASH_KNOCKBACK;
     public static final ModConfigSpec.IntValue NIDUS_STRIKE_COOLDOWN_TICKS;
+    public static final ModConfigSpec.DoubleValue SERUM_VIRAL_LOAD_DROP;
+    public static final ModConfigSpec.IntValue SERUM_INOCULATION_TICKS;
+    public static final ModConfigSpec.DoubleValue SERUM_INOCULATION_FACTOR;
+    public static final ModConfigSpec.IntValue PROTOTYPE_RADIUS;
+    public static final ModConfigSpec.IntValue PROTOTYPE_STEP;
+    public static final ModConfigSpec.DoubleValue PROTOTYPE_BACKFIRE_CHANCE;
+    public static final ModConfigSpec.DoubleValue PROTOTYPE_BACKFIRE_VIRAL_LOAD;
 
     static {
         BUILDER.push("hosts");
@@ -380,6 +388,35 @@ public final class RemissionCommonConfig {
                 .comment("Game ticks after a player's strike during which their further strikes on that nidus deal nothing, as a mob's",
                         "invulnerability after a hit (10). Clicking faster never beats fully charged swings.")
                 .defineInRange("strikeCooldownTicks", 10, 0, 200);
+        BUILDER.pop();
+
+        BUILDER.push("serums");
+        SERUM_VIRAL_LOAD_DROP = BUILDER
+                .comment("Viral load a serum takes off at once when drunk.")
+                .defineInRange("viralLoadDrop", 40.0, 0.0, 100.0);
+        SERUM_INOCULATION_TICKS = BUILDER
+                .comment("Game ticks of the inoculated effect a serum gives (0 gives none).")
+                .defineInRange("inoculationTicks", 3600, 0, 72000);
+        SERUM_INOCULATION_FACTOR = BUILDER
+                .comment("Fraction of viral load gain an inoculated player still takes (1 = no protection). At least 0.1:",
+                        "inoculation slows viral load, it never stops it.")
+                .defineInRange("inoculationFactor", 0.5, SerumSettings.MIN_INOCULATION_FACTOR, 1.0);
+        BUILDER.pop();
+
+        BUILDER.push("prototypes");
+        PROTOTYPE_RADIUS = BUILDER
+                .comment("Blocks around where a thrown Counterstrain prototype lands whose festered blocks and veins it cleanses (a cube).")
+                .defineInRange("radius", 4, 0, 8);
+        PROTOTYPE_STEP = BUILDER
+                .comment("Strain level the chunk where a Counterstrain prototype lands loses.")
+                .defineInRange("step", 40, 0, CorruptionState.MAX_LEVEL);
+        PROTOTYPE_BACKFIRE_CHANCE = BUILDER
+                .comment("Chance that a Counterstrain prototype is unstable and backfires: it cleanses nothing and releases a",
+                        "miasma cloud where it lands.")
+                .defineInRange("backfireChance", 0.25, 0.0, 1.0);
+        PROTOTYPE_BACKFIRE_VIRAL_LOAD = BUILDER
+                .comment("Viral load a backfiring prototype gives at once to every player within radius blocks of where it lands.")
+                .defineInRange("backfireViralLoad", 20.0, 0.0, 100.0);
         BUILDER.pop();
     }
 

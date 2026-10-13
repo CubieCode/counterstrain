@@ -574,9 +574,10 @@ Goals: the Strain becomes a resource processed by machines into tools for the fi
 
 ### P7.3: Serums, purifier fuel, Counterstrain prototypes and KubeJS integration
 
-- Status: `todo`
-- Owner:
-- PR:
+- Status: `review`
+- Owner: feat/p7.3-serums-kubejs
+- PR: https://github.com/CubieCode/counterstrain/pull/85
+- Validation: 202 gametests incl. SerumTests (dose and inoculation, milk, fuel repair, prototype cleanse, backfire and throw, the three synthesizer recipes, KubeJS schema fields); KubeJS dev run of `.agents/skills/kubejs-scripting/examples/remission_machine_recipes.js` editing each recipe type (4 added, 3 removed, 3 modified, 0 failed); `tech/serums` scene from the RTX 4070 reviewed, references committed.
 - Depends on: P7.2, P5.2
 - Scope: Serums, purifier fuel and unstable Counterstrain prototypes and their effects; verify KubeJS can add/remove/replace Remission recipes (schema registration if needed).
 - Acceptance: A sample KubeJS script edits each recipe type in a dev run; documented in kubejs-scripting. Ledger updated; placeholders marked.

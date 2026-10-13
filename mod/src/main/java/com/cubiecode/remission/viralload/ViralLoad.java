@@ -9,6 +9,8 @@ import com.cubiecode.remission.network.ViralLoadPayload;
 import com.cubiecode.remission.quest.QuestProgress;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionEntityTypes;
+import com.cubiecode.remission.serum.SerumSettings;
+import com.cubiecode.remission.serum.Serums;
 import com.cubiecode.remission.surge.MiasmaCloud;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -48,9 +50,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * {@link RemissionAttachments#VIRAL_LOAD} attachment. Every {@link ViralLoadSettings#INTERVAL_TICKS} ticks of a player
  * in survival or adventure, {@link #update} adds the gain from festering land (falling off with height above the
  * ground), water in festering land and miasma clouds, or takes off the decay when nothing adds any, then applies the
- * debuffs and damage for the new value. Drinking a water bottle in festering land adds a dose at once. Server
- * authoritative; the owner's client gets {@link ViralLoadPayload}. Updates skip while the level's ticks are frozen
- * ({@code /tick freeze}), so a frozen world keeps every player's viral load.
+ * debuffs and damage for the new value. An inoculated player (a serum, P7.3) takes only part of the gain. Drinking a
+ * water bottle in festering land adds a dose at once. Server authoritative; the owner's client gets
+ * {@link ViralLoadPayload}. Updates skip while the level's ticks are frozen ({@code /tick freeze}), so a frozen world
+ * keeps every player's viral load.
  */
 @EventBusSubscriber(modid = Remission.MOD_ID)
 public final class ViralLoad {
@@ -114,6 +117,8 @@ public final class ViralLoad {
         double gain = exposed ? gainPerMinute(player, settings) : 0.0;
         float load = get(player);
         if (gain > 0) {
+            // An inoculated player (a serum, P7.3) takes a fraction of the gain, never none: exposure still rises.
+            gain *= Serums.gainFactor(player, SerumSettings.fromConfig());
             set(player, (float) (load + gain * ticks / TICKS_PER_MINUTE), ViralLoadState.Trend.RISING,
                     ViralLoadChangedEvent.Cause.EXPOSURE);
         } else if (load > 0 && settings.decay() > 0) {
@@ -205,8 +210,20 @@ public final class ViralLoad {
     }
 
     /** Whether the player can gain viral load and take its debuffs: alive, and in survival or adventure. */
-    static boolean isExposed(ServerPlayer player) {
+    public static boolean isExposed(ServerPlayer player) {
         return player.isAlive() && !player.isCreative() && !player.isSpectator();
+    }
+
+    /**
+     * Adds a dose of viral load at once (a water bottle, a backfiring prototype) to a player who can gain it (enabled,
+     * {@link #isExposed}, not a fake player). Returns whether it was added.
+     */
+    public static boolean addDose(ServerPlayer player, double amount, ViralLoadChangedEvent.Cause cause) {
+        if (amount <= 0 || player instanceof FakePlayer || !isExposed(player) || !ViralLoadSettings.fromConfig().enabled()) {
+            return false;
+        }
+        set(player, (float) (get(player) + amount), ViralLoadState.Trend.RISING, cause);
+        return true;
     }
 
     /** Whether {@code stack} is a water bottle (a potion item holding plain water). */

@@ -1,6 +1,7 @@
 package com.cubiecode.remission.registry;
 
 import com.cubiecode.remission.Remission;
+import com.cubiecode.remission.counterstrain.ThrownPrototype;
 import com.cubiecode.remission.revenant.Revenant;
 import com.cubiecode.remission.surge.MiasmaCloud;
 import java.util.function.Supplier;
@@ -37,6 +38,14 @@ public final class RemissionEntityTypes {
                     .fireImmune()
                     .clientTrackingRange(8)
                     .build(Remission.id("revenant").toString()));
+
+    /** A thrown Counterstrain prototype (P7.3), sized and tracked like a thrown splash potion. */
+    public static final Supplier<EntityType<ThrownPrototype>> COUNTERSTRAIN_PROTOTYPE = ENTITY_TYPES.register(
+            "counterstrain_prototype", () -> EntityType.Builder.<ThrownPrototype>of(ThrownPrototype::new, MobCategory.MISC)
+                    .sized(0.25F, 0.25F)
+                    .clientTrackingRange(4)
+                    .updateInterval(10)
+                    .build(Remission.id("counterstrain_prototype").toString()));
 
     private RemissionEntityTypes() {
     }

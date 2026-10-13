@@ -24,5 +24,6 @@ public final class RemissionRegistries {
         RemissionEntityTypes.ENTITY_TYPES.register(modBus);
         RemissionMenus.MENU_TYPES.register(modBus);
         RemissionSounds.SOUND_EVENTS.register(modBus);
+        RemissionMobEffects.MOB_EFFECTS.register(modBus);
     }
 }
