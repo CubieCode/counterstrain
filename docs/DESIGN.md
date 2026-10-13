@@ -98,7 +98,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 
 ### Hosts (state, not entities)
 
-- A Data Attachment on `LivingEntity` holds corruption level and stage (and later, `variant`). Synced to tracking clients through NeoForge 21.1's built-in attachment sync (decided in P2.1; ARCHITECTURE).
+- A Data Attachment on `LivingEntity` holds corruption level, stage and, since P7.5, the `variant` the host carries. Synced to tracking clients through NeoForge 21.1's built-in attachment sync (decided in P2.1; ARCHITECTURE).
 - **Visuals:** a render layer added to every living-entity renderer in `EntityRenderersEvent.AddLayers` re-renders the mob's own model with a Strain overlay (tint, emissive veins, particles by stage).
 - **Behaviour:** on `EntityJoinLevelEvent`, host `Mob`s lose passive goals (breed, tempt, flee, follow parent) and gain targeting and melee/ranged attack goals. `Attributes.ATTACK_DAMAGE` (and anything else attacks need) is added to every entity type via `EntityAttributeModificationEvent`. Fallbacks for brain-based mobs (villagers, piglins, axolotls), flying and swimming mobs.
 - **Infection:** a kill by a host, touching festered blocks (contact infection, quick), or prolonged time in festering land (exposure, slow) infects the victim. The `convert_to` override can replace the victim with another entity type.

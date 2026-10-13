@@ -133,20 +133,20 @@ All lanes run on foundry, sharing CPU, RAM and one GPU (client runs queue on a l
 - P4.8 (follow-up to P4.6 and P4.7) runs alone or before wave F; it owns the vein block and the contact source and must merge before P5.2.
 - P4.9 (follow-up to P4.6 and P5.2) runs alone or alongside items that do not touch `world/`, the `[spread]` config or remission-data-formats; it must merge before P11.2.
 - P4.10 (follow-up to P4.3) is done; it owned `NidusBlock`, the nidus fight, the nidus API events and the `nidus_destroyed` trigger, which P4.13 and P4.14 append to.
-- P5.5 (follow-up to P5.2) can join any wave or run alone; it owns `RemissionZones` and the `[remission_zones]` config.
+- P5.5 (follow-up to P5.2) is done; it owned `RemissionZones` and the `[remission_zones]` config.
 - P4.11 (follow-up to P4.2) is done; it owned the `remission:fester` biome's effects, the fester sounds and client fog in `client/`.
 - P4.6 and P4.7 (follow-ups to P4.2 and P3.3) can join wave E with P4.3 or run alone. P4.6 owns `world/FesteringStages` and `world/FesterMaps` and runs before P5.2; P4.7 owns `infection/`. With P4.3 in the same wave, appoint one owner for config specs and one for remission-data-formats.
 - F: P5.1 + P5.2 + P7.1. P5.1 owns the player attachment and HUD; one remission-data-formats owner (P5.2).
 - P5.3 → P5.4 serially, after P5.1. P5.3 owns the revenant entity, `integration/curios/` and its build-file entries; P5.4 owns its payload and coordinates `integration/journeymap/` with P8.2 (never in the same wave).
-- G: P7.2 → P7.3 → P7.4 → P7.5 serially (P7.2 to P7.4 done) (recipe types, KubeJS schemas and the variant registry are contracts), after P8.1 (done; later items append their triggers and stats to its contracts). P7.4 and P7.5 were added after the phase was planned.
+- G: P7.2 → P7.3 → P7.4 → P7.5 serially (all done) (recipe types, KubeJS schemas and the variant registry are contracts), after P8.1 (done; later items append their triggers and stats to its contracts). P7.4 and P7.5 were added after the phase was planned.
 - H: P8.2 + P9.1, then P8.3 + P9.2. P8.2 owns command syntax; P8.3 owns the KubeJS binding contract.
-- P8.4 (playable slice) runs alone after P4.9, P4.10, P4.11, P5.3, P5.5, P7.4, P7.5 and P8.2, and before wave I; it owns `pack/config/remission-common.toml` and may add Mekanism Generators to the pack ahead of P10.1, owning pack membership while it runs.
+- P8.4 (playable slice) runs alone after P4.9, P4.10, P4.11, P5.3, P5.5, P7.4, P7.5 and P8.2 (all done but P4.9), and before wave I; it owns `pack/config/remission-common.toml` and may add Mekanism Generators to the pack ahead of P10.1, owning pack membership while it runs.
 - I: P10.1 alone (owns `pack/pack.toml`, `pack/mods/` and the build-file entries for every mod-side integration).
 - J: P10.2 + P10.3 + P10.4 + P10.5, after P10.1. Each owns its `integration/<modid>/` packages and its pack scripts (`pack/kubejs/**/integrations/<modid>.js`); one remission-data-formats owner per wave (P10.2); none touches build files or `pack/mods/`.
 - K: P10.6 + P10.7 + P10.8. P10.6 extends `integration/create/` after P10.2 has merged; P10.8 owns `integration/ballistix/`.
 - L: P11.1 → P11.4 → P11.5 → P11.2 → P11.3 serially (one pack-content owner). P11.4 and P11.5 were added after the phase was planned, so their numbers do not follow the run order.
 - P4.12 (team query) runs before P5.3 and P6.4, alone or in any wave without another build-file owner; it owns `integration/ftbteams/` and the team query in `api/`.
-- P4.13 → P4.14 serially after P4.10 (done; both append to the nidus and surge code and the `[nidi]` config).
+- P4.13 → P4.14 serially after P4.10 (P4.13 done; P4.14 appends to the same nidus and surge code and the `[nidi]` config).
 - P4.15 (animated nidus model, after P4.10) runs alone or before P4.13; it owns the nidus renderer and assets and adds GeckoLib to the build files.
 - P4.16 (festering keeps what it covers, after P4.8 and P5.2) runs alone or alongside items that touch neither `world/` festering, `purification/` nor remission-data-formats; it removes two blocks from the registry, so it is that wave's registry owner, and must merge before P4.9.
 - P5.7 (countermeasures) is done, ahead of P5.6, P7.7, P7.8, P10.2 and P10.6, which add hazards to its contracts (the countermeasure attachment, the hazard event and query, the protocol item); it retrofitted P5.2's contact viral load as hazard `remission:contact`.
