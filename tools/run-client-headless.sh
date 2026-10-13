@@ -38,6 +38,9 @@
 #   screenshots/     --scene only: <shot>.png and harness-result.txt
 #   capture.mp4      --record only: the clip (capture.log holds ffmpeg output)
 #   result.txt       renderer verdict and exit reason
+# Run folders older than 7 days are deleted at the start of each run, keeping
+# the 30 newest and latest (COUNTERSTRAIN_RUNS_KEEP_DAYS, COUNTERSTRAIN_RUNS_KEEP;
+# 0 keeps everything). It happens under the GPU lock, so no run is writing one.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
@@ -131,6 +134,7 @@ if ! flock -n 9; then
   flock -w "$gpu_wait" 9 || die "timed out waiting for the GPU lock"
 fi
 
+prune_runs "$local_dir/runs" client-
 run_dir="$local_dir/runs/client-$(date -u +%Y%m%dT%H%M%SZ)"
 fb_dir="$run_dir/.xvfb"
 mkdir -p "$fb_dir"
