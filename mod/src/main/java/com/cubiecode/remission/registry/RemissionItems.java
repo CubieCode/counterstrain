@@ -80,6 +80,9 @@ public final class RemissionItems {
     public static final DeferredItem<PrototypeItem> COUNTERSTRAIN_PROTOTYPE = ITEMS.registerItem("counterstrain_prototype",
             PrototypeItem::new, new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON));
 
+    // Reclaimers (P7.4)
+    public static final DeferredItem<BlockItem> RECLAIMER = ITEMS.registerSimpleBlockItem(RemissionBlocks.RECLAIMER);
+
     private RemissionItems() {
     }
 }

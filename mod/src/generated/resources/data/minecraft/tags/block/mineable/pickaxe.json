@@ -5,6 +5,7 @@
     "remission:quarantine_pylon",
     "remission:analyzer",
     "remission:sequencer",
-    "remission:synthesizer"
+    "remission:synthesizer",
+    "remission:reclaimer"
   ]
 }
