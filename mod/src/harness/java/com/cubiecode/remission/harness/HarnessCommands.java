@@ -12,6 +12,8 @@ import com.cubiecode.remission.purification.Purification;
 import com.cubiecode.remission.purification.PurificationSettings;
 import com.cubiecode.remission.purification.ReclaimerBlockEntity;
 import com.cubiecode.remission.purification.ReclaimerSettings;
+import com.cubiecode.remission.purification.RemissionZoneSettings;
+import com.cubiecode.remission.purification.RemissionZones;
 import com.cubiecode.remission.registry.RemissionAttachments;
 import com.cubiecode.remission.registry.RemissionItems;
 import com.cubiecode.remission.research.Bestiary;
@@ -79,7 +81,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * {@code harness revenant <pos> <owner> <level> <yaw>} raises a revenant of the owner player there, through the
  * revenant code, wearing copies of the owner's armour and main-hand item, at that Strain level and facing (P5.3).
  * {@code harness nidus <pos> <vitality>} strikes a nidus down to that percent of its vitality through the fight code, as
- * the nearest player, so the thresholds it passes start their surges (P4.10).
+ * the nearest player, so the thresholds it passes start their surges (P4.10). {@code harness regrow} regrows every
+ * column of every loaded chunk in remission at once, as the budgeted regrowth would over {@code regrowthTicks} (P5.5).
  */
 final class HarnessCommands {
     private static final SimpleCommandExceptionType NO_HOSTS =
@@ -178,6 +181,8 @@ final class HarnessCommands {
                                                 IntegerArgumentType.getInteger(context, "level")))))))
                 .then(Commands.literal("purify").executes(context -> Purification.engine(context.getSource().getLevel())
                         .settleNow(PurificationSettings.fromConfig())))
+                .then(Commands.literal("regrow").executes(context -> RemissionZones.engine(context.getSource().getLevel())
+                        .regrowNow(RemissionZoneSettings.fromConfig())))
                 .then(Commands.literal("reclaim").then(Commands.argument("pos", BlockPosArgument.blockPos())
                         .then(Commands.argument("operations", IntegerArgumentType.integer(1, 100_000))
                                 .executes(context -> reclaim(context.getSource().getLevel(),
