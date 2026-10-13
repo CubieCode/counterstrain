@@ -1008,8 +1008,8 @@ Goals: quests and scripts can observe and drive Remission.
 
 ### P8.3: KubeJS event bindings
 
-- Status: `todo`
-- Owner:
+- Status: `in-progress`
+- Owner: feat/p8.3-kubejs-event-bindings
 - PR:
 - Depends on: P4.4, P7.3
 - Scope: Expose the public API events (and queries) to KubeJS scripts without a hard KubeJS dependency (an optional `integration/kubejs/` plugin registering an event group, guarded by `ModList`), with a sample server script under `pack/kubejs/server_scripts/` that reacts to a nidus being destroyed and cancels spread into a chunk; documented in kubejs-scripting and remission-data-formats.
