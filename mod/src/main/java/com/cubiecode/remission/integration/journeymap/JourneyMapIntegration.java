@@ -1,6 +1,7 @@
 package com.cubiecode.remission.integration.journeymap;
 
 import com.cubiecode.remission.network.FesteringMapCache;
+import com.cubiecode.remission.network.HazardClientCache;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import journeymap.api.v2.client.IClientAPI;
@@ -13,7 +14,8 @@ import org.jetbrains.annotations.Nullable;
  * Optional JourneyMap integration, client only (P8.2): map layers drawn through JourneyMap's client API. The client
  * entrypoint calls {@link #init()} only when {@code ModList} reports JourneyMap; {@link RemissionJourneyMapPlugin} hands
  * over the API. Each {@link MapLayer} is updated on client ticks once the API is there. Layers: {@link FesteringOverlay}
- * (festering chunks by stage, and remission zones). Later map features add their layer in {@link #init()}.
+ * (festering chunks by stage, and remission zones) and {@link NoticeWaypoints} (temporary waypoints for hazard notices,
+ * P5.8). Later map features add their layer in {@link #init()}.
  */
 public final class JourneyMapIntegration {
     public static final String MOD_ID = "journeymap";
@@ -34,6 +36,9 @@ public final class JourneyMapIntegration {
     public static void init() {
         FesteringMapCache.enable();
         LAYERS.add(new FesteringOverlay());
+        NoticeWaypoints waypoints = new NoticeWaypoints();
+        HazardClientCache.addListener(waypoints);
+        LAYERS.add(waypoints);
         NeoForge.EVENT_BUS.addListener(JourneyMapIntegration::onClientTick);
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> FesteringMapCache.clear());
     }

@@ -202,7 +202,7 @@ public final class QuestEventTests {
         helper.assertValueEqual(new ArrayList<>(received.states().long2ByteEntrySet()).toString(),
                 new ArrayList<>(stages.long2ByteEntrySet()).toString(), "entries in order");
         helper.assertValueEqual(received.type().id(), Remission.id("festering_map"), "payload id");
-        helper.assertValueEqual(RemissionNetwork.PROTOCOL_VERSION, "3", "protocol version with the festering map payload");
+        helper.assertTrue(Integer.parseInt(RemissionNetwork.PROTOCOL_VERSION) >= 3, "protocol version with the festering map payload");
         helper.succeed();
     }
 

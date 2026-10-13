@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -81,6 +82,20 @@ public final class Countermeasures {
             }
         }
         return false;
+    }
+
+    /**
+     * Every countermeasure the player with UUID {@code player} (online or not) or anyone on their team holds, from the
+     * records, sorted (P5.8's hazards tab). Server thread.
+     */
+    public static Set<ResourceLocation> teamCountermeasures(MinecraftServer server, UUID player) {
+        Set<ResourceLocation> held = new TreeSet<>();
+        for (Map.Entry<UUID, CountermeasureSet> entry : CountermeasureRecords.get(server).players().entrySet()) {
+            if (entry.getKey().equals(player) || TeamQueries.areTeammates(server, player, entry.getKey())) {
+                held.addAll(entry.getValue().hazards());
+            }
+        }
+        return held;
     }
 
     /**

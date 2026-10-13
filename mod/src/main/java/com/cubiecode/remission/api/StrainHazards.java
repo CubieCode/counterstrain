@@ -2,6 +2,7 @@ package com.cubiecode.remission.api;
 
 import com.cubiecode.remission.Remission;
 import com.cubiecode.remission.countermeasure.Countermeasures;
+import com.cubiecode.remission.notice.HazardStatus;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -90,5 +91,31 @@ public final class StrainHazards {
      */
     public static int revoke(ServerPlayer player, ResourceLocation hazard) {
         return Countermeasures.revoke(player, hazard);
+    }
+
+    /**
+     * Declares a hazard so the bestiary's hazards tab (P5.8) lists it while it applies to the player. Remission declares
+     * its own built hazards; an integration declares its own once, at startup, and the declaration lasts for the game
+     * session. Hazards reported through
+     * {@link HazardNotices} and hazards a team holds a countermeasure for are listed without it. Any thread.
+     */
+    public static void declare(ResourceLocation hazard) {
+        HazardStatus.declare(hazard);
+    }
+
+    /**
+     * Every declared hazard and every hazard reported through {@link HazardNotices} on the running server (forgotten when
+     * it stops), sorted (P5.8). Any thread.
+     */
+    public static Set<ResourceLocation> declared() {
+        return HazardStatus.declared();
+    }
+
+    /**
+     * Every countermeasure the player with UUID {@code player} (online or not) or anyone on their team holds, sorted
+     * (P5.8). Server thread.
+     */
+    public static Set<ResourceLocation> teamCountermeasures(MinecraftServer server, UUID player) {
+        return Countermeasures.teamCountermeasures(server, player);
     }
 }
