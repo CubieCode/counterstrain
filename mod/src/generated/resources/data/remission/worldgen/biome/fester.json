@@ -2,26 +2,9 @@
   "carvers": {},
   "downfall": 0.4,
   "effects": {
-    "additions_sound": {
-      "sound": "remission:ambient.fester.additions",
-      "tick_chance": 0.008
-    },
-    "ambient_sound": "remission:ambient.fester.loop",
     "fog_color": 10852272,
     "foliage_color": 10520728,
     "grass_color": 11575422,
-    "mood_sound": {
-      "block_search_extent": 8,
-      "offset": 2.0,
-      "sound": "remission:ambient.fester.mood",
-      "tick_delay": 3000
-    },
-    "music": {
-      "max_delay": 9600,
-      "min_delay": 2400,
-      "replace_current_music": true,
-      "sound": "remission:music.fester"
-    },
     "sky_color": 9405603,
     "water_color": 6179438,
     "water_fog_color": 2826038

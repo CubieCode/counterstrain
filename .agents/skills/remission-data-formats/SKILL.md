@@ -723,7 +723,7 @@ Logs, leaves and flowers have no default entry: trees keep their wood type and s
 
 Changed in P4.6: P4.2 shipped one `#minecraft:base_stone_overworld` entry (stone, granite, diorite, andesite, tuff and deepslate to festered stone). It is now the two ore-replaceable tags above, so deepslate gets its own block, tuff festers into festered deepslate, and a modded stone that is only in `#minecraft:base_stone_overworld` no longer festers by default (add it to one of the two tags or give it an entry). A pack that removed `#minecraft:base_stone_overworld` removes the two new keys instead. Where several entries cover a block, the one in the file loaded last (datapack order) wins, whether it names the block or a tag; within one file, list a block only once (directly or through one tag), because the order of a file's values is not defined.
 
-**Biome `remission:fester`** (`data/remission/worldgen/biome/fester.json`, datagen `RemissionBiomeProvider`; lang `biome.remission.fester`): land only flips to it after generating, so it has no features or carvers. Rain, temperature 0.8, grass colour `#B0A07E`, foliage `#A08898`, water `#5E4A6E` (fog `#2B1F36`), sky `#8F84A3`, fog `#A597B0`, cave mood sound; spawns as plains (farm animals and the common monsters). Packs may override the file (same id), but must keep the id: it is the fallback.
+**Biome `remission:fester`** (`data/remission/worldgen/biome/fester.json`, datagen `RemissionBiomeProvider`; lang `biome.remission.fester`): land only flips to it after generating, so it has no features or carvers. Rain, temperature 0.8, grass colour `#B0A07E`, foliage `#A08898`, water `#5E4A6E` (fog `#2B1F36`), sky `#8F84A3`, fog `#A597B0`, no sounds or music (until the art pass); spawns as plains (farm animals and the common monsters). Packs may override the file (same id), but must keep the id: it is the fallback.
 
 **Data map `remission:fester_variant`** (on `minecraft:worldgen/biome`), `data/<ns>/data_maps/worldgen/biome/fester_variant.json`: the fester biome a source biome flips to. Remission ships no entries (every biome flips to `remission:fester`); the pack uses it for Biomes O' Plenty and Terralith (P10.7). Same reload rules as `festers_into` (chunks already flipped keep their biome).
 
@@ -747,15 +747,11 @@ Fester biomes are ordinary datapack biomes (`data/<ns>/worldgen/biome/<id>.json`
 ```json
 "effects": {
   "fog_color": 10852272, "sky_color": 9405603, "water_color": 6179438, "water_fog_color": 2826038,
-  "grass_color": 11575422, "foliage_color": 10520728,
-  "ambient_sound": "remission:ambient.fester.loop",
-  "mood_sound": { "sound": "remission:ambient.fester.mood", "tick_delay": 3000, "block_search_extent": 8, "offset": 2.0 },
-  "additions_sound": { "sound": "remission:ambient.fester.additions", "tick_chance": 0.008 },
-  "music": { "sound": "remission:music.fester", "min_delay": 2400, "max_delay": 9600, "replace_current_music": true }
+  "grass_color": 11575422, "foliage_color": 10520728
 }
 ```
 
-Sound events (`RemissionSounds`; files and subtitles in `assets/remission/sounds.json`, placeholders until P12.2): `remission:ambient.fester.loop` (looping drone), `remission:ambient.fester.mood` (cave-style mood, subtitle `subtitles.remission.ambient.fester.mood`), `remission:ambient.fester.additions` (wet, organic one-shots, subtitle `subtitles.remission.ambient.fester.additions`) and `remission:music.fester` (streamed). A fester track still playing when the player leaves festering land stops (the client makes the next music replace it), whatever the new biome's `replace_current_music`. A resource pack replaces their sounds through `sounds.json` (`"replace": true`). The client's stage fog is not biome data: it follows the chunk's festering stage in any biome (variant or not) and the last stage in `remission:fester` itself; a variant biome gets the stage fog from its chunk's stage, which the server sends with the chunk (`remission:festering_map`, above). Client config `config/remission-client.toml`, `[atmosphere] festerFog` (0 to 1, default 1) scales how much the stage fog thickens; 0 turns it off, and the biome's own colours stay.
+The biome has no ambient loop, mood sound, additions or music: P4.11's placeholders were removed after playtesting (2026-10-14) and the art pass (P12.2) supplies real ones; a pack adds its own through its biome file and `sounds.json`. One sound event remains (`RemissionSounds`; file and subtitle in `assets/remission/sounds.json`, a placeholder until P12.2): `remission:ambient.fester.additions` (wet, organic one-shots, subtitle `subtitles.remission.ambient.fester.additions`), which the nidus makes now and then; a resource pack replaces it through `sounds.json` (`"replace": true`). The client's stage fog is not biome data: it follows the chunk's festering stage in any biome (variant or not) and the last stage in `remission:fester` itself; a variant biome gets the stage fog from its chunk's stage, which the server sends with the chunk (`remission:festering_map`, above). Client config `config/remission-client.toml`, `[atmosphere] festerFog` (0 to 1, default 1) scales how much the stage fog thickens; 0 turns it off, and the biome's own colours stay.
 
 ## Festering veins and contact infection (built, P4.8)
 

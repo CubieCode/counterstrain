@@ -125,7 +125,6 @@
   "commands.remission.countermeasure.list.none": "commands.remission.countermeasure.list.none %1$s",
   "commands.remission.countermeasure.list.success": "commands.remission.countermeasure.list.success %1$s %2$s %3$s",
   "commands.remission.countermeasure.list.entry": "commands.remission.countermeasure.list.entry %1$s %2$s",
-  "subtitles.remission.ambient.fester.mood": "subtitles.remission.ambient.fester.mood",
   "subtitles.remission.ambient.fester.additions": "subtitles.remission.ambient.fester.additions",
   "remission.configuration.atmosphere": "remission.configuration.atmosphere",
   "remission.configuration.festerFog": "remission.configuration.festerFog",

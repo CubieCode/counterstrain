@@ -1,30 +1,10 @@
 {
-  "ambient.fester.loop": {
-    "sounds": [
-      "remission:ambient/fester/loop"
-    ]
-  },
-  "ambient.fester.mood": {
-    "subtitle": "subtitles.remission.ambient.fester.mood",
-    "sounds": [
-      "remission:ambient/fester/mood1",
-      "remission:ambient/fester/mood2"
-    ]
-  },
   "ambient.fester.additions": {
     "subtitle": "subtitles.remission.ambient.fester.additions",
     "sounds": [
       "remission:ambient/fester/additions1",
       "remission:ambient/fester/additions2",
       "remission:ambient/fester/additions3"
-    ]
-  },
-  "music.fester": {
-    "sounds": [
-      {
-        "name": "remission:music/fester",
-        "stream": true
-      }
     ]
   }
 }
