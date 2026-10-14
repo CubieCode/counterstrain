@@ -31,3 +31,6 @@ mod/src/generated/**/.cache/
 pack/kubejs/probe/
 pack/.probe/
 pack/local/
+
+# Per-user Claude Code settings (permissions); the shared .claude/ files stay committed
+.claude/settings.local.json
