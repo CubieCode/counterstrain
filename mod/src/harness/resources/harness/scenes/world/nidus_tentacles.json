@@ -1,0 +1,209 @@
+{
+  "time": 6000,
+  "weather": "clear",
+  "setup": [
+    "gamerule sendCommandFeedback false",
+    "difficulty peaceful",
+    "gamemode creative @a",
+    "harness fester -16 -60 -32 31 -60 31 60",
+    "setblock 0 -60 0 remission:nidus",
+    "setblock 16 -60 0 remission:nidus",
+    "tp @a 0.5 -60 -10 0 8"
+  ],
+  "shots": [
+    {
+      "name": "rest_hitboxes",
+      "camera": {
+        "pos": [
+          0.5,
+          -58.8,
+          -5.5
+        ],
+        "yaw": 0.0,
+        "pitch": 15.0
+      },
+      "hitboxes": true,
+      "commands": [
+        "tick step 20"
+      ]
+    },
+    {
+      "name": "hit_flash",
+      "camera": {
+        "pos": [
+          0.5,
+          -58.8,
+          -5.5
+        ],
+        "yaw": 0.0,
+        "pitch": 15.0
+      },
+      "commands": [
+        "harness nidus 0 -60 0 90",
+        "tick step 1"
+      ]
+    },
+    {
+      "name": "flinch",
+      "camera": {
+        "pos": [
+          0.5,
+          -58.8,
+          -5.5
+        ],
+        "yaw": 0.0,
+        "pitch": 15.0
+      },
+      "commands": [
+        "tick step 20",
+        "harness nidus 0 -60 0 tentacle 0",
+        "tick step 3"
+      ]
+    },
+    {
+      "name": "death",
+      "camera": {
+        "pos": [
+          0.5,
+          -58.8,
+          -5.5
+        ],
+        "yaw": 0.0,
+        "pitch": 15.0
+      },
+      "commands": [
+        "tick step 20",
+        "harness nidus 0 -60 0 kill",
+        "tick step 25"
+      ]
+    },
+    {
+      "name": "death_held",
+      "camera": {
+        "pos": [
+          0.5,
+          -58.8,
+          -5.5
+        ],
+        "yaw": 0.0,
+        "pitch": 15.0
+      },
+      "commands": [
+        "tick step 24"
+      ]
+    },
+    {
+      "name": "dead",
+      "camera": {
+        "pos": [
+          0.5,
+          -58.8,
+          -5.5
+        ],
+        "yaw": 0.0,
+        "pitch": 15.0
+      },
+      "commands": [
+        "tick step 5"
+      ]
+    },
+    {
+      "name": "track_east",
+      "camera": {
+        "pos": [
+          19.0,
+          -60.0,
+          0.5
+        ],
+        "yaw": 180.0,
+        "pitch": 90.0
+      },
+      "view": "third_person_back",
+      "hitboxes": true,
+      "commands": [
+        "gamemode survival @a",
+        "tick step 40"
+      ]
+    },
+    {
+      "name": "track_east_side",
+      "camera": {
+        "pos": [
+          19.0,
+          -60.0,
+          0.5
+        ],
+        "yaw": 180.0,
+        "pitch": 30.0
+      },
+      "view": "third_person_back",
+      "hitboxes": true,
+      "commands": [
+        "tick step 1"
+      ]
+    },
+    {
+      "name": "lash_rear",
+      "camera": {
+        "pos": [
+          19.0,
+          -60.0,
+          0.5
+        ],
+        "yaw": 180.0,
+        "pitch": 30.0
+      },
+      "view": "third_person_back",
+      "commands": [
+        "harness nidus 16 -60 0 lash",
+        "tick step 11"
+      ]
+    },
+    {
+      "name": "lash_contact",
+      "camera": {
+        "pos": [
+          19.0,
+          -60.0,
+          0.5
+        ],
+        "yaw": 180.0,
+        "pitch": 30.0
+      },
+      "view": "third_person_back",
+      "commands": [
+        "gamemode creative @a",
+        "tick step 3"
+      ]
+    },
+    {
+      "name": "lash_contact_top",
+      "camera": {
+        "pos": [
+          19.0,
+          -60.0,
+          0.5
+        ],
+        "yaw": 180.0,
+        "pitch": 90.0
+      },
+      "view": "third_person_back"
+    },
+    {
+      "name": "lash_follow_top",
+      "camera": {
+        "pos": [
+          19.0,
+          -60.0,
+          0.5
+        ],
+        "yaw": 180.0,
+        "pitch": 90.0
+      },
+      "view": "third_person_back",
+      "commands": [
+        "tick step 2"
+      ]
+    }
+  ]
+}

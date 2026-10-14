@@ -95,10 +95,13 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
      */
     public static final int EVENT_HIT = 1;
     /**
-     * Block event id: a tentacle lashes; the param is the tentacle's index plus 8 times the bearing it lashes toward, in
-     * whole degrees from 0 to 359.
+     * Block event id: a tentacle lashes. Block event params travel as one byte, so the param is the tentacle's index in the
+     * low 3 bits and the bearing it lashes toward in the high 5, in steps of {@link #LASH_BEARING_STEP} degrees
+     * ({@link #lashParam}).
      */
     public static final int EVENT_LASH = 2;
+    /** Degrees per step of a lash event's bearing: 32 steps around. */
+    public static final float LASH_BEARING_STEP = 360.0F / 32.0F;
     /** Ticks the model flashes red after a hit, as a mob's hurt time. */
     public static final int HURT_TICKS = 10;
     /** Ticks from the final blow until the block goes: the death animation's 2.5 s. */
@@ -110,8 +113,7 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
     public static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.nidus.death");
     /** Extra reach beyond {@code lashRadius} a lash still lands at: a player must step clearly back to dodge it. */
     public static final double LASH_DODGE_MARGIN = 0.5;
-    /** Transition ticks for a tentacle's lash or flinch, so its start and end blend with the loop. */
-    public static final int TENTACLE_BLEND_TICKS = 4;
+
     /** Ticks the body controller takes to blend between idle and enraged. */
     public static final int BLEND_TICKS = 10;
     private static final Vector3f SPORE_GREEN = new Vector3f(0.62F, 0.9F, 0.25F);
@@ -385,13 +387,18 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
             }
             any = true;
             aim.lash(tentacle, assignment.bearing(), now);
-            int bearing = Math.floorMod(Math.round(assignment.bearing()), 360);
-            level.blockEvent(worldPosition, getBlockState().getBlock(), EVENT_LASH, tentacle + 8 * bearing);
+            level.blockEvent(worldPosition, getBlockState().getBlock(), EVENT_LASH, lashParam(tentacle, assignment.bearing()));
             lashes.add(new PendingLash(assignment.player().getUUID(), tentacle, now + NidusTentacles.LASH_CONTACT_TICKS));
         }
         if (any) {
             level.playSound(null, worldPosition, SoundEvents.WARDEN_ATTACK_IMPACT, SoundSource.HOSTILE, 2.0F, 0.6F);
         }
+    }
+
+    /** The {@link #EVENT_LASH} param for {@code tentacle} lashing toward {@code bearing}. */
+    public static int lashParam(int tentacle, float bearing) {
+        int step = Math.floorMod(Math.round(bearing / LASH_BEARING_STEP), 32);
+        return tentacle | step << 3;
     }
 
     /** Lashes that reach their players at {@code now} strike them, if they are still within reach. */
@@ -740,9 +747,9 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
             return true;
         }
         if (id == EVENT_LASH) {
-            int tentacle = param % 8;
+            int tentacle = param & 7;
             if (level != null && level.isClientSide && tentacle < NidusTentacles.COUNT) {
-                aim.lash(tentacle, param / 8, level.getGameTime());
+                aim.lash(tentacle, (param >> 3 & 31) * LASH_BEARING_STEP, level.getGameTime());
                 triggerAnim(tentacleController(tentacle), "lash");
             }
             return true;
@@ -772,7 +779,9 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
         controllers.add(new AnimationController<>(this, "hit", 0, state -> PlayState.STOP).triggerableAnim("hit", HIT));
         // After the body, so a tentacle's lash or flinch wins over the loop for that tentacle's bones while it plays.
         for (String name : NidusTentacles.NAMES) {
-            controllers.add(new AnimationController<>(this, "tentacle_" + name, TENTACLE_BLEND_TICKS, state -> PlayState.STOP)
+            // No transition: GeckoLib's transition delays the animation by its length, which would put the strike after
+            // the server's contact tick.
+            controllers.add(new AnimationController<>(this, "tentacle_" + name, 0, state -> PlayState.STOP)
                     .triggerableAnim("lash", RawAnimation.begin().thenPlay("animation.nidus.lash_" + name))
                     .triggerableAnim("flinch", RawAnimation.begin().thenPlay("animation.nidus.flinch_" + name)));
         }

@@ -107,7 +107,7 @@ record Scene(long time, String weather, boolean festerFog, List<Step> setup, Lis
      */
     record Shot(String name, Camera camera, CameraType view, Optional<String> press, List<String> commands, boolean hud,
                 int guiScale, Optional<ResourceLocation> recipes, boolean screen, boolean map, Optional<Integer> tooltip,
-                Optional<String> button) {
+                Optional<String> button, boolean hitboxes) {
         private static final Codec<CameraType> VIEW_CODEC = Codec.STRING.comapFlatMap(
                 v -> Arrays.stream(CameraType.values()).filter(t -> t.name().toLowerCase(Locale.ROOT).equals(v))
                         .findFirst().map(DataResult::success)
@@ -129,7 +129,8 @@ record Scene(long time, String weather, boolean festerFog, List<Step> setup, Lis
                 Codec.BOOL.optionalFieldOf("screen", false).forGetter(Shot::screen),
                 Codec.BOOL.optionalFieldOf("map", false).forGetter(Shot::map),
                 Codec.intRange(0, 45).optionalFieldOf("tooltip").forGetter(Shot::tooltip),
-                Codec.STRING.optionalFieldOf("button").forGetter(Shot::button)
+                Codec.STRING.optionalFieldOf("button").forGetter(Shot::button),
+                Codec.BOOL.optionalFieldOf("hitboxes", false).forGetter(Shot::hitboxes)
         ).apply(i, Shot::new));
 
         /** Whether the shot shows a screen rather than the world. */

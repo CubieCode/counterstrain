@@ -449,7 +449,7 @@ public final class RemissionCommonConfig {
         NIDUS_LASH_INTERVAL_TICKS = BUILDER
                 .comment("Game ticks between the lashes of a nidus being fought, besides the lash at each threshold (which restarts the",
                         "count). Each tentacle with a player in lashRadius lashes it; a tentacle still lashing waits. 0 lashes at thresholds only.")
-                .defineInRange("lashIntervalTicks", 100, 0, 72000);
+                .defineInRange("lashIntervalTicks", 400, 0, 72000);
         NIDUS_TENTACLE_DAMAGE_FACTOR = BUILDER
                 .comment("Fraction of a strike's or arrow's damage a nidus takes when it hits a tentacle instead of the nidus itself.",
                         "Tentacle strikes share the strike cooldown with strikes on the nidus.")

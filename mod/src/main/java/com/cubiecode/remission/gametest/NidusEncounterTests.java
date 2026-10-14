@@ -323,7 +323,9 @@ public final class NidusEncounterTests {
             helper.assertValueEqual(from(started, fight.pos).size(), 1, "surges after the first threshold");
             int midRight = NidusTentacles.NAMES.indexOf("mid_right");
             helper.assertTrue(blockEvents(fight.level).contains(new BlockEventData(fight.pos, RemissionBlocks.NIDUS.get(),
-                    NidusBlockEntity.EVENT_LASH, midRight + 8 * 90)), "no lash event toward the east from the mid right tentacle");
+                    NidusBlockEntity.EVENT_LASH, NidusBlockEntity.lashParam(midRight, 90.0F))),
+                    "no lash event toward the east from the mid right tentacle");
+            helper.assertTrue(NidusBlockEntity.lashParam(midRight, 90.0F) < 256, "lash param does not fit the block event's byte");
             helper.assertValueEqual(ViralLoad.get(near), 0.0F, "viral load before the lash lands");
             fight.nidus().tick(fight.level, SETTINGS, now + NidusTentacles.LASH_CONTACT_TICKS - 1);
             helper.assertValueEqual(ViralLoad.get(near), 0.0F, "viral load a tick before the lash lands");
@@ -938,7 +940,7 @@ public final class NidusEncounterTests {
             NidusBlockEntity nidus = fight.nidus();
             long now = fight.level.getGameTime();
             nidus.damage(fight.level, NidusDamagedEvent.Kind.STRIKE, player, null, 1.0F, periodic, now);
-            int lash = NidusTentacles.NAMES.indexOf("mid_right") + 8 * 90;
+            int lash = NidusBlockEntity.lashParam(NidusTentacles.NAMES.indexOf("mid_right"), 90.0F);
             BlockEventData event = new BlockEventData(fight.pos, RemissionBlocks.NIDUS.get(), NidusBlockEntity.EVENT_LASH, lash);
             nidus.tick(fight.level, SETTINGS, now + 40);
             helper.assertFalse(blockEvents(fight.level).contains(event), "a lash with the interval off");
