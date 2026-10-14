@@ -29,6 +29,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 | Hosts in a nidus's land converging on it while it is under attack | **rallying** | config `[nidi]` `rally`, `rallyRadius`, `rallyBatch` (P4.13); "the hosts are rallying to the nidus" |
 | A surge started by a nidus because a nearby nidus is under attack | **sympathetic surge** | config `[nidi]` `sympathetic`, `sympatheticRadius`, `sympatheticChance`, `sympatheticIntensity` (P4.13); cause `SYMPATHETIC` and the attacked nidus on `SurgeStartedEvent`; "striking the east nidus set off a sympathetic surge in the valley" |
 | A nidus left alone long enough seeding a daughter nidus at the edge of its festering land | **budding** (a **daughter nidus**) | config `[nidi]` (planned, P4.14); `NidusBuddedEvent` (planned); "the nidus has budded" |
+| Festering land with no live nidus in reach, its fog thinned until it is purified | **spent land** | bit `SPENT` in the `remission:festering_map` chunk state (planned, P4.18); "the nidus is dead, but the valley is only spent" |
 | Large powered purifier that drains a wide area while fed energy and fuel | **reclaimer** | block `remission:reclaimer`, config `[reclaimers]`, `PurificationCause.RECLAIMER` (built, P7.4); "run a reclaimer over the valley" |
 | Wreck site loot that opens only once its chunk is in remission | **sealed caches** | pack feature (P11.4); "reclaim the valley to open the sealed cache" |
 | Festering a new chunk starts with, from world generation | **initial festering** | config `[spread]` (planned, P4.9); "initial festering is off by default" |
@@ -117,7 +118,7 @@ Every doc, quest, lang string, lore entry, command and content ID uses these ter
 - **Budding** (P4.14): a nidus left alone long enough seeds a **daughter nidus** at the edge of its festering land during a surge, so ignoring a region has a long-term cost. Budding is capped per nidus and stays inside festering land, so a world with a border stays finishable.
 - **Initial festering** (optional, off by default; P4.9): new chunks start at a configured level, rising with distance from world spawn, outside a safe radius. Land with no nidus in reach holds its level until purified; a live nidus takes purified land back, so nidi must still be destroyed.
 - **Catch-up:** unloaded chunks record a timestamp; on load they fast-forward deterministically, bounded per tick.
-- **Atmosphere** (P4.11): festering land has its own fog, sky, ambience and music, and fog thickens with the stage, so standing in it feels wrong.
+- **Atmosphere** (P4.11): festering land has its own fog, sky, ambience and music, and fog thickens with the stage, so standing in it feels wrong. Land whose nidus is destroyed is **spent**: its fog thins to half, while the rest stays until it is purified (planned, P4.18).
 - **Surges:** periodic events that accelerate spread, spawn hosts (in caves under festering land as well as on the surface) and release miasma clouds that drift above festering land, telegraphed to players.
 
 ### Viral load and purification
