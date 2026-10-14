@@ -176,6 +176,7 @@ Remission is played alone or together, and nothing it adds may make a solo game 
 - **Countermeasures move with a player.** A player who joins another team carries their countermeasures into it and gains the new team's: joining pools both ways (P5.7).
 - **Credit goes to everyone who took part.** Group achievements, starting with destroying a nidus, credit every player who contributed, not only the player who acted last (P4.10).
 - **Fights scale with the group.** Nidus vitality and the surges it starts scale with the number of players fighting it (P4.10).
+- **Teams fight their own fronts.** Several teams can each fight a different nidus at the same time: a level runs one surge per nidus, up to one for each team present (capped by config), and scheduled surges come due per team rather than per level, so a solo player or a single team still faces one at a time (decided 2026-10-14; planned, P4.17).
 - **Some mechanics need other players.** Shedding (P5.6), stabilising a succumbing player and injecting someone else (P7.6) need a second player. Each is server-configurable and defined so that a solo player is never worse off.
 - **The finale on a server with several teams** is an open decision, made and recorded here in P9.2: either the final deployment is one server-wide event that every team can defend, or it needs payloads deployed at several sites at once. Either way, one team cannot end the game for the others without warning.
 
