@@ -22,8 +22,10 @@ import com.cubiecode.remission.world.NidusSettings;
 import com.cubiecode.remission.world.SpreadSettings;
 import com.cubiecode.remission.world.SympatheticSurges;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
@@ -196,8 +198,10 @@ public final class NidusDefenceTests {
     // ---- rallying ---------------------------------------------------------------------------------------------------
 
     /**
-     * Struck, the nidus sends for the hosts within the rally radius, and they close in on it; a host outside the radius
-     * is left where it is.
+     * Struck, the nidus sends for the hosts within the rally radius, and each of them reaches it; a host outside the
+     * radius is never sent for. Hosts that have arrived mill about the nidus and jostle each other (they are sent on again
+     * only past {@link NidusRally#ARRIVED}), so each one's arrival is counted when it happens, not required of all three on
+     * one tick. The outside host has no AI: left to stroll, it could wander into the radius, and then rallying it is right.
      */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = 600)
     public static void hostsWithinRadiusRally(GameTestHelper helper) {
@@ -205,12 +209,18 @@ public final class NidusDefenceTests {
         land.whenTicking(() -> {
             List<Mob> inside = List.of(land.host(10, 0), land.host(-9, 4), land.host(3, -11));
             Mob outside = land.host(22, 0);
-            double outsideStart = distance(outside, land.nidus);
+            outside.setNoAi(true);
+            Set<UUID> arrived = new HashSet<>();
             helper.assertTrue(land.strike(1.0F) > 0, "the strike dealt nothing");
             helper.assertTrue(land.entity().underAttack(NidusSettings.current(), land.level.getGameTime()), "not under attack");
             helper.onEachTick(() -> {
                 if (land.level.getGameTime() % 20 == 10) {
                     land.strike(1.0F); // keep it under attack (it regenerates after 40 ticks without damage)
+                }
+                for (Mob host : inside) {
+                    if (distance(host, land.nidus) <= NidusRally.ARRIVED + 1.5) {
+                        arrived.add(host.getUUID());
+                    }
                 }
             });
             helper.succeedWhen(() -> {
@@ -220,12 +230,11 @@ public final class NidusDefenceTests {
                             + rally.leftAlone().contains(host.getUUID()) + ", alive " + host.isAlive() + ", at "
                             + distance(host, land.nidus) + ", under attack "
                             + land.entity().underAttack(NidusSettings.current(), land.level.getGameTime()));
-                    helper.assertTrue(distance(host, land.nidus) <= NidusRally.ARRIVED + 1.5,
-                            "a rallying host is still " + distance(host, land.nidus) + " blocks away");
+                    helper.assertTrue(arrived.contains(host.getUUID()),
+                            "a rallying host has not reached the nidus: still " + distance(host, land.nidus) + " blocks away");
                 }
                 helper.assertFalse(rally.rallying().contains(outside.getUUID()), "a host outside the radius rallied");
                 helper.assertFalse(headingFor(outside, land.nidus), "a host outside the radius is heading for the nidus");
-                helper.assertTrue(distance(outside, land.nidus) > outsideStart - 3.0, "a host outside the radius closed in");
                 land.close();
             });
         });
