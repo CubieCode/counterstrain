@@ -113,6 +113,8 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
     public static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.nidus.death");
     /** Extra reach beyond {@code lashRadius} a lash still lands at: a player must step clearly back to dodge it. */
     public static final double LASH_DODGE_MARGIN = 0.5;
+    /** Ticks after a player comes within reach before the first lash at them, fought or not. */
+    public static final int FIRST_LASH_TICKS = 20;
 
     /** Ticks the body controller takes to blend between idle and enraged. */
     public static final int BLEND_TICKS = 10;
@@ -151,6 +153,8 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
     private final List<PendingLash> lashes = new ArrayList<>();
     /** Server: game time of the last lash, for {@code lashIntervalTicks}; transient. */
     private long lastLash = Long.MIN_VALUE;
+    /** Server: game time its last surge ended (it stopped being enraged), for regeneration; transient. */
+    private long calmedAt = Long.MIN_VALUE;
 
     /** Game time of the final blow, or {@link Long#MIN_VALUE} while alive (client: whether it is dying, synced). */
     private long dyingSince = Long.MIN_VALUE;
@@ -314,7 +318,6 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
             players = Math.max(1, playersInRange(level, settings.radius()).size());
             damage = 0.0F;
             thresholdsPassed = 0;
-            lastLash = now;
         }
         float max = maxVitality(settings);
         if (kind != NidusDamagedEvent.Kind.STRIKE) {
@@ -524,11 +527,12 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
             }
             return;
         }
-        tentacles(level, settings, now);
+        List<ServerPlayer> targets = tentacles(level, settings, now);
         if (now % CHECK_TICKS == 0) {
             Surge surge = Surges.controller(level).current();
             setEnraged(surge != null && surge.started() && surge.origin().equals(worldPosition));
         }
+        periodicLash(level, settings, targets, now);
         rally.tick(level, underAttack(settings, now), NidusDefenceSettings.current(), now);
         if (!fighting()) {
             return;
@@ -537,10 +541,7 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
             endFight(level);
             return;
         }
-        if (settings.lashIntervalTicks() > 0 && now - lastLash >= settings.lashIntervalTicks()) {
-            lash(level, settings, now);
-        }
-        if (now - lastDamaged >= settings.regenDelayTicks() && settings.regenRate() > 0) {
+        if (regenerating(settings, now)) {
             damage -= (float) (settings.regenRate() * maxVitality(settings) / 20.0);
             setChanged();
             if (damage <= 0) {
@@ -567,15 +568,42 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
     }
 
     /**
-     * The tentacles at {@code now}: lashes land, the aim eases toward the players in reach, and the hitboxes (while
-     * encounters are on) are spawned where missing and moved to follow.
+     * Whether it regenerates at {@code now}: not while a surge from it runs, and only once {@code regenDelayTicks} have
+     * passed both since it was last damaged and since its last surge ended, so a fight's surge is never time it heals.
      */
-    private void tentacles(ServerLevel level, NidusSettings settings, long now) {
+    private boolean regenerating(NidusSettings settings, long now) {
+        return settings.regenRate() > 0 && !enraged && now - lastDamaged >= settings.regenDelayTicks()
+                && (calmedAt == Long.MIN_VALUE || now - calmedAt >= settings.regenDelayTicks() || now < calmedAt);
+    }
+
+    /**
+     * Lashes on its own, fought or not, while encounters are on: {@link #FIRST_LASH_TICKS} after a player comes within
+     * reach, then every {@code lashIntervalTicks} while anyone stays there (a threshold's lash restarts the count).
+     */
+    private void periodicLash(ServerLevel level, NidusSettings settings, List<ServerPlayer> targets, long now) {
+        if (!settings.encounters() || settings.lashIntervalTicks() <= 0 || targets.isEmpty()) {
+            lastLash = Long.MIN_VALUE;
+            return;
+        }
+        if (lastLash == Long.MIN_VALUE || now < lastLash) {
+            lastLash = now - settings.lashIntervalTicks() + FIRST_LASH_TICKS;
+        }
+        if (now - lastLash >= settings.lashIntervalTicks()) {
+            lash(level, settings, now);
+        }
+    }
+
+    /**
+     * The tentacles at {@code now}: lashes land, the aim eases toward the players in reach, and the hitboxes (while
+     * encounters are on) are spawned where missing and moved to follow. Returns the players in reach.
+     */
+    private List<ServerPlayer> tentacles(ServerLevel level, NidusSettings settings, long now) {
         landLashes(level, settings, now);
-        aim.tick(Vec3.atCenterOf(worldPosition), lashTargets(level, settings), now);
+        List<ServerPlayer> targets = lashTargets(level, settings);
+        aim.tick(Vec3.atCenterOf(worldPosition), targets, now);
         if (!settings.encounters()) {
             discardHitboxes();
-            return;
+            return targets;
         }
         for (int tentacle = 0; tentacle < NidusTentacles.COUNT; tentacle++) {
             NidusTentacle hitbox = hitboxes[tentacle];
@@ -588,6 +616,7 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
                 hitbox.place(aim.aim(tentacle));
             }
         }
+        return targets;
     }
 
     /** Whether {@code hitbox} is one of this nidus's current tentacle hitboxes. */
@@ -720,6 +749,9 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
             return;
         }
         enraged = value;
+        if (!value && level != null) {
+            calmedAt = level.getGameTime();
+        }
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }

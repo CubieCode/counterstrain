@@ -368,8 +368,8 @@ public final class NidusEncounterTests {
     // ---- regeneration and saving ------------------------------------------------------------------------------------
 
     /**
-     * Vitality regenerates only after the delay, at the configured rate; the fight is saved with the block entity; once
-     * whole the fight is over and the thresholds re-arm.
+     * Vitality never regenerates while the nidus's own surge runs, then only after the delay, at the configured rate; the
+     * fight is saved with the block entity; once whole the fight is over and the thresholds re-arm.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void vitalityRegeneratesAndSaves(GameTestHelper helper) {
@@ -380,6 +380,12 @@ public final class NidusEncounterTests {
             fight.strike(player, 30.0F, now);
             helper.assertValueEqual(nidus.thresholdsPassed(), 1, "thresholds after 30 damage");
             helper.assertValueEqual(nidus.damageStage(), 1, "damage shown after 30 damage");
+
+            // Its threshold surge is running: no regeneration however long, nor until the delay after the surge ends.
+            nidus.tick(fight.level, SETTINGS, now + SETTINGS.regenDelayTicks() * 2L);
+            helper.assertTrue(Math.abs(nidus.damageTaken() - 30.0F) < EPSILON, "regenerated during its own surge");
+            Surges.controller(fight.level).stop(now);
+            helper.assertFalse(nidus.enraged(), "still enraged after its surge stopped");
 
             nidus.tick(fight.level, SETTINGS, now + SETTINGS.regenDelayTicks() - 1);
             helper.assertTrue(Math.abs(nidus.damageTaken() - 30.0F) < EPSILON, "regenerated before the delay");
@@ -928,8 +934,8 @@ public final class NidusEncounterTests {
     }
 
     /**
-     * With {@code lashIntervalTicks} set, a nidus being fought lashes on its own every interval from the fight's start;
-     * at 0 (the batch's settings) it lashes only at thresholds.
+     * With {@code lashIntervalTicks} set, a nidus lashes a player in reach on its own, fought or not: a second after the
+     * player comes within reach, then every interval; at 0 (the batch's settings) it lashes only at thresholds.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void periodicLashesFollowTheInterval(GameTestHelper helper) {
@@ -939,17 +945,27 @@ public final class NidusEncounterTests {
             ServerPlayer player = fight.player(2);
             NidusBlockEntity nidus = fight.nidus();
             long now = fight.level.getGameTime();
-            nidus.damage(fight.level, NidusDamagedEvent.Kind.STRIKE, player, null, 1.0F, periodic, now);
-            int lash = NidusBlockEntity.lashParam(NidusTentacles.NAMES.indexOf("mid_right"), 90.0F);
-            BlockEventData event = new BlockEventData(fight.pos, RemissionBlocks.NIDUS.get(), NidusBlockEntity.EVENT_LASH, lash);
-            nidus.tick(fight.level, SETTINGS, now + 40);
+            BlockEventData event = new BlockEventData(fight.pos, RemissionBlocks.NIDUS.get(), NidusBlockEntity.EVENT_LASH,
+                    NidusBlockEntity.lashParam(NidusTentacles.NAMES.indexOf("mid_right"), 90.0F));
+            for (int t = 0; t <= 60; t++) {
+                nidus.tick(fight.level, SETTINGS, now + t);
+            }
             helper.assertFalse(blockEvents(fight.level).contains(event), "a lash with the interval off");
-            nidus.tick(fight.level, periodic, now + 39);
-            helper.assertFalse(blockEvents(fight.level).contains(event), "a lash before the interval");
-            nidus.tick(fight.level, periodic, now + 40);
-            helper.assertTrue(blockEvents(fight.level).contains(event), "no lash at the interval");
-            nidus.tick(fight.level, periodic, now + 40 + NidusTentacles.LASH_CONTACT_TICKS);
+            long start = now + 100;
+            nidus.tick(fight.level, periodic, start);
+            nidus.tick(fight.level, periodic, start + NidusBlockEntity.FIRST_LASH_TICKS - 1);
+            helper.assertFalse(blockEvents(fight.level).contains(event), "a lash before the first lash's delay");
+            nidus.tick(fight.level, periodic, start + NidusBlockEntity.FIRST_LASH_TICKS);
+            helper.assertTrue(blockEvents(fight.level).contains(event), "no lash a second after the player came within reach");
+            helper.assertFalse(nidus.fighting(), "a periodic lash started a fight");
+            nidus.tick(fight.level, periodic, start + NidusBlockEntity.FIRST_LASH_TICKS + NidusTentacles.LASH_CONTACT_TICKS);
             helper.assertValueEqual(ViralLoad.get(player), (float) periodic.lashViralLoad(), "viral load from the periodic lash");
+            blockEvents(fight.level).clear();
+            long next = start + NidusBlockEntity.FIRST_LASH_TICKS + periodic.lashIntervalTicks();
+            nidus.tick(fight.level, periodic, next - 1);
+            helper.assertFalse(blockEvents(fight.level).contains(event), "a lash before the interval");
+            nidus.tick(fight.level, periodic, next);
+            helper.assertTrue(blockEvents(fight.level).contains(event), "no lash at the interval");
         }
         helper.succeed();
     }

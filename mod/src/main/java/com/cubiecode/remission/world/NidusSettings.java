@@ -101,6 +101,13 @@ public record NidusSettings(double vitality, int growthTicks, double growthBonus
         override = settings;
     }
 
+    /** These settings with {@code lashIntervalTicks} replaced. */
+    public NidusSettings withLashIntervalTicks(int ticks) {
+        return new NidusSettings(vitality, growthTicks, growthBonus, radius, playerFactor, playerCap, distanceFactor,
+                distanceMaxBonus, contributorWindowTicks, regenDelayTicks, regenRate, thresholds, projectileFraction,
+                explosionFraction, lashRadius, lashViralLoad, lashKnockback, strikeCooldownTicks, ticks, tentacleDamageFactor);
+    }
+
     /** Whether nidi are fought rather than mined. */
     public boolean encounters() {
         return vitality > 0;

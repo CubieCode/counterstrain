@@ -34,6 +34,8 @@ public final class NidusModel extends GeoModel<NidusBlockEntity> {
      * other way, so a tentacle resting at bearing b has rest rotation -b.
      */
     static final float AIM_TO_BONE = -1.0F;
+    /** Degrees a base tips forward, toward its player, at full lean (about its X axis; positive reaches out and down). */
+    static final float LEAN_DEGREES = 25.0F;
 
     private static ResourceLocation[] resources(String prefix, String suffix) {
         ResourceLocation[] locations = new ResourceLocation[STAGES.length];
@@ -77,7 +79,10 @@ public final class NidusModel extends GeoModel<NidusBlockEntity> {
         super.handleAnimations(nidus, instanceId, state, partialTick);
     }
 
-    /** Turns each tentacle's base by its aim, from its rest rotation (never from last frame's, so turns never add up). */
+    /**
+     * Turns each tentacle's base by its aim and tips it forward by its lean, from its rest rotation (never from last
+     * frame's, so turns never add up).
+     */
     @Override
     public void setCustomAnimations(NidusBlockEntity nidus, long instanceId, AnimationState<NidusBlockEntity> state) {
         float frame = frame();
@@ -85,6 +90,7 @@ public final class NidusModel extends GeoModel<NidusBlockEntity> {
             GeoBone base = getAnimationProcessor().getBone("tentacle_" + NidusTentacles.NAMES.get(tentacle));
             if (base != null) {
                 base.setRotY(base.getInitialSnapshot().getRotY() + AIM_TO_BONE * nidus.aim().aim(tentacle, frame) * Mth.DEG_TO_RAD);
+                base.setRotX(base.getInitialSnapshot().getRotX() + LEAN_DEGREES * nidus.aim().lean(tentacle, frame) * Mth.DEG_TO_RAD);
             }
         }
     }

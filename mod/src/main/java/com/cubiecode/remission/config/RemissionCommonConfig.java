@@ -418,8 +418,9 @@ public final class RemissionCommonConfig {
                 .comment("Game ticks without damage after which a nidus starts to regenerate its vitality.")
                 .defineInRange("regenDelayTicks", 300, 0, 72000);
         NIDUS_REGEN_RATE = BUILDER
-                .comment("Fraction of its full vitality a regenerating nidus regains per second. Once whole, its fight is over.")
-                .defineInRange("regenRate", 0.05, 0.0, 1.0);
+                .comment("Fraction of its full vitality a regenerating nidus regains per second. Once whole, its fight is over.",
+                        "It never regenerates while a surge from it runs, nor until regenDelayTicks after that surge ends.")
+                .defineInRange("regenRate", 0.02, 0.0, 1.0);
         NIDUS_THRESHOLDS = BUILDER
                 .comment("Vitality left (percent of full) at which a nidus fights back, once each per fight: it starts a surge from",
                         "itself at once with no warning, its intensity rising with each threshold passed, and lashes nearby players.")
@@ -447,8 +448,8 @@ public final class RemissionCommonConfig {
                         "invulnerability after a hit (10). Clicking faster never beats fully charged swings.")
                 .defineInRange("strikeCooldownTicks", 10, 0, 200);
         NIDUS_LASH_INTERVAL_TICKS = BUILDER
-                .comment("Game ticks between the lashes of a nidus being fought, besides the lash at each threshold (which restarts the",
-                        "count). Each tentacle with a player in lashRadius lashes it; a tentacle still lashing waits. 0 lashes at thresholds only.")
+                .comment("Game ticks between a nidus's lashes at the players within lashRadius, fought or not: the first comes a second after",
+                        "a player comes within reach, and a threshold's lash restarts the count. A tentacle still lashing waits. 0 lashes at thresholds only.")
                 .defineInRange("lashIntervalTicks", 400, 0, 72000);
         NIDUS_TENTACLE_DAMAGE_FACTOR = BUILDER
                 .comment("Fraction of a strike's or arrow's damage a nidus takes when it hits a tentacle instead of the nidus itself.",

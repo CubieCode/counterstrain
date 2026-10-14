@@ -5,6 +5,7 @@
     "gamerule sendCommandFeedback false",
     "difficulty peaceful",
     "gamemode creative @a",
+    "harness nidi periodic_lashes false",
     "harness fester -16 -60 -32 31 -60 31 60",
     "setblock 0 -60 0 remission:nidus",
     "setblock 16 -60 0 remission:nidus",
@@ -203,6 +204,57 @@
       "view": "third_person_back",
       "commands": [
         "tick step 2"
+      ]
+    },
+    {
+      "name": "rest_top_north",
+      "camera": {
+        "pos": [
+          16.5,
+          -60.0,
+          -2.0
+        ],
+        "yaw": 180.0,
+        "pitch": 90.0
+      },
+      "view": "third_person_back",
+      "commands": [
+        "tick step 40"
+      ]
+    },
+    {
+      "name": "track_north",
+      "camera": {
+        "pos": [
+          16.5,
+          -60.0,
+          -2.0
+        ],
+        "yaw": 180.0,
+        "pitch": 90.0
+      },
+      "view": "third_person_back",
+      "hitboxes": true,
+      "commands": [
+        "gamemode survival @a",
+        "tick step 40"
+      ]
+    },
+    {
+      "name": "track_north_side",
+      "camera": {
+        "pos": [
+          16.5,
+          -60.0,
+          -2.0
+        ],
+        "yaw": -90.0,
+        "pitch": 25.0
+      },
+      "view": "third_person_back",
+      "commands": [
+        "tick step 1",
+        "harness nidi periodic_lashes true"
       ]
     }
   ]

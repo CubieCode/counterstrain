@@ -132,10 +132,13 @@ public final class NidusTentacles {
     /**
      * The aims of one nidus's tentacles, eased each game tick toward the players assigned to them and back to rest when
      * they have none; a lash turns its tentacle straight at its target, faster, and holds it there while the lash lasts.
+     * A tentacle tracking a player also leans toward it ({@link #lean}, 0 to 1), easing back while it lashes or has no one.
      */
     public static final class Aim {
         private final float[] aim = new float[COUNT];
         private final float[] previous = new float[COUNT];
+        private final float[] lean = new float[COUNT];
+        private final float[] previousLean = new float[COUNT];
         private final float[] lashAim = new float[COUNT];
         private final long[] lashUntil = new long[COUNT];
 
@@ -146,11 +149,16 @@ public final class NidusTentacles {
         /** One game tick at {@code now}: each tentacle eases toward its target in {@code players} (those in reach). */
         public void tick(Vec3 centre, List<? extends Entity> players, long now) {
             float[] target = new float[COUNT];
+            boolean[] tracking = new boolean[COUNT];
             for (Assignment assignment : assign(centre, players)) {
                 target[assignment.tentacle()] = aimToward(assignment.tentacle(), assignment.bearing(), TRACK_LIMIT);
+                tracking[assignment.tentacle()] = true;
             }
             for (int tentacle = 0; tentacle < COUNT; tentacle++) {
                 previous[tentacle] = aim[tentacle];
+                previousLean[tentacle] = lean[tentacle];
+                float leanTarget = tracking[tentacle] && !lashing(tentacle, now) ? 1.0F : 0.0F;
+                lean[tentacle] += (leanTarget - lean[tentacle]) * TRACK_EASE;
                 if (lashing(tentacle, now)) {
                     aim[tentacle] += (lashAim[tentacle] - aim[tentacle]) * LASH_EASE;
                 } else {
@@ -173,6 +181,11 @@ public final class NidusTentacles {
         /** The aim of {@code tentacle} after the last tick. */
         public float aim(int tentacle) {
             return aim[tentacle];
+        }
+
+        /** How far {@code tentacle} leans toward its player (0 to 1) between the last two ticks. */
+        public float lean(int tentacle, float partialTick) {
+            return Mth.lerp(partialTick, previousLean[tentacle], lean[tentacle]);
         }
 
         /** The aim of {@code tentacle} between the last two ticks, {@code partialTick} of the way through. */

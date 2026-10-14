@@ -30,6 +30,7 @@ import com.cubiecode.remission.world.FesteringVeins;
 import com.cubiecode.remission.world.NidusBlockEntity;
 import com.cubiecode.remission.world.NidusSettings;
 import com.cubiecode.remission.world.NidusTentacles;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -85,7 +86,8 @@ import org.jetbrains.annotations.Nullable;
  * {@code harness nidus <pos> <vitality>} strikes a nidus down to that percent of its vitality through the fight code, as
  * the nearest player, so the thresholds it passes start their surges (P4.10); {@code harness nidus <pos> lash} lashes the
  * players its tentacles track now, {@code harness nidus <pos> tentacle <index>} strikes that tentacle (a hit and a
- * flinch) and {@code harness nidus <pos> kill} strikes the final blow, starting its death (P4.19). {@code harness regrow} regrows every
+ * flinch) and {@code harness nidus <pos> kill} strikes the final blow, starting its death; {@code harness nidi
+ * periodic_lashes <true|false>} turns periodic lashes off for the session or back to the config (P4.19). {@code harness regrow} regrows every
  * column of every loaded chunk in remission at once, as the budgeted regrowth would over {@code regrowthTicks} (P5.5).
  */
 final class HarnessCommands {
@@ -226,7 +228,10 @@ final class HarnessCommands {
                                         BlockPosArgument.getLoadedBlockPos(context, "pos"),
                                         IntegerArgumentType.getInteger(context, "index")))))
                         .then(Commands.literal("kill").executes(context -> nidusKill(context.getSource().getLevel(),
-                                BlockPosArgument.getLoadedBlockPos(context, "pos")))))));
+                                BlockPosArgument.getLoadedBlockPos(context, "pos"))))))
+                .then(Commands.literal("nidi").then(Commands.literal("periodic_lashes")
+                        .then(Commands.argument("on", BoolArgumentType.bool())
+                                .executes(context -> periodicLashes(BoolArgumentType.getBool(context, "on")))))));
     }
 
     /**
@@ -279,6 +284,15 @@ final class HarnessCommands {
     private static ServerPlayer nearestPlayer(ServerLevel level, BlockPos pos) {
         return level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, -1.0, false)
                 instanceof ServerPlayer nearest ? nearest : null;
+    }
+
+    /**
+     * Turns nidi's periodic lashes (P4.19) off for the rest of the session, or back to the config, so a scene with a
+     * survival player near a nidus is not knocked about between shots; lashes the scene asks for still happen.
+     */
+    private static int periodicLashes(boolean on) {
+        NidusSettings.override(on ? null : NidusSettings.fromConfig().withLashIntervalTicks(0));
+        return 1;
     }
 
     /** Lashes now with the nidus at {@code pos}: each tentacle with a tracked player turns at it (P4.19). */
