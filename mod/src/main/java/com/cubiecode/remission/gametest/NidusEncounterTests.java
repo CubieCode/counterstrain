@@ -900,8 +900,8 @@ public final class NidusEncounterTests {
 
     /**
      * A lash strikes each assigned player at contact time and no one else: of seven players in reach the furthest is
-     * spared, each struck player is knocked away from the nidus, and a player who steps out of reach before contact
-     * dodges it.
+     * spared, each struck player is knocked away from the nidus, a player who steps out of reach before contact dodges
+     * it, and the lashing tentacle's hitbox lies on the ground out along the lash.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void lashesLandOnTheirTargetsAtContact(GameTestHelper helper) {
@@ -919,6 +919,10 @@ public final class NidusEncounterTests {
             }
             nidus.tick(fight.level, SETTINGS, now + NidusTentacles.LASH_CONTACT_TICKS);
             Vec3 centre = Vec3.atCenterOf(fight.pos);
+            // While a lash is down its tentacle's hitbox lies on the ground out along the lash, so a dodger can hit back.
+            NidusTentacle east = nidus.hitboxes().get(NidusTentacles.NAMES.indexOf("mid_right"));
+            helper.assertTrue(Math.abs(east.getX() - centre.x - NidusTentacles.LASH_HITBOX_DISTANCE) < 0.05
+                    && Math.abs(east.getY() - fight.pos.getY()) < 0.05, "grounded hitbox at " + east.position());
             for (int i = 0; i < seven.size(); i++) {
                 ServerPlayer player = seven.get(i);
                 boolean struck = i < NidusTentacles.COUNT && player != dodger;

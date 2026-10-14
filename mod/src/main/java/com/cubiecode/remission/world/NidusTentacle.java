@@ -21,7 +21,8 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 
 /**
  * {@code remission:nidus_tentacle}: the invisible hitbox of one of a nidus's tentacles (P4.19). Its nidus spawns one per
- * tentacle while it can be fought and moves each to where its tentacle points; a hitbox that finds no nidus owning it at
+ * tentacle while it can be fought and moves each to where its tentacle points (onto the ground along the lash while a
+ * lash is down); a hitbox that finds no nidus owning it at
  * its position discards itself. Never saved (its type does not serialize), so chunk loads never duplicate them.
  *
  * <p>Hits go to the nidus: a player's attack is a strike (the strike cooldown and the charge-scaled attack damage, not the
@@ -30,8 +31,8 @@ import net.neoforged.neoforge.common.util.FakePlayer;
  * blast), and it is never pushed, collided with or counted as a mob.
  */
 public class NidusTentacle extends Entity {
-    public static final float WIDTH = 0.8F;
-    public static final float HEIGHT = 1.4F;
+    public static final float WIDTH = 1.0F;
+    public static final float HEIGHT = 2.0F;
 
     private BlockPos nidus = BlockPos.ZERO;
     private int tentacle;
@@ -63,9 +64,22 @@ public class NidusTentacle extends Entity {
     /** Moves it to where its tentacle points with {@code aim} degrees of turn. */
     void place(float aim) {
         Vec3 centre = NidusTentacles.hitboxCentre(tentacle, aim);
-        double x = nidus.getX() + 0.5 + centre.x;
-        double y = nidus.getY() + centre.y - HEIGHT / 2.0;
-        double z = nidus.getZ() + 0.5 + centre.z;
+        moveIfMoved(nidus.getX() + 0.5 + centre.x, nidus.getY() + centre.y - HEIGHT / 2.0, nidus.getZ() + 0.5 + centre.z);
+    }
+
+    /**
+     * Moves it onto the ground {@link NidusTentacles#LASH_HITBOX_DISTANCE} blocks out along {@code bearing}, where its
+     * tentacle lies while a lash is down, so a player who dodged the lash can strike back.
+     */
+    void placeOnGround(float bearing) {
+        double angle = Math.toRadians(bearing);
+        double distance = NidusTentacles.LASH_HITBOX_DISTANCE;
+        double x = nidus.getX() + 0.5 + Math.sin(angle) * distance;
+        double z = nidus.getZ() + 0.5 - Math.cos(angle) * distance;
+        moveIfMoved(x, nidus.getY(), z);
+    }
+
+    private void moveIfMoved(double x, double y, double z) {
         if (distanceToSqr(x, y, z) > 1.0E-4) {
             moveTo(x, y, z);
         }

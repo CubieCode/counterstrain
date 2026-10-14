@@ -9,7 +9,9 @@
     "harness fester -16 -60 -32 31 -60 31 60",
     "setblock 0 -60 0 remission:nidus",
     "setblock 16 -60 0 remission:nidus",
-    "tp @a 0.5 -60 -10 0 8"
+    "tp @a 0.5 -60 -10 0 8",
+    "setblock 12 -60 0 minecraft:red_wool",
+    "setblock 11 -60 0 minecraft:yellow_wool"
   ],
   "shots": [
     {
@@ -109,10 +111,72 @@
       ]
     },
     {
+      "name": "lash_wide_rest",
+      "camera": {
+        "pos": [
+          14.5,
+          -55.5,
+          9.0
+        ],
+        "yaw": 180.0,
+        "pitch": 28.0
+      },
+      "commands": [
+        "tick step 20"
+      ]
+    },
+    {
+      "name": "lash_wide_rear",
+      "camera": {
+        "pos": [
+          14.5,
+          -55.5,
+          9.0
+        ],
+        "yaw": 180.0,
+        "pitch": 28.0
+      },
+      "commands": [
+        "harness nidus 16 -60 0 lash_at 270",
+        "tick step 11"
+      ]
+    },
+    {
+      "name": "lash_wide_contact",
+      "camera": {
+        "pos": [
+          14.5,
+          -55.5,
+          9.0
+        ],
+        "yaw": 180.0,
+        "pitch": 28.0
+      },
+      "commands": [
+        "tick step 3"
+      ]
+    },
+    {
+      "name": "lash_wide_down",
+      "camera": {
+        "pos": [
+          14.5,
+          -55.5,
+          9.0
+        ],
+        "yaw": 180.0,
+        "pitch": 28.0
+      },
+      "hitboxes": true,
+      "commands": [
+        "tick step 2"
+      ]
+    },
+    {
       "name": "track_east",
       "camera": {
         "pos": [
-          19.0,
+          21.0,
           -60.0,
           0.5
         ],
@@ -130,7 +194,7 @@
       "name": "track_east_side",
       "camera": {
         "pos": [
-          19.0,
+          21.0,
           -60.0,
           0.5
         ],
@@ -147,7 +211,7 @@
       "name": "lash_rear",
       "camera": {
         "pos": [
-          19.0,
+          21.0,
           -60.0,
           0.5
         ],
@@ -164,7 +228,7 @@
       "name": "lash_contact",
       "camera": {
         "pos": [
-          19.0,
+          21.0,
           -60.0,
           0.5
         ],
@@ -181,7 +245,7 @@
       "name": "lash_contact_top",
       "camera": {
         "pos": [
-          19.0,
+          21.0,
           -60.0,
           0.5
         ],
@@ -194,7 +258,7 @@
       "name": "lash_follow_top",
       "camera": {
         "pos": [
-          19.0,
+          21.0,
           -60.0,
           0.5
         ],
@@ -212,7 +276,7 @@
         "pos": [
           16.5,
           -60.0,
-          -2.0
+          -4.0
         ],
         "yaw": 180.0,
         "pitch": 90.0
@@ -228,7 +292,7 @@
         "pos": [
           16.5,
           -60.0,
-          -2.0
+          -4.0
         ],
         "yaw": 180.0,
         "pitch": 90.0
@@ -246,7 +310,7 @@
         "pos": [
           16.5,
           -60.0,
-          -2.0
+          -4.0
         ],
         "yaw": -90.0,
         "pitch": 25.0

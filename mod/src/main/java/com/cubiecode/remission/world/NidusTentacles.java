@@ -29,8 +29,8 @@ public final class NidusTentacles {
      * lower (segments 1 to 3) and upper (4 to 7) segments, measured from the model at rest.
      */
     private static final double[][] REST_CENTRES = {
-            {0.74, 1.23, -0.60}, {-0.79, 1.23, -0.46}, {0.94, 1.29, 0.24},
-            {-0.95, 1.28, 0.15}, {0.41, 1.32, 0.86}, {-0.46, 1.32, 0.83}};
+            {0.91, 1.49, -0.76}, {-0.96, 1.49, -0.55}, {1.16, 1.57, 0.30},
+            {-1.16, 1.56, 0.20}, {0.52, 1.62, 1.05}, {-0.57, 1.61, 1.02}};
     /** Each tentacle's base pivot, in blocks from the block's bottom centre: the hitbox turns around it. */
     private static final double[][] PIVOTS = {
             {0.433, 0.575, -0.339}, {-0.461, 0.575, -0.299}, {0.529, 0.575, 0.152},
@@ -49,7 +49,11 @@ public final class NidusTentacles {
     /** Ticks a lash lasts (the animation's 1.4 s); the tentacle keeps its lash aim until then. */
     public static final int LASH_TICKS = 28;
     /** How far a lash's tip lands from the nidus's centre, in blocks, at the end of its strike. */
-    public static final double LASH_REACH = 2.8;
+    public static final double LASH_REACH = 5.2;
+    /** Ticks after a lash's start until its tentacle rises off the ground again (contact is 0.65 to 0.8 s). */
+    public static final int LASH_GROUND_TICKS = 16;
+    /** How far out along the lash a lashing tentacle's hitbox lies while it is on the ground, in blocks from the centre. */
+    public static final double LASH_HITBOX_DISTANCE = 3.0;
 
     private NidusTentacles() {
     }
@@ -140,6 +144,7 @@ public final class NidusTentacles {
         private final float[] lean = new float[COUNT];
         private final float[] previousLean = new float[COUNT];
         private final float[] lashAim = new float[COUNT];
+        private final float[] lashBearing = new float[COUNT];
         private final long[] lashUntil = new long[COUNT];
 
         public Aim() {
@@ -170,12 +175,27 @@ public final class NidusTentacles {
         /** {@code tentacle} lashes toward {@code bearing} from {@code now}, for {@link #LASH_TICKS}. */
         public void lash(int tentacle, float bearing, long now) {
             lashAim[tentacle] = aimToward(tentacle, bearing, LASH_LIMIT);
+            lashBearing[tentacle] = bearing;
             lashUntil[tentacle] = now + LASH_TICKS;
         }
 
         /** Whether {@code tentacle} is mid-lash at {@code now}. */
         public boolean lashing(int tentacle, long now) {
             return now < lashUntil[tentacle] && now >= lashUntil[tentacle] - LASH_TICKS;
+        }
+
+        /**
+         * Whether {@code tentacle}'s lash has it lying along the ground at {@code now}: from contact
+         * ({@link #LASH_CONTACT_TICKS}) until {@link #LASH_GROUND_TICKS} after the lash started.
+         */
+        public boolean grounded(int tentacle, long now) {
+            long start = lashUntil[tentacle] - LASH_TICKS;
+            return lashing(tentacle, now) && now - start >= LASH_CONTACT_TICKS && now - start <= LASH_GROUND_TICKS;
+        }
+
+        /** The bearing of {@code tentacle}'s latest lash. */
+        public float lashBearing(int tentacle) {
+            return lashBearing[tentacle];
         }
 
         /** The aim of {@code tentacle} after the last tick. */

@@ -435,8 +435,8 @@ public final class RemissionCommonConfig {
                 .defineInRange("explosionFraction", 0.25, 0.0, 1.0);
         NIDUS_LASH_RADIUS = BUILDER
                 .comment("Blocks from a nidus within which its tentacles turn toward players and lash them, one player per tentacle,",
-                        "nearest first. A lash lands about 2.8 blocks out, so a larger radius would lash players the tentacle never reaches.")
-                .defineInRange("lashRadius", 3.0, 0.0, 4.0);
+                        "nearest first. A lash reaches about 5.2 blocks out, so a larger radius would lash players the tentacle never reaches.")
+                .defineInRange("lashRadius", 5.0, 0.0, 6.0);
         NIDUS_LASH_VIRAL_LOAD = BUILDER
                 .comment("Viral load a lash adds to each player it reaches (while [viral_load] is enabled).")
                 .defineInRange("lashViralLoad", 2.0, 0.0, 100.0);

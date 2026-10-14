@@ -10,14 +10,14 @@ import software.bernie.geckolib.renderer.GeoBlockRenderer;
 /**
  * Draws a nidus as its animated organism ({@link NidusModel}) with the glowing core and veins ({@link NidusGlowLayer}),
  * flashing red (the vanilla hurt overlay, glow included) for {@link NidusBlockEntity#HURT_TICKS} game ticks after a hit.
- * The model is far bigger than its block: about 3.3 blocks across with its tentacles and 2.2 tall at rest, and a lash
- * reaches 2.8 blocks out from the centre. Its render box covers that with a margin, and it is drawn as a global block entity
+ * The model is far bigger than its block: about 4 blocks across with its tentacles and 2.7 tall at rest, and a lash
+ * reaches up to 5.4 blocks out from the centre. Its render box covers that with a margin, and it is drawn as a global block entity
  * (off screen), so it does not vanish when its own block or chunk section leaves the view.
  */
 public final class NidusRenderer extends GeoBlockRenderer<NidusBlockEntity> {
-    /** Horizontal reach from the block's centre, in blocks: a lash's 2.8 plus room for the roots and the tentacles' sway. */
-    public static final double REACH = 4.0;
-    /** Height above the block's bottom, in blocks: the rest pose's 2.2 plus room for the tentacles rearing to lash. */
+    /** Horizontal reach from the block's centre, in blocks: a lash's 5.4 plus a margin. */
+    public static final double REACH = 6.0;
+    /** Height above the block's bottom, in blocks: the rest pose's 2.7 plus room for the tentacles rearing to lash. */
     public static final double HEIGHT = 5.0;
     /** The buried mass reaches a little below the block. */
     public static final double DEPTH = 0.25;

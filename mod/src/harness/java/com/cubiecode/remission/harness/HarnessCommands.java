@@ -53,6 +53,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -86,7 +87,8 @@ import org.jetbrains.annotations.Nullable;
  * {@code harness nidus <pos> <vitality>} strikes a nidus down to that percent of its vitality through the fight code, as
  * the nearest player, so the thresholds it passes start their surges (P4.10); {@code harness nidus <pos> lash} lashes the
  * players its tentacles track now, {@code harness nidus <pos> tentacle <index>} strikes that tentacle (a hit and a
- * flinch) and {@code harness nidus <pos> kill} strikes the final blow, starting its death; {@code harness nidi
+ * flinch), {@code harness nidus <pos> lash_at <bearing>} shows a lash toward a bearing with no player, and
+ * {@code harness nidus <pos> kill} strikes the final blow, starting its death; {@code harness nidi
  * periodic_lashes <true|false>} turns periodic lashes off for the session or back to the config (P4.19). {@code harness regrow} regrows every
  * column of every loaded chunk in remission at once, as the budgeted regrowth would over {@code regrowthTicks} (P5.5).
  */
@@ -222,6 +224,10 @@ final class HarnessCommands {
                                         IntegerArgumentType.getInteger(context, "vitality"))))
                         .then(Commands.literal("lash").executes(context -> nidusLash(context.getSource().getLevel(),
                                 BlockPosArgument.getLoadedBlockPos(context, "pos"))))
+                        .then(Commands.literal("lash_at").then(Commands.argument("bearing", FloatArgumentType.floatArg(-180, 360))
+                                .executes(context -> nidusLashAt(context.getSource().getLevel(),
+                                        BlockPosArgument.getLoadedBlockPos(context, "pos"),
+                                        FloatArgumentType.getFloat(context, "bearing")))))
                         .then(Commands.literal("tentacle").then(Commands.argument("index",
                                         IntegerArgumentType.integer(0, NidusTentacles.COUNT - 1))
                                 .executes(context -> nidusTentacle(context.getSource().getLevel(),
@@ -299,6 +305,24 @@ final class HarnessCommands {
     private static int nidusLash(ServerLevel level, BlockPos pos) throws CommandSyntaxException {
         nidusAt(level, pos).lash(level, NidusSettings.current(), level.getGameTime());
         return 1;
+    }
+
+    /**
+     * Shows a lash toward {@code bearing} (degrees, 0 north, 90 east) by the tentacle resting closest to it, with no
+     * player to strike: the event clients play and the server's aim (so the hitbox follows), nothing lands (P4.19).
+     */
+    private static int nidusLashAt(ServerLevel level, BlockPos pos, float bearing) throws CommandSyntaxException {
+        NidusBlockEntity nidus = nidusAt(level, pos);
+        int best = 0;
+        for (int tentacle = 1; tentacle < NidusTentacles.COUNT; tentacle++) {
+            if (Math.abs(Mth.wrapDegrees(bearing - NidusTentacles.restBearing(tentacle)))
+                    < Math.abs(Mth.wrapDegrees(bearing - NidusTentacles.restBearing(best)))) {
+                best = tentacle;
+            }
+        }
+        nidus.aim().lash(best, bearing, level.getGameTime());
+        level.blockEvent(pos, nidus.getBlockState().getBlock(), NidusBlockEntity.EVENT_LASH, NidusBlockEntity.lashParam(best, bearing));
+        return best;
     }
 
     /**

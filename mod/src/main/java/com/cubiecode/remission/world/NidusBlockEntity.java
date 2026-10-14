@@ -610,13 +610,21 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
             if (hitbox == null || hitbox.isRemoved()) {
                 hitbox = NidusTentacle.create(level, worldPosition, tentacle);
                 hitboxes[tentacle] = hitbox;
-                hitbox.place(aim.aim(tentacle));
+                placeHitbox(hitbox, tentacle, now);
                 level.addFreshEntity(hitbox);
             } else {
-                hitbox.place(aim.aim(tentacle));
+                placeHitbox(hitbox, tentacle, now);
             }
         }
         return targets;
+    }
+
+    private void placeHitbox(NidusTentacle hitbox, int tentacle, long now) {
+        if (aim.grounded(tentacle, now)) {
+            hitbox.placeOnGround(aim.lashBearing(tentacle));
+        } else {
+            hitbox.place(aim.aim(tentacle));
+        }
     }
 
     /** Whether {@code hitbox} is one of this nidus's current tentacle hitboxes. */
