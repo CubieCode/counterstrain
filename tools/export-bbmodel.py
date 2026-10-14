@@ -8,9 +8,13 @@ A stand-in for Blockbench's own export (File > Export > Export GeckoLib Model) o
 foundry. It applies the Bedrock geometry conventions Blockbench's exporter applies and GeckoLib's loader undoes: X is
 mirrored (a cube's origin x is minus its far x edge, pivots' x are negated) and bone and cube rotations about X and Y
 are negated, while Z rotations are kept. Box UV cubes keep their offset and mirror flag; per-face UV cubes keep their
-face rectangles. Elements and groups with export off are skipped. Animations are written as Blockbench writes them
-(format 1.8.0, keyframe vectors with their lerp mode): Blockbench stores keyframes in the exported convention already,
-so their values are copied unchanged.
+face rectangles. Elements and groups with export off are skipped. Reads Blockbench 4 projects, whose outliner nodes
+carry their group's data, and Blockbench 5 projects (format 5.0), whose outliner nodes carry only a uuid and children
+and whose group data (name, origin, rotation, export) is in a top-level "groups" list. Animations are written as Blockbench writes them
+(format 1.8.0, keyframe vectors with their lerp mode, times snapped to the animation's snapping as Blockbench's export
+snaps them). Blockbench 4 stores keyframes in the exported convention already, so their values are copied unchanged;
+Blockbench 5 stores them as shown in its editor, so rotations about X and Y and positions along X are negated, as its
+own export does.
 
 Standard library only. Exit 0 on success, 1 on an input it cannot convert.
 """
@@ -68,9 +72,13 @@ def compile_cube(element, bone_mirror):
 def export(project, identifier):
     elements = {e["uuid"]: e for e in project["elements"] if e.get("type", "cube") == "cube"}
     resolution = project.get("resolution", {"width": 16, "height": 16})
+    groups = {g["uuid"]: g for g in project.get("groups", []) if "uuid" in g}
     bones = []
 
-    def walk(group, parent):
+    def walk(node, parent):
+        group = node if "name" in node else {**groups.get(node.get("uuid"), {}), **node}
+        if "name" not in group:
+            raise ValueError(f"outliner group {node.get('uuid')} has no name and no entry in groups")
         if not group.get("export", True):
             return
         bone = {"name": group["name"]}
@@ -121,7 +129,16 @@ def export(project, identifier):
     }
 
 
+def blockbench5(project):
+    version = str(project.get("meta", {}).get("format_version", "4"))
+    try:
+        return int(version.split(".")[0]) >= 5
+    except ValueError:
+        return False
+
+
 def export_animations(project):
+    flip = blockbench5(project)
     animations = {}
     for animation in project.get("animations", []):
         out = {}
@@ -132,6 +149,7 @@ def export_animations(project):
         else:
             out["loop"] = False
         out["animation_length"] = number(animation.get("length", 0))
+        snapping = animation.get("snapping") or 0
         bones = {}
         for animator in animation.get("animators", {}).values():
             if animator.get("type", "bone") != "bone":
@@ -143,10 +161,17 @@ def export_animations(project):
                     continue
                 point = keyframe["data_points"][0]
                 vector = [float(point[axis]) for axis in "xyz"]
-                entry = {"vector": vector}
+                if flip and channel == "rotation":
+                    vector = [-vector[0], -vector[1], vector[2]]
+                elif flip and channel == "position":
+                    vector = [-vector[0], vector[1], vector[2]]
+                entry = {"vector": [number(v) for v in vector]}
                 if keyframe.get("interpolation", "linear") != "linear":
                     entry["lerp_mode"] = keyframe["interpolation"]
-                channels.setdefault(channel, {})[f"{number(keyframe['time'])}"] = entry
+                time = float(keyframe["time"])
+                if snapping > 0:
+                    time = round(time * snapping) / snapping
+                channels.setdefault(channel, {})[f"{number(time)}"] = entry
             if channels:
                 bones[animator["name"]] = channels
         out["bones"] = bones

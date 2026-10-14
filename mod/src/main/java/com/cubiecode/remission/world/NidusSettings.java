@@ -27,17 +27,19 @@ import org.jetbrains.annotations.VisibleForTesting;
  * @param thresholds             percent of vitality left at which the nidus fights back, highest first
  * @param projectileFraction     fraction of arrow damage a nidus takes
  * @param explosionFraction      fraction of mob explosion damage a nidus takes
- * @param lashRadius             blocks a lash reaches
+ * @param lashRadius             blocks within which tentacles track and lash players
  * @param lashViralLoad          viral load a lash adds
  * @param lashKnockback          knockback strength of a lash
  * @param strikeCooldownTicks    game ticks after a player's strike during which their further strikes deal nothing
+ * @param lashIntervalTicks      game ticks between a fighting nidus's lashes besides those at thresholds; 0 is off
+ * @param tentacleDamageFactor   fraction of a strike's or projectile's damage a nidus takes through a tentacle
  */
 @EventBusSubscriber(modid = Remission.MOD_ID)
 public record NidusSettings(double vitality, int growthTicks, double growthBonus, int radius, double playerFactor,
                             int playerCap, double distanceFactor, double distanceMaxBonus, int contributorWindowTicks,
                             int regenDelayTicks, double regenRate, List<Integer> thresholds, double projectileFraction,
                             double explosionFraction, double lashRadius, double lashViralLoad, double lashKnockback,
-                            int strikeCooldownTicks) {
+                            int strikeCooldownTicks, int lashIntervalTicks, double tentacleDamageFactor) {
     @Nullable
     private static volatile NidusSettings override;
     /** The config settings, built once per config load or reload. */
@@ -67,7 +69,9 @@ public record NidusSettings(double vitality, int growthTicks, double growthBonus
                 RemissionCommonConfig.NIDUS_LASH_RADIUS.get(),
                 RemissionCommonConfig.NIDUS_LASH_VIRAL_LOAD.get(),
                 RemissionCommonConfig.NIDUS_LASH_KNOCKBACK.get(),
-                RemissionCommonConfig.NIDUS_STRIKE_COOLDOWN_TICKS.get());
+                RemissionCommonConfig.NIDUS_STRIKE_COOLDOWN_TICKS.get(),
+                RemissionCommonConfig.NIDUS_LASH_INTERVAL_TICKS.get(),
+                RemissionCommonConfig.NIDUS_TENTACLE_DAMAGE_FACTOR.get());
     }
 
     /** The settings in force: the config (cached until it next loads or reloads), unless a gametest replaced them. */

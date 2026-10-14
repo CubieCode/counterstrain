@@ -95,6 +95,8 @@ public final class RemissionCommonConfig {
     public static final ModConfigSpec.DoubleValue NIDUS_LASH_VIRAL_LOAD;
     public static final ModConfigSpec.DoubleValue NIDUS_LASH_KNOCKBACK;
     public static final ModConfigSpec.IntValue NIDUS_STRIKE_COOLDOWN_TICKS;
+    public static final ModConfigSpec.IntValue NIDUS_LASH_INTERVAL_TICKS;
+    public static final ModConfigSpec.DoubleValue NIDUS_TENTACLE_DAMAGE_FACTOR;
     public static final ModConfigSpec.BooleanValue NIDUS_RALLY;
     public static final ModConfigSpec.IntValue NIDUS_RALLY_RADIUS;
     public static final ModConfigSpec.IntValue NIDUS_RALLY_BATCH;
@@ -431,8 +433,9 @@ public final class RemissionCommonConfig {
                         "Explosions never destroy a nidus.")
                 .defineInRange("explosionFraction", 0.25, 0.0, 1.0);
         NIDUS_LASH_RADIUS = BUILDER
-                .comment("Blocks from a nidus within which its lash at each threshold reaches players.")
-                .defineInRange("lashRadius", 8.0, 0.0, 64.0);
+                .comment("Blocks from a nidus within which its tentacles turn toward players and lash them, one player per tentacle,",
+                        "nearest first. A lash lands about 2.8 blocks out, so a larger radius would lash players the tentacle never reaches.")
+                .defineInRange("lashRadius", 3.0, 0.0, 4.0);
         NIDUS_LASH_VIRAL_LOAD = BUILDER
                 .comment("Viral load a lash adds to each player it reaches (while [viral_load] is enabled).")
                 .defineInRange("lashViralLoad", 8.0, 0.0, 100.0);
@@ -443,6 +446,14 @@ public final class RemissionCommonConfig {
                 .comment("Game ticks after a player's strike during which their further strikes on that nidus deal nothing, as a mob's",
                         "invulnerability after a hit (10). Clicking faster never beats fully charged swings.")
                 .defineInRange("strikeCooldownTicks", 10, 0, 200);
+        NIDUS_LASH_INTERVAL_TICKS = BUILDER
+                .comment("Game ticks between the lashes of a nidus being fought, besides the lash at each threshold (which restarts the",
+                        "count). Each tentacle with a player in lashRadius lashes it; a tentacle still lashing waits. 0 lashes at thresholds only.")
+                .defineInRange("lashIntervalTicks", 100, 0, 72000);
+        NIDUS_TENTACLE_DAMAGE_FACTOR = BUILDER
+                .comment("Fraction of a strike's or arrow's damage a nidus takes when it hits a tentacle instead of the nidus itself.",
+                        "Tentacle strikes share the strike cooldown with strikes on the nidus.")
+                .defineInRange("tentacleDamageFactor", 0.5, 0.0, 10.0);
         NIDUS_RALLY = BUILDER
                 .comment("Whether hosts rally to a nidus under attack (damaged within contributorWindowTicks): hosts in festering",
                         "chunks within rallyRadius path toward it, a batch at a time, and those that cannot get closer are left alone.")

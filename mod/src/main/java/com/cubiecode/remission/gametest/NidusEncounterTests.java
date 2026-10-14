@@ -6,6 +6,7 @@ import com.cubiecode.remission.api.NidusDestroyedEvent;
 import com.cubiecode.remission.api.SurgeEndedEvent;
 import com.cubiecode.remission.api.SurgeStartedEvent;
 import com.cubiecode.remission.registry.RemissionBlocks;
+import com.cubiecode.remission.registry.RemissionEntityTypes;
 import com.cubiecode.remission.registry.RemissionItems;
 import com.cubiecode.remission.registry.RemissionStats;
 import com.cubiecode.remission.surge.Surges;
@@ -16,10 +17,13 @@ import com.cubiecode.remission.world.NidusDefenceSettings;
 import com.cubiecode.remission.world.NidusEncounters;
 import com.cubiecode.remission.world.NidusIndex;
 import com.cubiecode.remission.world.NidusSettings;
+import com.cubiecode.remission.world.NidusTentacle;
+import com.cubiecode.remission.world.NidusTentacles;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -51,6 +55,7 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.Event;
@@ -85,9 +90,9 @@ public final class NidusEncounterTests {
     private static final String BATCH = "nidi";
     private static final String PLAIN_BATCH = "nidi_plain";
     static final NidusSettings SETTINGS = new NidusSettings(100.0, 1000, 1.0, 16, 0.5, 3, 0.0, 2.0, 200, 40, 0.1,
-            List.of(75, 50, 25), 0.5, 0.25, 6.0, 15.0, 1.0, 10);
+            List.of(75, 50, 25), 0.5, 0.25, 3.0, 15.0, 1.0, 10, 0, 0.5);
     private static final NidusSettings PLAIN = new NidusSettings(0.0, 1000, 1.0, 16, 0.5, 3, 0.0, 2.0, 200, 40, 0.1,
-            List.of(75, 50, 25), 0.5, 0.25, 6.0, 15.0, 1.0, 10);
+            List.of(75, 50, 25), 0.5, 0.25, 3.0, 15.0, 1.0, 10, 0, 0.5);
     private static final float EPSILON = 1.0E-3F;
 
     private NidusEncounterTests() {
@@ -296,7 +301,8 @@ public final class NidusEncounterTests {
 
     /**
      * Each threshold starts one surge from that nidus at once (intensity 1, 2, 3 for one player), replacing the last, and
-     * lashes the player in range with viral load and knockback; a player out of lash range is spared.
+     * lashes: the tentacle nearest the player in reach (due east: mid right) turns at it, and only at contact time does
+     * the player gain viral load and get knocked away; a player out of lash range is spared.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void thresholdsSurgeAndLash(GameTestHelper helper) {
@@ -315,6 +321,13 @@ public final class NidusEncounterTests {
 
             fight.strike(near, max * 0.06F, now);
             helper.assertValueEqual(from(started, fight.pos).size(), 1, "surges after the first threshold");
+            int midRight = NidusTentacles.NAMES.indexOf("mid_right");
+            helper.assertTrue(blockEvents(fight.level).contains(new BlockEventData(fight.pos, RemissionBlocks.NIDUS.get(),
+                    NidusBlockEntity.EVENT_LASH, midRight + 8 * 90)), "no lash event toward the east from the mid right tentacle");
+            helper.assertValueEqual(ViralLoad.get(near), 0.0F, "viral load before the lash lands");
+            fight.nidus().tick(fight.level, SETTINGS, now + NidusTentacles.LASH_CONTACT_TICKS - 1);
+            helper.assertValueEqual(ViralLoad.get(near), 0.0F, "viral load a tick before the lash lands");
+            fight.nidus().tick(fight.level, SETTINGS, now + NidusTentacles.LASH_CONTACT_TICKS);
             helper.assertValueEqual(from(started, fight.pos).getFirst().getIntensity(),
                     (int) Math.round(1 * SETTINGS.playerMultiplier(players)), "first surge intensity");
             helper.assertValueEqual(Surges.controller(fight.level).current().origin(), fight.pos, "running surge origin");
@@ -323,8 +336,12 @@ public final class NidusEncounterTests {
             helper.assertTrue(near.getDeltaMovement().x > 0, "lash did not push the player away: " + near.getDeltaMovement());
             helper.assertValueEqual(ViralLoad.get(far), 0.0F, "viral load out of lash range");
 
-            fight.strike(near, max * 0.25F, now);
-            fight.strike(near, max * 0.25F, now);
+            // The next thresholds once the tentacle has finished lashing: each lands at its contact time.
+            for (int i = 1; i <= 2; i++) {
+                long later = now + (long) i * NidusTentacles.LASH_TICKS;
+                fight.strike(near, max * 0.25F, later);
+                fight.nidus().tick(fight.level, SETTINGS, later + NidusTentacles.LASH_CONTACT_TICKS);
+            }
             List<SurgeStartedEvent> ours = from(started, fight.pos);
             helper.assertValueEqual(ours.size(), 3, "surges after three thresholds");
             helper.assertValueEqual(ours.get(1).getIntensity(), (int) Math.round(2 * SETTINGS.playerMultiplier(players)), "second intensity");
@@ -335,7 +352,7 @@ public final class NidusEncounterTests {
             helper.assertValueEqual(ViralLoad.get(near), (float) SETTINGS.lashViralLoad() * 3, "viral load after three lashes");
 
             // No threshold left: more damage short of the last point starts nothing.
-            fight.strike(near, max * 0.1F, now);
+            fight.strike(near, max * 0.1F, now + 3L * NidusTentacles.LASH_TICKS);
             helper.assertValueEqual(from(started, fight.pos).size(), 3, "surges after the last threshold");
             helper.assertTrue(fight.nidus().barPlayers().containsAll(List.of(near, far)), "boss bar players");
             helper.assertTrue(Math.abs(fight.nidus().barProgress() - fight.nidus().vitality(SETTINGS) / max) < EPSILON,
@@ -392,9 +409,10 @@ public final class NidusEncounterTests {
     // ---- the final blow ---------------------------------------------------------------------------------------------
 
     /**
-     * The final strike destroys the nidus and drops its core; the destroyed event names the striker and every player
-     * who damaged it within the window (a projectile's owner too), and each of them earns the trigger and stat, but not
-     * a player whose only strike was before the window.
+     * The final strike kills the nidus: it plays its death for {@link NidusBlockEntity#DEATH_TICKS}, taking no damage,
+     * then it is destroyed and drops its core; the destroyed event names the striker and every player who damaged it
+     * within the window (a projectile's owner too), and each of them earns the trigger and stat, but not a player whose
+     * only strike was before the window.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void finalBlowDropsCoreAndCreditsContributors(GameTestHelper helper) {
@@ -414,8 +432,24 @@ public final class NidusEncounterTests {
             float left = fight.nidus().vitality(SETTINGS);
             fight.strike(striker, left - 1.0F, now);
             helper.assertBlockPresent(RemissionBlocks.NIDUS.get(), fight.rel);
+            NidusBlockEntity nidus = fight.nidus();
             fight.strike(striker, 50.0F, now);
+            helper.assertTrue(nidus.dying(), "the final blow did not start the death");
+            helper.assertBlockPresent(RemissionBlocks.NIDUS.get(), fight.rel);
+            helper.assertTrue(destroyed.isEmpty(), "destroyed before the death played");
+            helper.assertTrue(nidus.getUpdateTag(fight.level.registryAccess()).getBoolean("dying"), "dying not in the update tag");
+            helper.assertValueEqual(fight.strike(archer, 50.0F, now + 1), 0.0F, "damage to a dying nidus");
+            helper.assertTrue(nidus.hitboxes().isEmpty(), "tentacle hitboxes while dying");
 
+            // An unload mid-death keeps it: the reloaded block entity finishes it.
+            CompoundTag saved = nidus.saveWithoutMetadata(fight.level.registryAccess());
+            NidusBlockEntity reloaded = new NidusBlockEntity(fight.pos, fight.level.getBlockState(fight.pos));
+            reloaded.loadWithComponents(saved, fight.level.registryAccess());
+            helper.assertTrue(reloaded.dying(), "the death was not saved");
+
+            nidus.tick(fight.level, SETTINGS, now + NidusBlockEntity.DEATH_TICKS - 1);
+            helper.assertBlockPresent(RemissionBlocks.NIDUS.get(), fight.rel);
+            nidus.tick(fight.level, SETTINGS, now + NidusBlockEntity.DEATH_TICKS);
             helper.assertBlockPresent(Blocks.AIR, fight.rel);
             helper.assertItemEntityCountIs(RemissionItems.NIDUS_CORE.get(), fight.rel, 3, 1);
             helper.assertFalse(NidusIndex.get(fight.level).contains(fight.pos), "destroyed nidus still indexed");
@@ -472,7 +506,7 @@ public final class NidusEncounterTests {
 
             // Distance scaling (off in SETTINGS): the factor per 1000 blocks from spawn, capped.
             NidusSettings far = new NidusSettings(100.0, 1000, 1.0, 16, 0.5, 3, 1.0, 0.5, 200, 40, 0.1, List.of(75, 50, 25),
-                    0.5, 0.25, 6.0, 15.0, 1.0, 10);
+                    0.5, 0.25, 3.0, 15.0, 1.0, 10, 0, 0.5);
             helper.assertTrue(Math.abs(far.distanceMultiplier(200.0) - 1.2) < 1.0E-6, "distance multiplier at 200 blocks");
             helper.assertTrue(Math.abs(far.distanceMultiplier(1.0E6) - 1.5) < 1.0E-6, "distance multiplier cap");
             helper.assertTrue(Math.abs(SETTINGS.distanceMultiplier(1.0E6) - 1.0) < 1.0E-6, "distance scaling off by default");
@@ -526,7 +560,9 @@ public final class NidusEncounterTests {
             helper.assertValueEqual(seen.getFirst().getAmount(), 6.0F, "event amount after scaling");
             List<UUID> credited = new ArrayList<>();
             fight.listen(NidusDestroyedEvent.class, event -> credited.addAll(event.getContributors()));
+            NidusBlockEntity nidus = fight.nidus();
             fight.strike(player, 1000.0F, now);
+            nidus.tick(fight.level, SETTINGS, now + NidusBlockEntity.DEATH_TICKS);
             helper.assertValueEqual(credited, List.of(player.getUUID()), "contributors (the cancelled player excluded)");
         }
         helper.succeed();
@@ -586,7 +622,7 @@ public final class NidusEncounterTests {
     @GameTest(template = "empty", batch = BATCH)
     public static void strikeSpamNeverBeatsChargedSwings(GameTestHelper helper) {
         NidusSettings tough = new NidusSettings(1.0E6, 1000, 1.0, 16, 0.5, 3, 0.0, 2.0, 200, 40, 0.1, List.of(), 0.5, 0.25,
-                6.0, 15.0, 1.0, 10);
+                3.0, 15.0, 1.0, 10, 0, 0.5);
         try (Fight fight = new Fight(helper)) {
             for (ItemStack held : List.of(new ItemStack(Items.IRON_SWORD), new ItemStack(Items.IRON_AXE), ItemStack.EMPTY)) {
                 ServerPlayer spammer = fight.player(1);
@@ -698,6 +734,220 @@ public final class NidusEncounterTests {
                 surges.stop(now + 3);
                 fight.level.removeBlock(other, false);
             }
+        }
+        helper.succeed();
+    }
+
+    // ---- tentacles (P4.19) -------------------------------------------------------------------------------------------
+
+    private static List<NidusTentacle> hitboxesNear(Fight fight) {
+        return fight.level.getEntitiesOfClass(NidusTentacle.class, new AABB(fight.pos).inflate(4.0));
+    }
+
+    /**
+     * A nidus keeps six tentacle hitboxes at their rest places, one per tentacle, never more however often it ticks;
+     * their type never saves, a stray one discards itself, and none are left once the block is removed.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void tentacleHitboxesFollowTheirNidus(GameTestHelper helper) {
+        try (Fight fight = new Fight(helper)) {
+            NidusBlockEntity nidus = fight.nidus();
+            long now = fight.level.getGameTime();
+            nidus.tick(fight.level, SETTINGS, now);
+            nidus.tick(fight.level, SETTINGS, now + 1);
+            helper.assertValueEqual(nidus.hitboxes().size(), NidusTentacles.COUNT, "hitboxes kept");
+            helper.assertValueEqual(hitboxesNear(fight).size(), NidusTentacles.COUNT, "hitboxes in the level");
+            for (NidusTentacle hitbox : nidus.hitboxes()) {
+                Vec3 centre = NidusTentacles.hitboxCentre(hitbox.tentacle(), 0.0F);
+                Vec3 expected = new Vec3(fight.pos.getX() + 0.5 + centre.x, fight.pos.getY() + centre.y, fight.pos.getZ() + 0.5 + centre.z);
+                helper.assertTrue(hitbox.getBoundingBox().getCenter().distanceTo(expected) < 0.01,
+                        "hitbox " + hitbox.tentacle() + " at " + hitbox.getBoundingBox().getCenter() + ", expected " + expected);
+            }
+            helper.assertFalse(RemissionEntityTypes.NIDUS_TENTACLE.get().canSerialize(), "tentacle hitboxes save");
+
+            // One lost (killed, or a chunk's entities unloaded) comes back once, at the next tick.
+            nidus.hitboxes().getFirst().discard();
+            nidus.tick(fight.level, SETTINGS, now + 2);
+            helper.assertValueEqual(hitboxesNear(fight).size(), NidusTentacles.COUNT, "hitboxes after one was lost");
+
+            NidusTentacle stray = RemissionEntityTypes.NIDUS_TENTACLE.get().create(fight.level);
+            stray.moveTo(Vec3.atCenterOf(fight.pos).add(1.0, 0.0, 0.0));
+            fight.level.addFreshEntity(stray);
+            stray.tick();
+            helper.assertTrue(stray.isRemoved(), "a hitbox no nidus owns stayed");
+
+            fight.level.removeBlock(fight.pos, false);
+            helper.assertTrue(hitboxesNear(fight).isEmpty(), "hitboxes left after the nidus was removed");
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A player's attack on a tentacle is a strike at the tentacle factor, never the weapon's hit: it shares the strike
+     * cooldown, names the tentacle in the hit event and has the hitbox as the damage's direct entity. An arrow is
+     * projectile damage at the projectile and tentacle factors; an explosion counts once, through the nidus.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void tentacleHitsDamageTheNidus(GameTestHelper helper) {
+        try (Fight fight = new Fight(helper)) {
+            ServerPlayer player = fight.player(2);
+            ServerPlayer archer = fight.player(-3); // in range from the start, so the fight's vitality never rescales
+            ItemStack sword = new ItemStack(Items.IRON_SWORD);
+            player.setItemInHand(InteractionHand.MAIN_HAND, sword);
+            sword.forEachModifier(EquipmentSlot.MAINHAND, (attribute, modifier) ->
+                    player.getAttribute(attribute).addOrReplacePermanentModifier(modifier));
+            setAttackTicker(player, 100);
+            NidusBlockEntity nidus = fight.nidus();
+            nidus.tick(fight.level, SETTINGS, fight.level.getGameTime());
+            List<NidusDamagedEvent> seen = new ArrayList<>();
+            fight.listen(NidusDamagedEvent.class, event -> {
+                if (event.getPos().equals(fight.pos)) {
+                    seen.add(event);
+                }
+            });
+            NidusTentacle hitbox = nidus.hitboxes().get(2);
+            float expected = NidusEncounters.strikeDamage(player) * (float) SETTINGS.tentacleDamageFactor();
+            player.attack(hitbox);
+            helper.assertTrue(Math.abs(nidus.damageTaken() - expected) < EPSILON,
+                    "tentacle strike damage " + nidus.damageTaken() + ", expected " + expected);
+            helper.assertValueEqual(seen.getFirst().getKind(), NidusDamagedEvent.Kind.STRIKE, "tentacle strike kind");
+            helper.assertValueEqual(seen.getFirst().getDirectEntity(), hitbox, "tentacle strike direct entity");
+            helper.assertTrue(blockEvents(fight.level).contains(new BlockEventData(fight.pos, RemissionBlocks.NIDUS.get(),
+                    NidusBlockEntity.EVENT_HIT, hitbox.tentacle() + 1)), "hit event naming the tentacle");
+            helper.assertValueEqual(sword.getDamageValue(), 1, "sword wear");
+
+            setAttackTicker(player, 100);
+            player.attack(nidus.hitboxes().get(3));
+            helper.assertTrue(Math.abs(nidus.damageTaken() - expected) < EPSILON, "a second strike within the cooldown counted");
+
+            Arrow arrow = new Arrow(EntityType.ARROW, fight.level);
+            arrow.setOwner(archer);
+            arrow.setPos(hitbox.position());
+            arrow.setDeltaMovement(-2.5, 0.0, 0.0);
+            float arrowDamage = (float) Math.ceil(2.5 * arrow.getBaseDamage()) * 0.5F * (float) SETTINGS.tentacleDamageFactor();
+            helper.assertTrue(hitbox.hurt(fight.level.damageSources().arrow(arrow, archer), 9.0F), "the arrow did not hit");
+            helper.assertTrue(Math.abs(nidus.damageTaken() - expected - arrowDamage) < EPSILON,
+                    "damage after a tentacle arrow " + nidus.damageTaken() + ", expected " + (expected + arrowDamage));
+            helper.assertValueEqual(seen.getLast().getKind(), NidusDamagedEvent.Kind.PROJECTILE, "tentacle arrow kind");
+
+            float before = nidus.damageTaken();
+            Vec3 blast = hitbox.getBoundingBox().getCenter();
+            float blastDamage = NidusEncounters.explosionDamage(blast, 1.0F, fight.pos) * 0.25F;
+            fight.level.explode(archer, blast.x, blast.y, blast.z, 1.0F, Level.ExplosionInteraction.NONE);
+            helper.assertTrue(Math.abs(nidus.damageTaken() - before - blastDamage) < EPSILON,
+                    "explosion by a tentacle " + (nidus.damageTaken() - before) + ", expected once " + blastDamage);
+            helper.assertFalse(hitbox.isRemoved(), "an explosion removed a hitbox");
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Tentacles go to the nearest players first, each to the free tentacle resting closest to its bearing: players east
+     * and west get the mid right and mid left tentacles; of seven players the furthest gets none; the same players
+     * always get the same tentacles, whatever order they are listed in.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void tentaclesAreAssignedDeterministically(GameTestHelper helper) {
+        try (Fight fight = new Fight(helper)) {
+            Vec3 centre = Vec3.atCenterOf(fight.pos);
+            ServerPlayer east = fight.player(2);
+            ServerPlayer west = fight.player(-2);
+            List<NidusTentacles.Assignment> two = NidusTentacles.assign(centre, List.of(west, east));
+            helper.assertValueEqual(tentacleOf(two, east), NidusTentacles.NAMES.indexOf("mid_right"), "east player's tentacle");
+            helper.assertValueEqual(tentacleOf(two, west), NidusTentacles.NAMES.indexOf("mid_left"), "west player's tentacle");
+
+            List<ServerPlayer> seven = sevenAround(fight);
+            List<NidusTentacles.Assignment> assigned = NidusTentacles.assign(centre, seven);
+            helper.assertValueEqual(assigned.size(), NidusTentacles.COUNT, "players assigned of seven");
+            helper.assertValueEqual(assigned.stream().map(NidusTentacles.Assignment::tentacle).distinct().count(),
+                    (long) NidusTentacles.COUNT, "distinct tentacles");
+            helper.assertValueEqual(tentacleOf(assigned, seven.getLast()), -1, "the furthest of seven was assigned");
+            List<ServerPlayer> reversed = new ArrayList<>(seven);
+            Collections.reverse(reversed);
+            List<NidusTentacles.Assignment> again = NidusTentacles.assign(centre, reversed);
+            for (ServerPlayer player : seven) {
+                helper.assertValueEqual(tentacleOf(again, player), tentacleOf(assigned, player), "tentacle on a second run");
+            }
+        }
+        helper.succeed();
+    }
+
+    /** Seven players around the nidus within reach: six within 2 blocks and the last, furthest, 2.8 blocks out. */
+    private static List<ServerPlayer> sevenAround(Fight fight) {
+        List<ServerPlayer> players = new ArrayList<>();
+        int[][] offsets = {{2, 0}, {-2, 0}, {0, -2}, {0, 2}, {1, -1}, {-1, 1}, {2, -2}};
+        for (int[] offset : offsets) {
+            ServerPlayer player = SurgeTests.player(fight.helper, fight.pos.offset(offset[0], 0, offset[1]));
+            fight.players.add(player);
+            NidusEncounters.addTestPlayer(fight.pos, player);
+            players.add(player);
+        }
+        return players;
+    }
+
+    private static int tentacleOf(List<NidusTentacles.Assignment> assignments, ServerPlayer player) {
+        return assignments.stream().filter(a -> a.player() == player).mapToInt(NidusTentacles.Assignment::tentacle)
+                .findFirst().orElse(-1);
+    }
+
+    /**
+     * A lash strikes each assigned player at contact time and no one else: of seven players in reach the furthest is
+     * spared, each struck player is knocked away from the nidus, and a player who steps out of reach before contact
+     * dodges it.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void lashesLandOnTheirTargetsAtContact(GameTestHelper helper) {
+        try (Fight fight = new Fight(helper)) {
+            List<ServerPlayer> seven = sevenAround(fight);
+            NidusBlockEntity nidus = fight.nidus();
+            long now = fight.level.getGameTime();
+            fight.strike(seven.getFirst(), 1.0F, now);
+            nidus.lash(fight.level, SETTINGS, now);
+            ServerPlayer dodger = seven.get(3); // due south
+            dodger.moveTo(dodger.getX(), dodger.getY(), dodger.getZ() + 3.0);
+            nidus.tick(fight.level, SETTINGS, now + NidusTentacles.LASH_CONTACT_TICKS - 1);
+            for (ServerPlayer player : seven) {
+                helper.assertValueEqual(ViralLoad.get(player), 0.0F, "viral load before contact");
+            }
+            nidus.tick(fight.level, SETTINGS, now + NidusTentacles.LASH_CONTACT_TICKS);
+            Vec3 centre = Vec3.atCenterOf(fight.pos);
+            for (int i = 0; i < seven.size(); i++) {
+                ServerPlayer player = seven.get(i);
+                boolean struck = i < NidusTentacles.COUNT && player != dodger;
+                helper.assertValueEqual(ViralLoad.get(player), struck ? (float) SETTINGS.lashViralLoad() : 0.0F, "viral load of player " + i);
+                if (struck) {
+                    Vec3 away = player.position().subtract(centre).multiply(1.0, 0.0, 1.0);
+                    helper.assertTrue(player.getDeltaMovement().multiply(1.0, 0.0, 1.0).dot(away) > 0,
+                            "player " + i + " knocked toward the nidus: " + player.getDeltaMovement());
+                }
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * With {@code lashIntervalTicks} set, a nidus being fought lashes on its own every interval from the fight's start;
+     * at 0 (the batch's settings) it lashes only at thresholds.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void periodicLashesFollowTheInterval(GameTestHelper helper) {
+        NidusSettings periodic = new NidusSettings(100.0, 1000, 1.0, 16, 0.5, 3, 0.0, 2.0, 200, 400, 0.1, List.of(75, 50, 25),
+                0.5, 0.25, 3.0, 15.0, 1.0, 10, 40, 0.5);
+        try (Fight fight = new Fight(helper)) {
+            ServerPlayer player = fight.player(2);
+            NidusBlockEntity nidus = fight.nidus();
+            long now = fight.level.getGameTime();
+            nidus.damage(fight.level, NidusDamagedEvent.Kind.STRIKE, player, null, 1.0F, periodic, now);
+            int lash = NidusTentacles.NAMES.indexOf("mid_right") + 8 * 90;
+            BlockEventData event = new BlockEventData(fight.pos, RemissionBlocks.NIDUS.get(), NidusBlockEntity.EVENT_LASH, lash);
+            nidus.tick(fight.level, SETTINGS, now + 40);
+            helper.assertFalse(blockEvents(fight.level).contains(event), "a lash with the interval off");
+            nidus.tick(fight.level, periodic, now + 39);
+            helper.assertFalse(blockEvents(fight.level).contains(event), "a lash before the interval");
+            nidus.tick(fight.level, periodic, now + 40);
+            helper.assertTrue(blockEvents(fight.level).contains(event), "no lash at the interval");
+            nidus.tick(fight.level, periodic, now + 40 + NidusTentacles.LASH_CONTACT_TICKS);
+            helper.assertValueEqual(ViralLoad.get(player), (float) periodic.lashViralLoad(), "viral load from the periodic lash");
         }
         helper.succeed();
     }
