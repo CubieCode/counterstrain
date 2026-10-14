@@ -439,7 +439,7 @@ public final class RemissionCommonConfig {
                 .defineInRange("lashRadius", 3.0, 0.0, 4.0);
         NIDUS_LASH_VIRAL_LOAD = BUILDER
                 .comment("Viral load a lash adds to each player it reaches (while [viral_load] is enabled).")
-                .defineInRange("lashViralLoad", 4.0, 0.0, 100.0);
+                .defineInRange("lashViralLoad", 2.0, 0.0, 100.0);
         NIDUS_LASH_KNOCKBACK = BUILDER
                 .comment("Knockback strength of a lash, away from the nidus (a strong mob hit is about 1).")
                 .defineInRange("lashKnockback", 1.5, 0.0, 10.0);
