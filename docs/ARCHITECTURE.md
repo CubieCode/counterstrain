@@ -284,7 +284,7 @@ Internal Java system names and public API types may keep the generic word "corru
 
 ### Festering land atmosphere (phase 4, built in P4.11)
 
-- Biome effects (datagen, `RemissionBiomeProvider`): `remission:fester` keeps P4.2's colours (violet-grey sky `#8F84A3`, mauve fog `#A597B0`, water fog `#2B1F36`) and adds its own ambient loop, cave-style mood sound (every 3000 ticks in dark spots, half vanilla's cave delay), occasional additions (wet, organic noises) and music that replaces whatever plays when a player walks in (`replace_current_music`, 2400–9600 ticks between tracks). Sound events live in `registry/RemissionSounds`; files and subtitles in `assets/remission/sounds.json`. Variant biomes inherit none of it (remission-data-formats).
+- Biome effects (datagen, `RemissionBiomeProvider`): `remission:fester` keeps P4.2's colours (violet-grey sky `#8F84A3`, mauve fog `#A597B0`, water fog `#2B1F36`) and adds its own ambient loop, cave-style mood sound (every 3000 ticks in dark spots, half vanilla's cave delay), occasional additions (wet, organic noises) and music that replaces whatever plays when a player walks in (`replace_current_music`, 2400–9600 ticks between tracks). Most other music never replaces a playing track, so `client/FesterMusic` (`SelectMusicEvent`) makes the situational music replace a fester track still playing once the player is out of festering land (walked out, or the land purified around them); the music manager then stops it and waits its usual short delay. Sound events live in `registry/RemissionSounds`; files and subtitles in `assets/remission/sounds.json`. Variant biomes inherit none of it (remission-data-formats).
 
 <details>
 <summary>Implementation detail</summary>
