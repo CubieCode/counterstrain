@@ -1,8 +1,5 @@
 # Local scratch: run logs, test instances, screenshots, exports
 .local/
-
-# Per-user Claude Code settings (permissions); the shared .claude/ files stay committed
-.claude/settings.local.json
 .DS_Store
 
 # Python bytecode from tools/ scripts and tests
@@ -34,3 +31,6 @@ mod/src/generated/**/.cache/
 pack/kubejs/probe/
 pack/.probe/
 pack/local/
+
+# Per-user Claude Code settings (permissions); the shared .claude/ files stay committed
+.claude/settings.local.json
