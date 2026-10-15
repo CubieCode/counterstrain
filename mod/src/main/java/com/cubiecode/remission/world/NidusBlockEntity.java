@@ -115,6 +115,12 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
     public static final double LASH_DODGE_MARGIN = 0.5;
     /** Ticks after a player comes within reach before the first lash at them, fought or not. */
     public static final int FIRST_LASH_TICKS = 20;
+    /** Horizontal distance from its centre within which a player standing on the block is on its crown. */
+    public static final double CROWN_RADIUS = 0.9;
+    /** Ticks a player may stand on the crown before a tentacle lashes at them and throws them off. */
+    public static final int CROWN_TICKS = 10;
+    /** Upward speed a lash gives a player it strikes on the crown, so it throws them off rather than nudging them. */
+    public static final double CROWN_THROW = 0.6;
 
     /** Ticks the body controller takes to blend between idle and enraged. */
     public static final int BLEND_TICKS = 10;
@@ -153,6 +159,8 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
     private final List<PendingLash> lashes = new ArrayList<>();
     /** Server: game time of the last lash, for {@code lashIntervalTicks}; transient. */
     private long lastLash = Long.MIN_VALUE;
+    /** Server: players standing on its crown and since when; transient. */
+    private final Map<UUID, Long> onCrown = new HashMap<>();
     /** Server: game time its last surge ended (it stopped being enraged), for regeneration; transient. */
     private long calmedAt = Long.MIN_VALUE;
 
@@ -384,14 +392,53 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
         Vec3 centre = Vec3.atCenterOf(worldPosition);
         boolean any = false;
         for (NidusTentacles.Assignment assignment : NidusTentacles.assign(centre, lashTargets(level, settings))) {
-            int tentacle = assignment.tentacle();
-            if (aim.lashing(tentacle, now)) {
-                continue;
+            any |= lash(level, assignment, now);
+        }
+        if (any) {
+            level.playSound(null, worldPosition, SoundEvents.WARDEN_ATTACK_IMPACT, SoundSource.HOSTILE, 2.0F, 0.6F);
+        }
+    }
+
+    /** {@code assignment}'s tentacle lashes at its player, unless it is still lashing. Returns whether it lashed. */
+    private boolean lash(ServerLevel level, NidusTentacles.Assignment assignment, long now) {
+        int tentacle = assignment.tentacle();
+        if (aim.lashing(tentacle, now)) {
+            return false;
+        }
+        aim.lash(tentacle, assignment.bearing(), now);
+        level.blockEvent(worldPosition, getBlockState().getBlock(), EVENT_LASH, lashParam(tentacle, assignment.bearing()));
+        lashes.add(new PendingLash(assignment.player().getUUID(), tentacle, now + NidusTentacles.LASH_CONTACT_TICKS));
+        return true;
+    }
+
+    /** Whether {@code player} stands on top of the block, inside the crown where no lash visibly reaches. */
+    public boolean onCrown(Entity player) {
+        double dx = player.getX() - (worldPosition.getX() + 0.5);
+        double dz = player.getZ() - (worldPosition.getZ() + 0.5);
+        double above = player.getY() - (worldPosition.getY() + 1);
+        return dx * dx + dz * dz <= CROWN_RADIUS * CROWN_RADIUS && above >= -0.01 && above < 1.5;
+    }
+
+    /**
+     * Players on the crown for {@link #CROWN_TICKS} are lashed at once by their tentacle, whatever the lash interval, so
+     * standing on the nidus is never safe; the lash throws them off ({@link #CROWN_THROW}).
+     */
+    private void crownLash(ServerLevel level, NidusSettings settings, List<ServerPlayer> targets, long now) {
+        List<UUID> standing = new ArrayList<>();
+        for (ServerPlayer player : targets) {
+            if (settings.encounters() && onCrown(player)) {
+                standing.add(player.getUUID());
+                onCrown.putIfAbsent(player.getUUID(), now);
             }
-            any = true;
-            aim.lash(tentacle, assignment.bearing(), now);
-            level.blockEvent(worldPosition, getBlockState().getBlock(), EVENT_LASH, lashParam(tentacle, assignment.bearing()));
-            lashes.add(new PendingLash(assignment.player().getUUID(), tentacle, now + NidusTentacles.LASH_CONTACT_TICKS));
+        }
+        onCrown.keySet().retainAll(standing);
+        boolean any = false;
+        for (NidusTentacles.Assignment assignment : NidusTentacles.assign(Vec3.atCenterOf(worldPosition), targets)) {
+            Long since = onCrown.get(assignment.player().getUUID());
+            if (since != null && now - since >= CROWN_TICKS && lash(level, assignment, now)) {
+                onCrown.put(assignment.player().getUUID(), now);
+                any = true;
+            }
         }
         if (any) {
             level.playSound(null, worldPosition, SoundEvents.WARDEN_ATTACK_IMPACT, SoundSource.HOSTILE, 2.0F, 0.6F);
@@ -438,6 +485,10 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
                 dz = 1.0;
             }
             player.knockback(settings.lashKnockback(), dx, dz);
+            if (onCrown(player)) {
+                Vec3 motion = player.getDeltaMovement();
+                player.setDeltaMovement(motion.x, Math.max(motion.y, CROWN_THROW), motion.z);
+            }
             player.hurtMarked = true;
         }
         player.displayClientMessage(Component.translatable("event.remission.nidus.lash"), true);
@@ -533,6 +584,7 @@ public final class NidusBlockEntity extends BlockEntity implements GeoBlockEntit
             setEnraged(surge != null && surge.started() && surge.origin().equals(worldPosition));
         }
         periodicLash(level, settings, targets, now);
+        crownLash(level, settings, targets, now);
         rally.tick(level, underAttack(settings, now), NidusDefenceSettings.current(), now);
         if (!fighting()) {
             return;

@@ -974,6 +974,39 @@ public final class NidusEncounterTests {
         helper.succeed();
     }
 
+    /**
+     * Standing on the nidus is never safe: a player on its crown for {@link NidusBlockEntity#CROWN_TICKS} is lashed at
+     * once, whatever the lash interval (here off), and the lash throws them upward off it; a player beside it is spared.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void playersOnTheCrownAreThrownOff(GameTestHelper helper) {
+        try (Fight fight = new Fight(helper)) {
+            ServerPlayer beside = fight.player(2);
+            ServerPlayer crown = fight.player(0);
+            crown.teleportTo(fight.pos.getX() + 0.5, fight.pos.getY() + 1.0, fight.pos.getZ() + 0.5);
+            NidusBlockEntity nidus = fight.nidus();
+            helper.assertTrue(nidus.onCrown(crown), "player on top of the block not on the crown");
+            helper.assertFalse(nidus.onCrown(beside), "player beside the block on the crown");
+            long now = fight.level.getGameTime();
+            for (int t = 0; t < NidusBlockEntity.CROWN_TICKS; t++) {
+                nidus.tick(fight.level, SETTINGS, now + t);
+            }
+            helper.assertTrue(blockEvents(fight.level).stream().noneMatch(e -> e.pos().equals(fight.pos) && e.paramA() == NidusBlockEntity.EVENT_LASH),
+                    "a lash before the crown's grace ran out");
+            long lash = now + NidusBlockEntity.CROWN_TICKS;
+            nidus.tick(fight.level, SETTINGS, lash);
+            helper.assertValueEqual(blockEvents(fight.level).stream().filter(e -> e.pos().equals(fight.pos) && e.paramA() == NidusBlockEntity.EVENT_LASH).count(),
+                    1L, "lashes at the player on the crown");
+            for (long t = lash + 1; t <= lash + NidusTentacles.LASH_CONTACT_TICKS; t++) {
+                nidus.tick(fight.level, SETTINGS, t);
+            }
+            helper.assertValueEqual(ViralLoad.get(crown), (float) SETTINGS.lashViralLoad(), "viral load on the crown");
+            helper.assertValueEqual(ViralLoad.get(beside), 0.0F, "viral load beside the nidus");
+            helper.assertTrue(crown.getDeltaMovement().y >= NidusBlockEntity.CROWN_THROW, "lash did not throw the player up");
+        }
+        helper.succeed();
+    }
+
     // ---- appearance -------------------------------------------------------------------------------------------------
 
     /**
