@@ -20,7 +20,7 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 /**
- * Client entrypoint: renderers (the nidus's animated block entity renderer among them), render layers, HUD layers, festering fog and music, hazard notices, client config and client-side integrations
+ * Client entrypoint: renderers (the nidus's animated block entity renderer among them), render layers, HUD layers, festering fog, hazard notices, client config and client-side integrations
  * (JourneyMap).
  */
 @Mod(value = Remission.MOD_ID, dist = Dist.CLIENT)
@@ -46,7 +46,6 @@ public final class RemissionClient {
                 event.registerEntityRenderer(RemissionEntityTypes.NIDUS_TENTACLE.get(), NoopRenderer::new));
         modBus.addListener(ViralLoadHud::register);
         FesterFog.init();
-        FesterMusic.init();
         HazardNoticeDisplay.init();
         // Optional integrations: each class is touched only when its mod is loaded.
         if (ModList.get().isLoaded(JourneyMapIntegration.MOD_ID)) {
