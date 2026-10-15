@@ -550,6 +550,7 @@ final class SceneRunner {
         Scene.Camera camera = shot.camera();
         mc.options.setCameraType(shot.view());
         mc.options.hideGui = !shot.hud();
+        mc.getEntityRenderDispatcher().setRenderHitBoxes(shot.hitboxes());
         pinJourneyMapMinimap(!shot.hud(), false);
         if (mc.options.guiScale().get() != shot.guiScale()) {
             mc.options.guiScale().set(shot.guiScale());

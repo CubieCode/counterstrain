@@ -6,6 +6,7 @@ import com.cubiecode.remission.config.RemissionClientConfig;
 import com.cubiecode.remission.integration.journeymap.JourneyMapIntegration;
 import com.cubiecode.remission.registry.RemissionBlockEntities;
 import com.cubiecode.remission.registry.RemissionEntityTypes;
+import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
@@ -40,6 +41,9 @@ public final class RemissionClient {
                 event.registerEntityRenderer(RemissionEntityTypes.COUNTERSTRAIN_PROTOTYPE.get(), ThrownItemRenderer::new));
         modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
                 event.registerBlockEntityRenderer(RemissionBlockEntities.NIDUS.get(), NidusRenderer::new));
+        // The nidus's tentacle hitboxes are invisible: the nidus's own renderer draws the tentacles.
+        modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
+                event.registerEntityRenderer(RemissionEntityTypes.NIDUS_TENTACLE.get(), NoopRenderer::new));
         modBus.addListener(ViralLoadHud::register);
         FesterFog.init();
         FesterMusic.init();

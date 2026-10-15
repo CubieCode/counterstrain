@@ -16,11 +16,11 @@ import software.bernie.geckolib.renderer.GeoRenderer;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
 /**
- * The nidus's emissive pass: its health stage's mask ({@link NidusModel#emissive}: the core, the wounds and the stumps)
+ * The nidus's emissive pass: its health stage's mask ({@link NidusModel#emissive}: the core, the veins and the root veins)
  * drawn again over the model at full brightness, while the purple flesh beneath stays lit by the world. The glow beats
  * with the heart: its strength follows the {@code core} bone's animated swell, so it keeps time with whichever loop is
  * playing (a slow double beat at idle, a fast hard one when enraged). Near death the core also flickers, dropping out
- * for a tick or two at a time.
+ * for a tick or two at a time. The glow takes the model's overlay, so it flashes red with the flesh after a hit.
  */
 public final class NidusGlowLayer extends GeoRenderLayer<NidusBlockEntity> {
     /** Glow at rest, between beats. */

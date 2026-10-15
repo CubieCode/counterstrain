@@ -198,5 +198,6 @@
   "commands.remission.variant.clear.success": "commands.remission.variant.clear.success %1$s %2$s %3$s",
   "commands.remission.variant.query.none": "commands.remission.variant.query.none",
   "commands.remission.variant.query.entry": "commands.remission.variant.query.entry %1$s %2$s",
-  "commands.remission.variant.query.success": "commands.remission.variant.query.success %1$s %2$s %3$s %4$s %5$s %6$s"
+  "commands.remission.variant.query.success": "commands.remission.variant.query.success %1$s %2$s %3$s %4$s %5$s %6$s",
+  "entity.remission.nidus_tentacle": "entity.remission.nidus_tentacle"
 }

@@ -29,6 +29,8 @@ import com.cubiecode.remission.world.FesteringStages;
 import com.cubiecode.remission.world.FesteringVeins;
 import com.cubiecode.remission.world.NidusBlockEntity;
 import com.cubiecode.remission.world.NidusSettings;
+import com.cubiecode.remission.world.NidusTentacles;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -51,6 +53,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -62,6 +65,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Harness-only commands, registered only while a scene runs, for setup that has no player-facing command.
@@ -81,7 +85,11 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * {@code harness revenant <pos> <owner> <level> <yaw>} raises a revenant of the owner player there, through the
  * revenant code, wearing copies of the owner's armour and main-hand item, at that Strain level and facing (P5.3).
  * {@code harness nidus <pos> <vitality>} strikes a nidus down to that percent of its vitality through the fight code, as
- * the nearest player, so the thresholds it passes start their surges (P4.10). {@code harness regrow} regrows every
+ * the nearest player, so the thresholds it passes start their surges (P4.10); {@code harness nidus <pos> lash} lashes the
+ * players its tentacles track now, {@code harness nidus <pos> tentacle <index>} strikes that tentacle (a hit and a
+ * flinch), {@code harness nidus <pos> lash_at <bearing>} shows a lash toward a bearing with no player, and
+ * {@code harness nidus <pos> kill} strikes the final blow, starting its death; {@code harness nidi
+ * periodic_lashes <true|false>} turns periodic lashes off for the session or back to the config (P4.19). {@code harness regrow} regrows every
  * column of every loaded chunk in remission at once, as the budgeted regrowth would over {@code regrowthTicks} (P5.5).
  */
 final class HarnessCommands {
@@ -213,7 +221,23 @@ final class HarnessCommands {
                         .then(Commands.argument("vitality", IntegerArgumentType.integer(1, 100))
                                 .executes(context -> nidus(context.getSource().getLevel(),
                                         BlockPosArgument.getLoadedBlockPos(context, "pos"),
-                                        IntegerArgumentType.getInteger(context, "vitality")))))));
+                                        IntegerArgumentType.getInteger(context, "vitality"))))
+                        .then(Commands.literal("lash").executes(context -> nidusLash(context.getSource().getLevel(),
+                                BlockPosArgument.getLoadedBlockPos(context, "pos"))))
+                        .then(Commands.literal("lash_at").then(Commands.argument("bearing", FloatArgumentType.floatArg(-180, 360))
+                                .executes(context -> nidusLashAt(context.getSource().getLevel(),
+                                        BlockPosArgument.getLoadedBlockPos(context, "pos"),
+                                        FloatArgumentType.getFloat(context, "bearing")))))
+                        .then(Commands.literal("tentacle").then(Commands.argument("index",
+                                        IntegerArgumentType.integer(0, NidusTentacles.COUNT - 1))
+                                .executes(context -> nidusTentacle(context.getSource().getLevel(),
+                                        BlockPosArgument.getLoadedBlockPos(context, "pos"),
+                                        IntegerArgumentType.getInteger(context, "index")))))
+                        .then(Commands.literal("kill").executes(context -> nidusKill(context.getSource().getLevel(),
+                                BlockPosArgument.getLoadedBlockPos(context, "pos"))))))
+                .then(Commands.literal("nidi").then(Commands.literal("periodic_lashes")
+                        .then(Commands.argument("on", BoolArgumentType.bool())
+                                .executes(context -> periodicLashes(BoolArgumentType.getBool(context, "on")))))));
     }
 
     /**
@@ -253,6 +277,74 @@ final class HarnessCommands {
             nidus.damage(level, NidusDamagedEvent.Kind.STRIKE, player, null, rest, settings, now);
         }
         return Math.round(nidus.vitality(settings));
+    }
+
+    private static NidusBlockEntity nidusAt(ServerLevel level, BlockPos pos) throws CommandSyntaxException {
+        if (!(level.getBlockEntity(pos) instanceof NidusBlockEntity nidus)) {
+            throw NO_NIDUS.create();
+        }
+        return nidus;
+    }
+
+    @Nullable
+    private static ServerPlayer nearestPlayer(ServerLevel level, BlockPos pos) {
+        return level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, -1.0, false)
+                instanceof ServerPlayer nearest ? nearest : null;
+    }
+
+    /**
+     * Turns nidi's periodic lashes (P4.19) off for the rest of the session, or back to the config, so a scene with a
+     * survival player near a nidus is not knocked about between shots; lashes the scene asks for still happen.
+     */
+    private static int periodicLashes(boolean on) {
+        NidusSettings.override(on ? null : NidusSettings.fromConfig().withLashIntervalTicks(0));
+        return 1;
+    }
+
+    /** Lashes now with the nidus at {@code pos}: each tentacle with a tracked player turns at it (P4.19). */
+    private static int nidusLash(ServerLevel level, BlockPos pos) throws CommandSyntaxException {
+        nidusAt(level, pos).lash(level, NidusSettings.current(), level.getGameTime());
+        return 1;
+    }
+
+    /**
+     * Shows a lash toward {@code bearing} (degrees, 0 north, 90 east) by the tentacle resting closest to it, with no
+     * player to strike: the event clients play and the server's aim (so the hitbox follows), nothing lands (P4.19).
+     */
+    private static int nidusLashAt(ServerLevel level, BlockPos pos, float bearing) throws CommandSyntaxException {
+        NidusBlockEntity nidus = nidusAt(level, pos);
+        int best = 0;
+        for (int tentacle = 1; tentacle < NidusTentacles.COUNT; tentacle++) {
+            if (Math.abs(Mth.wrapDegrees(bearing - NidusTentacles.restBearing(tentacle)))
+                    < Math.abs(Mth.wrapDegrees(bearing - NidusTentacles.restBearing(best)))) {
+                best = tentacle;
+            }
+        }
+        nidus.aim().lash(best, bearing, level.getGameTime());
+        level.blockEvent(pos, nidus.getBlockState().getBlock(), NidusBlockEntity.EVENT_LASH, NidusBlockEntity.lashParam(best, bearing));
+        return best;
+    }
+
+    /**
+     * Strikes tentacle {@code index} of the nidus at {@code pos} for 1% of its vitality as the nearest player, through the
+     * fight code: the hit reaction, the red flash and that tentacle's flinch (P4.19).
+     */
+    private static int nidusTentacle(ServerLevel level, BlockPos pos, int index) throws CommandSyntaxException {
+        NidusBlockEntity nidus = nidusAt(level, pos);
+        NidusSettings settings = NidusSettings.current();
+        float amount = nidus.maxVitality(settings) * 0.01F;
+        nidus.damage(level, NidusDamagedEvent.Kind.STRIKE, nearestPlayer(level, pos), null, amount, settings, level.getGameTime(),
+                index + 1);
+        return 1;
+    }
+
+    /** Strikes the final blow on the nidus at {@code pos} as the nearest player: it plays its death, then goes (P4.19). */
+    private static int nidusKill(ServerLevel level, BlockPos pos) throws CommandSyntaxException {
+        NidusBlockEntity nidus = nidusAt(level, pos);
+        NidusSettings settings = NidusSettings.current();
+        nidus.damage(level, NidusDamagedEvent.Kind.STRIKE, nearestPlayer(level, pos), null, nidus.maxVitality(settings) * 2.0F,
+                settings, level.getGameTime());
+        return nidus.dying() ? 1 : 0;
     }
 
     /**

@@ -36,11 +36,11 @@ import org.jetbrains.annotations.Nullable;
  * far it has gone. Creative players and edits
  * (such as {@code /setblock}) still remove it at once. At vitality 0 it is mined like any block.
  *
- * <p>It looks like a living organism two blocks across with tentacles three blocks long, drawn by its block entity's
- * animated renderer at the health stage {@link #DAMAGE} gives; the block model only supplies the break particles and the
- * item. Collision, the outline and strikes stay on this one block: the body and tentacles are scenery that players walk
- * through, so the fight is always against the block at the nidus's heart. It does not occlude, so its own position is
- * lit and the model is lit by it.
+ * <p>It looks like a living organism about two blocks across with six tentacles, drawn by its block entity's animated
+ * renderer at the health stage {@link #DAMAGE} gives; the block model only supplies the break particles and the item.
+ * Collision and the outline stay on this one block, and players walk through the body. Each tentacle has its own hitbox
+ * entity ({@link NidusTentacle}, P4.19), so a strike or arrow on a tentacle damages the nidus too, at
+ * {@code tentacleDamageFactor}. It does not occlude, so its own position is lit and the model is lit by it.
  */
 public final class NidusBlock extends BaseEntityBlock {
     public static final MapCodec<NidusBlock> CODEC = simpleCodec(NidusBlock::new);

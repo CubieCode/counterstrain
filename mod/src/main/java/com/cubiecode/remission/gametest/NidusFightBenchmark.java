@@ -63,7 +63,9 @@ import org.jetbrains.annotations.Nullable;
  * when charged, first hits a host targeting it within reach ({@code Player#attack}) until the nidus is past its last
  * threshold (then it only strikes the nidus, racing the final surge), and eats a bread (32 ticks) whenever its food drops
  * below what natural regeneration needs. The server does not move players (their clients do), so a lash's
- * knockback is modelled as {@link #KNOCKBACK_PAUSE_TICKS} without striking (walking back). It writes
+ * knockback is modelled as {@link #KNOCKBACK_PAUSE_TICKS} without striking (walking back); a lash is seen as its viral
+ * load landing at once (P4.19: threshold and periodic lashes, at contact time). The final blow ends the trial (the
+ * nidus then plays its death). It writes
  * {@code nidus-fight-<trial>.txt} (time to kill, strikes, viral load, health lost, lowest health, survived) and logs it.
  */
 @GameTestHolder(Remission.MOD_ID)
@@ -106,6 +108,7 @@ public final class NidusFightBenchmark {
         int strikes;
         int lashes;
         int thresholdsSeen;
+        float viralLoad;
         float health;
         float healthLost;
         float lowestHealth;
@@ -182,11 +185,15 @@ public final class NidusFightBenchmark {
             if (!player.getMainHandItem().isEmpty()) {
                 run.durabilityUsed = player.getMainHandItem().getDamageValue();
             }
-            boolean present = level.getBlockState(nidus).is(RemissionBlocks.NIDUS.get());
-            if (present && entity.thresholdsPassed() > run.thresholdsSeen) {
-                run.lashes += entity.thresholdsPassed() - run.thresholdsSeen;
-                run.thresholdsSeen = entity.thresholdsPassed();
+            boolean present = level.getBlockState(nidus).is(RemissionBlocks.NIDUS.get()) && !entity.dying();
+            float viralLoad = ViralLoad.get(player);
+            if (settings.lashViralLoad() > 0 && viralLoad - run.viralLoad >= settings.lashViralLoad() - 0.5) {
+                run.lashes++;
                 run.pauseUntil = now + KNOCKBACK_PAUSE_TICKS;
+            }
+            run.viralLoad = viralLoad;
+            if (present && entity.thresholdsPassed() > run.thresholdsSeen) {
+                run.thresholdsSeen = entity.thresholdsPassed();
                 run.out.add(String.format("  t=%5.1fs threshold %d: vitality %.0f/%.0f, health %.1f, viral load %.1f, effects %s", t / 20.0,
                         run.thresholdsSeen, entity.vitality(settings), entity.maxVitality(settings), health, ViralLoad.get(player),
                         player.getActiveEffects().stream().map(effect -> effect.getEffect().getRegisteredName()).toList()));
