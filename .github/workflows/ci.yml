@@ -76,12 +76,6 @@ jobs:
             exit 1
           fi
       - run: ./gradlew runGameTestServer --console=plain
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: remission-jar
-          path: mod/build/libs/*.jar
-          if-no-files-found: ignore
 
   pack:
     needs: changes
