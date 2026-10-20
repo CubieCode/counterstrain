@@ -163,7 +163,7 @@ It writes `<shot>-diff.png` (the actual image dimmed to grey, pixels over the th
 
 **Updating references:** only for an intentional, reviewed change. Run the scene from a GPU-verified run, look at every shot and its diff image, then rerun the comparison with `--accept` (copies the actual shots over the references and drops shots the scene no longer takes) and commit the new PNGs in the same PR as the change that caused them, with the reason in the PR body. A new scene's first reference is made the same way (exit 3, then `--accept`). Never accept to make a failing check pass without looking.
 
-**Recording:** list in the PR each scene, the image paths or artifact name, the renderer line, the comparison result and what you checked. Attach or upload images; don't commit run output (only reviewed references, as above). Say plainly when a check could not be done.
+**Recording:** list in the PR each scene, the image paths, the renderer line, the comparison result and what you checked. Attach or upload images; don't commit run output (only reviewed references, as above). Say plainly when a check could not be done.
 
 **Acceptance:** A visual exit criterion is met only when:
 - the listed scenes run in the GPU workflow (`gpu-smoke.yml` runs every scene file; dispatch it on your branch or label the PR `gpu-smoke` (headless-client has the command), and link the run),
