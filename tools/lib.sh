@@ -57,14 +57,16 @@ prune_runs() {
   ((removed == 0)) || log "Pruned $removed run folder(s) older than $days days from $dir (the newest $keep are always kept)"
 }
 
-# Take the exclusive GPU lock (~/.cache/counterstrain/gpu.lock) on file
-# descriptor 9, waiting up to WAIT seconds, or die. Child scripts inherit the
-# held lock through fd 9 and COUNTERSTRAIN_GPU_LOCK, so tools/run-scenes.sh can
+# Take the exclusive GPU lock on file descriptor 9 (COUNTERSTRAIN_GPU_LOCK_FILE
+# if set, else ~/.cache/counterstrain/gpu.lock; every user of the GPU must
+# resolve the same file for the lock to exclude them), waiting up to WAIT
+# seconds, or die. Child scripts inherit the held lock through fd 9 and
+# COUNTERSTRAIN_GPU_LOCK, so tools/run-scenes.sh can
 # hold it for a whole scene list while each tools/run-client-headless.sh run
 # skips taking it again (reopening the file would wait on its own parent).
 gpu_lock() {
   local wait=$1
-  local lock_file="${XDG_CACHE_HOME:-$HOME/.cache}/counterstrain/gpu.lock"
+  local lock_file="${COUNTERSTRAIN_GPU_LOCK_FILE:-${XDG_CACHE_HOME:-$HOME/.cache}/counterstrain/gpu.lock}"
   if [[ "${COUNTERSTRAIN_GPU_LOCK:-}" == "$lock_file" && "$(readlink /proc/$$/fd/9 2>/dev/null)" == "$lock_file" ]]; then
     return 0
   fi
